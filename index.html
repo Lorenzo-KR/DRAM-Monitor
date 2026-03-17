@@ -292,7 +292,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 
   <div class="etw" id="lot-etw">
     <!-- 일괄 삭제 툴바 -->
-    <div id="lot-bulk-bar" style="display:none;padding:8px 14px;background:#FEF2F2;border-bottom:1px solid #FECACA;display:none;align-items:center;gap:10px">
+    <div id="lot-bulk-bar" style="display:none;padding:8px 14px;background:#FEF2F2;border-bottom:1px solid #FECACA;align-items:center;gap:10px">
       <span id="lot-sel-cnt" style="font-size:13px;font-weight:500;color:#991b1b"></span>
       <button class="btn sm" style="border-color:#E24B4A;color:#991b1b;background:#fff" onclick="bulkDeleteLots()">선택 삭제</button>
       <button class="btn sm" onclick="clearLotChecks()">선택 해제</button>
@@ -561,6 +561,15 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 <div class="tw-wrap" id="tw-wrap"></div>
 
 <script>
+// ── 전역 에러 핸들러 ──
+window.addEventListener('error',function(e){
+  if(e.message==='Script error.'||e.message==='Script error')return;
+  console.error('[App Error]',e.message,'line:',e.lineno,'col:',e.colno,e.error&&e.error.stack);
+});
+window.addEventListener('unhandledrejection',function(e){
+  console.error('[Promise Error]',e.reason);
+});
+
 const API='https://script.google.com/macros/s/AKfycbwg4i_T7ulsPhLXe51GyESxGLRr51f0ywGehkw33lmPfeHtPTmWKtXrWymZb7tPjqJf/exec';
 const BN={DRAM:'DRAM Test',SSD:'SSD Test',MID:'Mobile Ink Die'};
 const BC={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
@@ -751,8 +760,6 @@ function renderLotTable(){
   const sorted=[...lots].sort((a,b)=>String(b.inDate||'').localeCompare(String(a.inDate||'')));
   const tb=document.getElementById('lot-tbody');
   tb.innerHTML=sorted.map(l=>lotRow(l)).join('');
-  // 붙여넣기 이벤트
-  tb.addEventListener('paste',handleLotPaste,{once:true});
 }
 
 function lotRow(l){
@@ -1242,19 +1249,19 @@ function xlsxExp(data,filename,sheetname){
 }
 
 // ── 로그인 ──
-const PW_HASH='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // 기본: "password" — 아래에서 변경하세요
-async function sha256(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
-async function doLogin(){
-  const pw=document.getElementById('login-pw').value;
-  const hash=await sha256(pw);
-  if(hash===PW_HASH){
-    document.getElementById('login-screen').style.display='none';
+// 비밀번호 변경: 아래 btoa('원하는비밀번호') 값으로 교체하세요
+// btoa('password') = 'cGFzc3dvcmQ='
+const PW_B64 = 'MTIzNA=='; // 비밀번호: 1234
+
+function doLogin(){
+  const pw = document.getElementById('login-pw').value;
+  if(btoa(pw) === PW_B64){
+    document.getElementById('login-screen').style.display = 'none';
     sessionStorage.setItem('tom_auth','1');
-    await loadAll();
-    renderDash();
+    loadAll().then(()=>renderDash());
   } else {
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-pw').value='';
+    document.getElementById('login-err').style.display = 'block';
+    document.getElementById('login-pw').value = '';
     document.getElementById('login-pw').focus();
   }
 }
@@ -1486,15 +1493,13 @@ async function savePasteData(){
 }
 
 
-(async()=>{
-  if(sessionStorage.getItem('tom_auth')!=='1'){
-    document.getElementById('login-pw').focus();
-    return;
-  }
+// ── Init ──
+if(sessionStorage.getItem('tom_auth')==='1'){
   document.getElementById('login-screen').style.display='none';
-  await loadAll();
-  renderDash();
-})();
+  loadAll().then(()=>renderDash());
+} else {
+  setTimeout(()=>document.getElementById('login-pw').focus(), 100);
+}
 </script>
 </body>
 </html>
