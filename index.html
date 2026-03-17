@@ -948,16 +948,22 @@ async function saveLOT(){
   const qty=n(document.getElementById('lr-qty').value);
   if(!inDate||!qty){toast('입고일과 수량은 필수입니다',1);return;}
   if(!lrCo||!lrBiz){toast('국가와 사업을 먼저 선택하세요',1);return;}
-  const rec={id:Date.now(),biz:lrBiz,country:lrCo,
+  const rec={
+    id:Date.now(),
+    biz:lrBiz,
+    country:lrCo,
     customerName:document.getElementById('lr-cust').value.trim(),
     lotNo:document.getElementById('lr-lot').value.trim()||('LOT-'+Date.now()),
-    inDate,targetDate:document.getElementById('lr-tgt').value,qty,
+    inDate,
+    targetDate:document.getElementById('lr-tgt').value,
+    qty,
     unit:document.getElementById('lr-unit').value,
     price:n(document.getElementById('lr-price').value),
     currency:document.getElementById('lr-cur').value,
     product:document.getElementById('lr-prod').value.trim(),
     note:document.getElementById('lr-note').value.trim(),
-    done:'0',actualDone:''};
+    done:'0',
+    actualDone:''};
   // 즉시 로컬 반영
   lots.push(rec);
   renderLotTable();
@@ -1172,8 +1178,22 @@ async function saveDailyAcc(lotId){
   const cumNew=lotCumul(lot.id)+proc;
   const remNew=Math.max(0,n(lot.qty)-cumNew);
   const isDone=document.getElementById('dp-done-'+lotId).value==='1'||remNew===0;
-  const rec={id:Date.now(),date,lotId:lot.id,lotNo:lot.lotNo||lot.id,biz:lot.biz,country:lot.country,customerName:lot.customerName||'',
-    proc,normal,noBoot,abnormal,cumul:cumNew,remain:remNew,note:(document.getElementById('dp-note-'+lotId)||{}).value||'',done:isDone?'1':'0'};
+  const rec={
+    id:Date.now(),
+    date,
+    lotId:lot.id,
+    lotNo:lot.lotNo||lot.id,
+    biz:lot.biz,
+    country:lot.country,
+    customerName:lot.customerName||'',
+    proc,
+    normal,
+    noBoot,
+    abnormal,
+    cumul:cumNew,
+    remain:remNew,
+    note:(document.getElementById('dp-note-'+lotId)||{}).value||'',
+    done:isDone?'1':'0'};
   // 즉시 로컬 반영
   dailies.push(rec);
   if(isDone){
@@ -1544,8 +1564,22 @@ function importDailyFile(input){
       const lot=lots.find(l=>l.lotNo===lotNo||String(l.id)===lotNo);
       const normal=n(r[3]),noBoot=n(r[4]),abnormal=n(r[5]);
       const proc=normal+noBoot+abnormal||n(r[2]);
-      const rec={id:Date.now()+i,date,lotId:lot?lot.id:'',lotNo,biz:lot?lot.biz:String(r[6]||'DRAM'),country:lot?lot.country:'HK',customerName:lot?lot.customerName||'':'',
-        proc,normal,noBoot,abnormal,cumul:0,remain:0,yieldPct:n(r[7])||'',note:String(r[8]||''),done:'0'};
+      const rec={
+        id:Date.now()+i,
+        date,
+        lotId:lot?lot.id:'',
+        lotNo,
+        biz:lot?lot.biz:String(r[6]||'DRAM'),
+        country:lot?lot.country:'HK',
+        customerName:lot?lot.customerName||'':'',
+        proc,
+        normal,
+        noBoot,
+        abnormal,
+        cumul:0,
+        remain:0,
+        note:String(r[7]||''),
+        done:'0'};
       const res=await aPost({action:'append',sheet:'daily',data:rec});
       if(!res.error){dailies.push(rec);cnt++;}
     }
@@ -1762,10 +1796,20 @@ async function savePasteData(){
     const isDone=remNew===0;
     const rec={
       id:Date.now()+Math.random(),
-      date:r.date, lotId:lot.id, lotNo:lot.lotNo||lot.id,
-      biz:lot.biz, country:lot.country, customerName:lot.customerName||'',
-      proc:r.proc, normal:r.normal, noBoot:r.noBoot, abnormal:r.abnormal,
-      cumul:cumNew, remain:remNew, note:r.note, done:isDone?'1':'0'
+      date:r.date,
+      lotId:lot.id,
+      lotNo:lot.lotNo||lot.id,
+      biz:lot.biz,
+      country:lot.country,
+      customerName:lot.customerName||'',
+      proc:r.proc,
+      normal:r.normal,
+      noBoot:r.noBoot,
+      abnormal:r.abnormal,
+      cumul:cumNew,
+      remain:remNew,
+      note:r.note,
+      done:isDone?'1':'0'
     };
     const res=await aPost({action:'append',sheet:'daily',data:rec});
     if(!res.error){
