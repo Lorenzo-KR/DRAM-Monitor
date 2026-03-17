@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRAM Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --a: #1B4F8A;
+  --a2: #2563a8;
+  --b: #0F6E56;
+  --c: #6A3D7C;
+  --al: #E8F1FB;
+  --bl: #E0F4EE;
+  --cl: #F2E8F8;
+  --bg: #F6F7F9;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1d23;
+  --text2: #5a6170;
+  --text3: #9aa0ad;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Layout */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--a); flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+.main { margin-left: 220px; flex: 1; padding: 28px 32px; max-width: 1200px; }
+
+/* Sidebar */
+.logo { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.logo-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+.logo-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+.nav { padding: 12px 12px; flex: 1; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65); cursor: pointer; transition: all .15s; margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left; }
+.nav-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-item.on { background: rgba(255,255,255,0.18); color: #fff; }
+.nav-icon { width: 16px; height: 16px; opacity: .8; flex-shrink: 0; }
+.nav-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 8px 12px; }
+.sidebar-bottom { padding: 16px; border-top: 1px solid rgba(255,255,255,0.1); }
+.sync-status { font-size: 11px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 6px; }
+.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+.sync-dot.err { background: #f87171; }
+.sync-dot.loading { background: #fbbf24; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* Pages */
+.pg { display: none; }
+.pg.on { display: block; }
+.page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 6px; }
+.page-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 14px; }
+
+/* Metric grid */
+.mg { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.mc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.mc-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.mc-val { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+.mc-sub { font-size: 11px; color: var(--text3); margin-top: 5px; }
+
+/* Biz cards */
+.bcg { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+.bc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; border-top: 3px solid; }
+.bc[data-b="0"] { border-top-color: var(--a); }
+.bc[data-b="1"] { border-top-color: var(--b); }
+.bc[data-b="2"] { border-top-color: var(--c); }
+.bc-head { font-size: 13px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.bc[data-b="0"] .bc-head { color: var(--a); }
+.bc[data-b="1"] .bc-head { color: var(--b); }
+.bc[data-b="2"] .bc-head { color: var(--c); }
+.bc-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
+.bc-l { color: var(--text2); }
+.bc-v { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Progress bar */
+.prog-wrap { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.prog { height: 100%; border-radius: 3px; transition: width .4s; }
+
+/* Table */
+.tw { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; background: var(--bg); border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+.tr { text-align: right; font-family: 'DM Mono', monospace; }
+.tc { text-align: center; }
+
+/* Form */
+.fw { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+.fg { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-bottom: 14px; }
+.fg3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.fg1 { grid-template-columns: minmax(0,1fr); }
+.fld { display: flex; flex-direction: column; gap: 5px; }
+.fld label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+.fld input, .fld select, .fld textarea { padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); transition: border-color .15s; width: 100%; }
+.fld input:focus, .fld select:focus, .fld textarea:focus { outline: none; border-color: var(--a); background: #fff; }
+.fld textarea { resize: vertical; min-height: 60px; }
+.fld input[readonly] { color: var(--text2); cursor: default; }
+.sect { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin: 18px 0 10px; }
+.sect:first-child { margin-top: 0; }
+
+/* Buttons */
+.btn { padding: 9px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; border: 1px solid var(--border2); background: var(--card); color: var(--text); transition: all .15s; }
+.btn:hover { background: var(--bg); }
+.btn:active { transform: scale(.98); }
+.btn.pri { background: var(--a); color: #fff; border-color: var(--a); }
+.btn.pri:hover { background: var(--a2); }
+.btn.sm { padding: 5px 12px; font-size: 12px; }
+.btn.del { color: #dc2626; border-color: transparent; background: transparent; padding: 5px 8px; }
+.btn.del:hover { background: #fef2f2; }
+.btn-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+/* Badges */
+.bdg { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; }
+.ok { background: #dcfce7; color: #166534; }
+.warn { background: #fef3c7; color: #92400e; }
+.bad { background: #fee2e2; color: #991b1b; }
+.neu { background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+
+/* Yield bar */
+.yb-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 5px; }
+.yb { height: 100%; border-radius: 2px; transition: width .25s, background .25s; }
+
+/* Alert */
+.alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; border-left: 3px solid; }
+.alert.warn { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+.alert.info { background: var(--al); color: #1e40af; border-color: var(--a); }
+.alert.err { background: #fee2e2; color: #991b1b; border-color: #dc2626; }
+
+/* Filters */
+.filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { padding: 8px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--card); color: var(--text); }
+
+/* Chart */
+.cw { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.ct { font-size: 13px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+
+/* Two col */
+.two-col { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
+
+/* Aging */
+.aging-row { margin-bottom: 10px; }
+.aging-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.aging-label { color: var(--text2); }
+.aging-val { font-weight: 500; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--a); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { background: #1e293b; color: #fff; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; opacity: 0; transform: translateY(8px); transition: all .25s; }
+.toast.show { opacity: 1; transform: none; }
+
+/* Empty */
+.empty { text-align: center; padding: 36px; color: var(--text3); font-size: 13px; }
+
+/* Colors */
+.col-a { color: var(--a); } .col-b { color: var(--b); } .col-c { color: var(--c); }
+.col-ok { color: #166534; } .col-bad { color: #dc2626; } .col-warn { color: #92400e; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 180px; }
+  .main { margin-left: 180px; padding: 20px; }
+  .mg { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .bcg { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-title">DRAM Monitor</div>
+    <div class="logo-sub">신사업 3개 통합 관리</div>
+  </div>
+  <nav class="nav">
+    <button class="nav-item on" onclick="nav('dash')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+      대시보드
+    </button>
+    <button class="nav-item" onclick="nav('input')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M8 1v14M1 8h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      물량 입력
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-item" onclick="nav('invoice')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      인보이스 입력
+    </button>
+    <button class="nav-item" onclick="nav('revenue')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M1 12l4-4 3 3 4-5 3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      매출 현황
+    </button>
+    <div class="nav-divider"></div>
+    <button class="nav-item" onclick="nav('lot')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      LOT 이력
+    </button>
+    <button class="nav-item" onclick="nav('trend')">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M1 13l5-6 3 3 6-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      트렌드
+    </button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="sync-status">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-text">Google Sheets 연결됨</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+<!-- 대시보드 -->
+<div class="pg on" id="pg-dash">
+  <div class="page-title">대시보드</div>
+  <div class="page-sub" id="dash-date"></div>
+  <div id="dash-alert"></div>
+  <div class="card-title">이달 매출</div>
+  <div class="mg" id="d-rev"></div>
+  <div class="card-title">이달 물량</div>
+  <div class="mg" id="d-vol"></div>
+  <div class="card-title">사업별 현황</div>
+  <div class="bcg" id="d-cards"></div>
+</div>
+
+<!-- 물량 입력 -->
+<div class="pg" id="pg-input">
+  <div class="page-title">물량 입력</div>
+  <div class="page-sub">입고 · 처리 · 출고 일별 기록</div>
+  <div class="fw">
+    <div class="sect">기본 정보</div>
+    <div class="fg">
+      <div class="fld"><label>날짜</label><input type="date" id="fi-date"></div>
+      <div class="fld"><label>사업</label>
+        <select id="fi-biz"><option value="0">A사업</option><option value="1">B사업</option><option value="2">C사업</option></select>
+      </div>
+      <div class="fld"><label>고객사</label><input type="text" id="fi-cust" placeholder="예: 삼성전자"></div>
+      <div class="fld"><label>LOT 번호</label><input type="text" id="fi-lot" placeholder="예: LOT-2024-001"></div>
+    </div>
+    <div class="fg fg1"><div class="fld"><label>제품</label><input type="text" id="fi-prod" placeholder="예: DDR5-8GB"></div></div>
+    <div class="sect">물량</div>
+    <div class="fg fg3">
+      <div class="fld"><label>입고 수량</label><input type="number" id="fi-in" placeholder="0" min="0"></div>
+      <div class="fld"><label>처리 수량</label><input type="number" id="fi-proc" placeholder="0" min="0"></div>
+      <div class="fld"><label>출고 수량</label><input type="number" id="fi-out" placeholder="0" min="0"></div>
+    </div>
+    <div class="fg">
+      <div class="fld">
+        <label>수율 (%) <span id="fi-yl" style="font-weight:600;color:var(--a)"></span></label>
+        <input type="number" id="fi-yield" placeholder="95.0" min="0" max="100" step="0.1" oninput="updY()">
+        <div class="yb-wrap"><div class="yb" id="fi-ybar" style="width:0"></div></div>
+      </div>
+      <div class="fld"><label>TAT 준수율 (%)</label><input type="number" id="fi-tat" placeholder="100" min="0" max="100"></div>
+    </div>
+    <div class="fg fg1"><div class="fld"><label>비고</label><textarea id="fi-note" placeholder="이슈, 특이사항 등"></textarea></div></div>
+    <div class="btn-row">
+      <button class="btn pri" id="fi-btn" onclick="saveLot()">저장</button>
+      <button class="btn" onclick="clearLotF()">초기화</button>
+      <span id="fi-ok" style="font-size:12px;color:#166534;display:none;font-weight:500">✓ 저장 완료</span>
+    </div>
+  </div>
+</div>
+
+<!-- 인보이스 입력 -->
+<div class="pg" id="pg-invoice">
+  <div class="page-title">인보이스 입력</div>
+  <div class="page-sub">청구 및 수금 현황 기록</div>
+  <div class="fw">
+    <div class="sect">인보이스 정보</div>
+    <div class="fg fg3">
+      <div class="fld"><label>인보이스 번호</label><input type="text" id="iv-no" placeholder="INV-2024-001"></div>
+      <div class="fld"><label>발행일</label><input type="date" id="iv-date"></div>
+      <div class="fld"><label>결제 기한</label><input type="date" id="iv-due"></div>
+    </div>
+    <div class="fg">
+      <div class="fld"><label>사업</label>
+        <select id="iv-biz"><option value="0">A사업</option><option value="1">B사업</option><option value="2">C사업</option></select>
+      </div>
+      <div class="fld"><label>고객사</label><input type="text" id="iv-cust" placeholder="예: 삼성전자"></div>
+    </div>
+    <div class="sect">금액</div>
+    <div class="fg fg3">
+      <div class="fld"><label>청구 금액 (원)</label><input type="number" id="iv-amt" placeholder="0" min="0" oninput="calcVat()"></div>
+      <div class="fld"><label>VAT (원)</label><input type="number" id="iv-vat" placeholder="자동계산" min="0" oninput="vatManual=true;calcTotal()"></div>
+      <div class="fld"><label>합계 (원)</label><input type="number" id="iv-total" readonly placeholder="자동계산"></div>
+    </div>
+    <div class="fg">
+      <div class="fld"><label>통화</label>
+        <select id="iv-cur"><option value="KRW">KRW (원)</option><option value="USD">USD</option><option value="JPY">JPY</option></select>
+      </div>
+      <div class="fld"><label>수금 상태</label>
+        <select id="iv-status" onchange="togglePaid()">
+          <option value="unpaid">미수금</option><option value="paid">수금 완료</option><option value="partial">부분 수금</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" id="iv-paid-wrap" style="display:none">
+      <div class="fld"><label>수금일</label><input type="date" id="iv-paid-date"></div>
+      <div class="fld"><label>실수금액 (원)</label><input type="number" id="iv-paid-amt" placeholder="0" min="0"></div>
+    </div>
+    <div class="fg fg1"><div class="fld"><label>비고</label><textarea id="iv-note" placeholder="연결 LOT, 계약 조건 등"></textarea></div></div>
+    <div class="btn-row">
+      <button class="btn pri" id="iv-btn" onclick="saveInv()">저장</button>
+      <button class="btn" onclick="clearInvF()">초기화</button>
+      <span id="iv-ok" style="font-size:12px;color:#166534;display:none;font-weight:500">✓ 저장 완료</span>
+    </div>
+  </div>
+  <div class="card-title">최근 인보이스</div>
+  <div class="tw"><table>
+    <thead><tr><th>발행일</th><th>번호</th><th>사업</th><th>고객사</th><th>청구액</th><th>합계</th><th>상태</th><th>D-Day</th><th></th></tr></thead>
+    <tbody id="inv-recent"><tr><td colspan="9"><div class="empty">불러오는 중...</div></td></tr></tbody>
+  </table></div>
+</div>
+
+<!-- 매출 현황 -->
+<div class="pg" id="pg-revenue">
+  <div class="page-title">매출 현황</div>
+  <div class="filters">
+    <select id="rv-month" onchange="renderRevenue()"></select>
+    <select id="rv-biz" onchange="renderRevenue()">
+      <option value="">전체 사업</option><option value="0">A사업</option><option value="1">B사업</option><option value="2">C사업</option>
+    </select>
+    <select id="rv-status-f" onchange="renderRevenue()">
+      <option value="">전체</option><option value="unpaid">미수금</option><option value="paid">수금완료</option><option value="partial">부분수금</option><option value="overdue">연체</option>
+    </select>
+    <span id="rv-cnt" style="font-size:12px;color:var(--text3)"></span>
+  </div>
+  <div class="mg" id="rv-top"></div>
+  <div class="two-col">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="bc" data-b="0" style="border-top:none;border-left:3px solid var(--a)"><div class="bc-head" style="color:var(--a)">A사업</div><div id="rv-a"></div></div>
+      <div class="bc" data-b="1" style="border-top:none;border-left:3px solid var(--b)"><div class="bc-head" style="color:var(--b)">B사업</div><div id="rv-b"></div></div>
+      <div class="bc" data-b="2" style="border-top:none;border-left:3px solid var(--c)"><div class="bc-head" style="color:var(--c)">C사업</div><div id="rv-c"></div></div>
+    </div>
+    <div class="cw"><div class="ct">미수금 Aging</div><div id="rv-aging"></div></div>
+  </div>
+  <div class="card-title">인보이스 목록</div>
+  <div class="tw"><table>
+    <thead><tr><th>발행일</th><th>번호</th><th>사업</th><th>고객사</th><th>청구액</th><th>VAT포함</th><th>수금액</th><th>미수금</th><th>상태</th><th>D-Day</th><th></th></tr></thead>
+    <tbody id="rv-rows"></tbody>
+  </table></div>
+</div>
+
+<!-- LOT 이력 -->
+<div class="pg" id="pg-lot">
+  <div class="page-title">LOT 이력</div>
+  <div class="filters">
+    <select id="lf-biz" onchange="renderLot()"><option value="">전체</option><option value="0">A사업</option><option value="1">B사업</option><option value="2">C사업</option></select>
+    <input type="month" id="lf-month" onchange="renderLot()">
+    <input type="text" id="lf-q" placeholder="LOT · 고객사 검색" oninput="renderLot()" style="min-width:160px">
+    <span id="lf-cnt" style="font-size:12px;color:var(--text3)"></span>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>날짜</th><th>사업</th><th>고객사</th><th>LOT번호</th><th>제품</th><th>입고</th><th>처리</th><th>출고</th><th>WIP</th><th>수율</th><th>비고</th><th></th></tr></thead>
+    <tbody id="lot-rows"><tr><td colspan="12"><div class="empty">불러오는 중...</div></td></tr></tbody>
+  </table></div>
+</div>
+
+<!-- 트렌드 -->
+<div class="pg" id="pg-trend">
+  <div class="page-title">트렌드</div>
+  <div class="filters">
+    <select id="tf-biz" onchange="renderTrend()"><option value="">전체</option><option value="0">A사업</option><option value="1">B사업</option><option value="2">C사업</option></select>
+    <select id="tf-days" onchange="renderTrend()"><option value="14">최근 14일</option><option value="30">최근 30일</option><option value="60">최근 60일</option></select>
+  </div>
+  <div class="cw"><div class="ct">일별 입고 · 처리 · 출고</div><div style="position:relative;height:200px"><canvas id="cv-vol"></canvas></div></div>
+  <div class="cw"><div class="ct">월별 청구액 추이</div><div style="position:relative;height:180px"><canvas id="cv-rev"></canvas></div></div>
+</div>
+
+</main>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbx4D69pijECKmWtKawujdQACgZ36tmrFtSZjAdL9bGUg9wMeulNUf4qGh1pUTY9YyIt/exec';
+const BN = ['A사업','B사업','C사업'];
+const BC = ['#1B4F8A','#0F6E56','#6A3D7C'];
+const BL = ['#E8F1FB','#E0F4EE','#F2E8F8'];
+
+let lots = [], invs = [];
+let vatManual = false;
+let charts4 = {};
+let loading = false;
+
+// ── API ──
+function setSyncStatus(state) {
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  dot.className = 'sync-dot' + (state==='ok'?'':state==='err'?' err':' loading');
+  text.textContent = state==='ok'?'Google Sheets 연결됨':state==='err'?'연결 오류':state==='saving'?'저장 중...':'불러오는 중...';
+}
+
+async function apiGet(sheet) {
+  setSyncStatus('loading');
+  try {
+    const res = await fetch(`${API}?action=getAll&sheet=${sheet}`);
+    const data = await res.json();
+    setSyncStatus('ok');
+    return Array.isArray(data) ? data : [];
+  } catch(e) {
+    setSyncStatus('err');
+    toast('연결 오류: ' + e.message, true);
+    return [];
+  }
+}
+
+async function apiPost(body) {
+  setSyncStatus('saving');
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    setSyncStatus('ok');
+    return data;
+  } catch(e) {
+    setSyncStatus('err');
+    toast('저장 오류: ' + e.message, true);
+    return { error: e.message };
+  }
+}
+
+async function loadAll() {
+  setSyncStatus('loading');
+  [lots, invs] = await Promise.all([apiGet('lots'), apiGet('invoices')]);
+  lots = lots.map(r => ({...r, inQty:n(r.inQty), procQty:n(r.procQty), outQty:n(r.outQty)}));
+  invs = invs.map(r => ({...r, amount:n(r.amount), vat:n(r.vat), total:n(r.total), paidAmt:n(r.paidAmt)}));
+}
+
+// ── Utils ──
+const today = () => new Date().toISOString().split('T')[0];
+const thisMonth = () => new Date().toISOString().slice(0,7);
+const n = v => Number(v) || 0;
+const sum = (arr, f) => arr.reduce((s,r) => s + n(r[f]), 0);
+const fmtM = v => { if(v>=100000000) return (v/100000000).toFixed(1)+'억'; if(v>=10000) return Math.round(v/10000).toLocaleString()+'만'; return v.toLocaleString(); };
+function avg(arr, f) { const v = arr.filter(r => r[f]!==''&&r[f]!==null&&r[f]!==undefined).map(r=>n(r[f])); return v.length ? v.reduce((a,b)=>a+b)/v.length : null; }
+function mLots(bi, month) { const m = month||thisMonth(); return lots.filter(r => (bi===''||String(r.biz)===String(bi)) && String(r.date||'').startsWith(m)); }
+function tLots(bi) { return lots.filter(r => (bi===''||String(r.biz)===String(bi)) && r.date===today()); }
+function mInvs(bi, month) { const m = month||thisMonth(); return invs.filter(r => (bi===''||String(r.biz)===String(bi)) && String(r.date||'').startsWith(m)); }
+function isOverdue(inv) { return inv.status!=='paid' && inv.due && inv.due < today(); }
+function dday(due) {
+  if(!due) return '';
+  const d = Math.ceil((new Date(due)-new Date(today()))/(1000*86400));
+  if(d<0) return `<span class="bdg bad">D+${Math.abs(d)}</span>`;
+  if(d===0) return `<span class="bdg warn">D-Day</span>`;
+  if(d<=7) return `<span class="bdg warn">D-${d}</span>`;
+  return `<span style="font-size:12px;color:var(--text3)">D-${d}</span>`;
+}
+function statusBadge(inv) {
+  if(isOverdue(inv)) return '<span class="bdg bad">연체</span>';
+  if(inv.status==='paid') return '<span class="bdg ok">수금완료</span>';
+  if(inv.status==='partial') return '<span class="bdg warn">부분수금</span>';
+  return '<span class="bdg warn">미수금</span>';
+}
+function yBadge(v) {
+  if(v===null||v===''||v===undefined) return '<span class="bdg neu">-</span>';
+  const p = (Math.round(v*10)/10).toFixed(1);
+  return v>=95 ? `<span class="bdg ok">${p}%</span>` : v>=90 ? `<span class="bdg warn">${p}%</span>` : `<span class="bdg bad">${p}%</span>`;
+}
+
+function toast(msg, isErr) {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.background = isErr ? '#dc2626' : '#1e293b';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('show')); });
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 2500);
+}
+
+// ── Nav ──
+function nav(p) {
+  document.querySelectorAll('.pg').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('on'));
+  document.getElementById('pg-'+p).classList.add('on');
+  const idx = {dash:0,input:1,invoice:2,revenue:3,lot:4,trend:5}[p];
+  document.querySelectorAll('.nav-item')[idx].classList.add('on');
+  if(p==='dash') renderDash();
+  if(p==='invoice') renderInvRecent();
+  if(p==='revenue') renderRevenue();
+  if(p==='lot') renderLot();
+  if(p==='trend') renderTrend();
+}
+
+// ── 대시보드 ──
+function renderDash() {
+  const now = new Date();
+  document.getElementById('dash-date').textContent = now.toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+  const mi = mInvs(''), ml = mLots(''), tl = tLots('');
+  const totBill = sum(mi,'amount'), totTotal = sum(mi,'total');
+  const totPaid = mi.reduce((s,r) => s+(r.status==='paid'?r.total:r.status==='partial'?n(r.paidAmt):0), 0);
+  const totUnpaid = totTotal - totPaid;
+  const overdueCnt = mi.filter(r=>isOverdue(r)).length;
+  const pctPaid = totTotal > 0 ? Math.round(totPaid/totTotal*100) : 0;
+
+  document.getElementById('d-rev').innerHTML =
+    mc2('이달 청구액', fmtM(totBill)+'원', 'VAT 제외', BC[0]) +
+    mc2('VAT 포함 합계', fmtM(totTotal)+'원', '', '#444') +
+    mc2('수금 완료', fmtM(totPaid)+'원', `수금률 ${pctPaid}%`, BC[1]) +
+    mc2('미수금', fmtM(totUnpaid)+'원', overdueCnt>0?`⚠ 연체 ${overdueCnt}건`:'', totUnpaid>0?'#dc2626':'#888');
+
+  const totIn=sum(tl,'inQty'), totP=sum(tl,'procQty'), totO=sum(tl,'outQty');
+  const mWip=sum(ml,'inQty')-sum(ml,'outQty');
+  document.getElementById('d-vol').innerHTML =
+    mc2('오늘 입고', totIn.toLocaleString(), '수량', BC[0]) +
+    mc2('오늘 처리', totP.toLocaleString(), '수량', BC[1]) +
+    mc2('오늘 출고', totO.toLocaleString(), '수량', BC[2]) +
+    mc2('이달 WIP', mWip.toLocaleString(), '잔량', mWip>0?BC[1]:mWip<0?'#dc2626':'#888');
+
+  document.getElementById('d-cards').innerHTML = [0,1,2].map(bi => {
+    const m = mLots(bi), iv = mInvs(bi);
+    const mIn=sum(m,'inQty'), mOut=sum(m,'outQty'), mProc=sum(m,'procQty');
+    const wip=mIn-mOut, y=avg(m.filter(r=>r.yieldPct!==''),'yieldPct');
+    const bill=sum(iv,'amount'), tot=sum(iv,'total');
+    const paid=iv.reduce((s,r)=>s+(r.status==='paid'?r.total:r.status==='partial'?n(r.paidAmt):0),0);
+    const unpaid=tot-paid, pct=tot>0?Math.round(paid/tot*100):0;
+    return `<div class="bc" data-b="${bi}">
+      <div class="bc-head">${BN[bi]}</div>
+      <div class="bc-row"><span class="bc-l">청구액</span><span class="bc-v">${fmtM(bill)}원</span></div>
+      <div class="bc-row"><span class="bc-l">수금</span><span class="bc-v" style="color:var(--b)">${fmtM(paid)}원</span></div>
+      <div class="bc-row"><span class="bc-l">미수금</span><span class="bc-v" style="color:${unpaid>0?'#dc2626':'var(--text3)'}">${fmtM(unpaid)}원</span></div>
+      <div class="prog-wrap"><div class="prog" style="width:${pct}%;background:${pct>=80?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;margin-bottom:10px">수금률 ${pct}%</div>
+      <div class="bc-row"><span class="bc-l">이달 입고</span><span class="bc-v">${mIn.toLocaleString()}</span></div>
+      <div class="bc-row"><span class="bc-l">이달 처리</span><span class="bc-v">${mProc.toLocaleString()}</span></div>
+      <div class="bc-row"><span class="bc-l">WIP</span><span class="bc-v" style="color:${wip>0?BC[bi]:wip<0?'#dc2626':'var(--text3)'}">${wip.toLocaleString()}</span></div>
+      <div class="bc-row"><span class="bc-l">평균 수율</span><span class="bc-v">${y!==null?(Math.round(y*10)/10).toFixed(1)+'%':'-'}</span></div>
+    </div>`;
+  }).join('');
+
+  const noToday = [0,1,2].filter(bi=>tLots(bi).length===0);
+  document.getElementById('dash-alert').innerHTML = noToday.length===3 ?
+    `<div class="alert warn">오늘(${today()}) 물량 데이터 미입력 — 물량 입력에서 추가하세요.</div>` : '';
+}
+
+function mc2(l, v, s, color) {
+  return `<div class="mc"><div class="mc-label">${l}</div><div class="mc-val" style="color:${color}">${v}</div><div class="mc-sub">${s||'&nbsp;'}</div></div>`;
+}
+
+// ── 물량 저장 ──
+function updY() {
+  const v = parseFloat(document.getElementById('fi-yield').value);
+  const bar = document.getElementById('fi-ybar'), lbl = document.getElementById('fi-yl');
+  if(!isNaN(v)&&v>0) { bar.style.width=Math.min(v,100)+'%'; bar.style.background=v>=95?'#16a34a':v>=90?'#d97706':'#dc2626'; lbl.textContent=v.toFixed(1)+'%'; }
+  else { bar.style.width='0'; lbl.textContent=''; }
+}
+
+async function saveLot() {
+  const date = document.getElementById('fi-date').value;
+  const biz = Number(document.getElementById('fi-biz').value);
+  if(!date) { toast('날짜를 선택해 주세요', true); return; }
+  const btn = document.getElementById('fi-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>저장 중';
+  const rec = {
+    id: Date.now(), date, biz,
+    customer: document.getElementById('fi-cust').value.trim(),
+    lot: document.getElementById('fi-lot').value.trim(),
+    product: document.getElementById('fi-prod').value.trim(),
+    inQty: n(document.getElementById('fi-in').value),
+    procQty: n(document.getElementById('fi-proc').value),
+    outQty: n(document.getElementById('fi-out').value),
+    yieldPct: document.getElementById('fi-yield').value===''?'':Number(document.getElementById('fi-yield').value),
+    tat: document.getElementById('fi-tat').value===''?'':Number(document.getElementById('fi-tat').value),
+    note: document.getElementById('fi-note').value.trim()
+  };
+  const res = await apiPost({ action:'append', sheet:'lots', data:rec });
+  btn.disabled = false; btn.textContent = '저장';
+  if(!res.error) {
+    lots.push(rec);
+    const ok = document.getElementById('fi-ok'); ok.style.display='inline'; setTimeout(()=>ok.style.display='none',2500);
+    toast(BN[biz]+' 물량 저장 완료');
+  }
+}
+
+function clearLotF() {
+  ['fi-cust','fi-lot','fi-prod','fi-in','fi-proc','fi-out','fi-yield','fi-tat','fi-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fi-ybar').style.width='0'; document.getElementById('fi-yl').textContent='';
+}
+
+// ── 인보이스 저장 ──
+function calcVat() {
+  if(vatManual) { calcTotal(); return; }
+  const a = n(document.getElementById('iv-amt').value);
+  const vat = Math.round(a*0.1);
+  document.getElementById('iv-vat').value = vat || '';
+  document.getElementById('iv-total').value = (a+vat) || '';
+}
+function calcTotal() {
+  const a = n(document.getElementById('iv-amt').value);
+  const v = n(document.getElementById('iv-vat').value);
+  document.getElementById('iv-total').value = (a+v) || '';
+}
+function togglePaid() {
+  const st = document.getElementById('iv-status').value;
+  document.getElementById('iv-paid-wrap').style.display = st==='unpaid' ? 'none' : 'grid';
+}
+
+async function saveInv() {
+  const date = document.getElementById('iv-date').value;
+  const amt = n(document.getElementById('iv-amt').value);
+  if(!date||!amt) { toast('발행일과 청구금액은 필수입니다', true); return; }
+  const btn = document.getElementById('iv-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>저장 중';
+  const inv = {
+    id: Date.now(),
+    no: document.getElementById('iv-no').value.trim() || `INV-${Date.now()}`,
+    date,
+    due: document.getElementById('iv-due').value,
+    biz: Number(document.getElementById('iv-biz').value),
+    customer: document.getElementById('iv-cust').value.trim(),
+    amount: amt,
+    vat: n(document.getElementById('iv-vat').value),
+    total: n(document.getElementById('iv-total').value) || amt,
+    currency: document.getElementById('iv-cur').value,
+    status: document.getElementById('iv-status').value,
+    paidDate: document.getElementById('iv-paid-date').value,
+    paidAmt: n(document.getElementById('iv-paid-amt').value),
+    note: document.getElementById('iv-note').value.trim()
+  };
+  const res = await apiPost({ action:'append', sheet:'invoices', data:inv });
+  btn.disabled = false; btn.textContent = '저장';
+  if(!res.error) {
+    invs.push(inv); vatManual = false;
+    const ok = document.getElementById('iv-ok'); ok.style.display='inline'; setTimeout(()=>ok.style.display='none',2500);
+    toast(BN[inv.biz]+' 인보이스 저장 완료');
+    renderInvRecent();
+  }
+}
+
+function clearInvF() {
+  ['iv-no','iv-date','iv-due','iv-cust','iv-amt','iv-vat','iv-total','iv-paid-date','iv-paid-amt','iv-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('iv-status').value='unpaid'; document.getElementById('iv-paid-wrap').style.display='none'; vatManual=false;
+}
+
+function renderInvRecent() {
+  const recent = [...invs].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,10);
+  const tb = document.getElementById('inv-recent');
+  if(!recent.length) { tb.innerHTML=`<tr><td colspan="9"><div class="empty">인보이스가 없습니다</div></td></tr>`; return; }
+  tb.innerHTML = recent.map(r => `<tr>
+    <td>${r.date}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${r.no}</td>
+    <td style="font-weight:600;color:${BC[r.biz]}">${BN[r.biz]}</td><td>${r.customer||''}</td>
+    <td class="tr">${n(r.amount).toLocaleString()}</td><td class="tr" style="font-weight:500">${n(r.total).toLocaleString()}</td>
+    <td class="tc">${statusBadge(r)}</td><td class="tc">${dday(r.due)}</td>
+    <td><button class="btn del sm" onclick="delInv(${r.id})">✕</button></td>
+  </tr>`).join('');
+}
+
+async function delInv(id) {
+  if(!confirm('삭제하시겠습니까?')) return;
+  const res = await apiPost({ action:'delete', sheet:'invoices', id });
+  if(!res.error) { invs=invs.filter(r=>r.id!==id); renderInvRecent(); if(document.getElementById('pg-revenue').classList.contains('on')) renderRevenue(); toast('삭제되었습니다'); }
+}
+
+// ── 매출 현황 ──
+function buildMonthOpts() {
+  const sel = document.getElementById('rv-month');
+  const months = new Set([thisMonth()]);
+  invs.forEach(r => { if(r.date) months.add(String(r.date).slice(0,7)); });
+  const sorted = [...months].sort().reverse();
+  sel.innerHTML = sorted.map(m=>`<option value="${m}"${m===thisMonth()?'selected':''}>${m}</option>`).join('');
+}
+
+function renderRevenue() {
+  buildMonthOpts();
+  const month = document.getElementById('rv-month').value || thisMonth();
+  const biz = document.getElementById('rv-biz').value;
+  const statusF = document.getElementById('rv-status-f').value;
+  let filtered = invs.filter(r => String(r.date||'').startsWith(month) && (biz===''||String(r.biz)===biz));
+  if(statusF==='overdue') filtered=filtered.filter(r=>isOverdue(r));
+  else if(statusF) filtered=filtered.filter(r=>r.status===statusF);
+
+  const totBill=sum(filtered,'amount'), totVat=sum(filtered,'vat'), totTotal=sum(filtered,'total');
+  const totPaid=filtered.reduce((s,r)=>s+(r.status==='paid'?r.total:r.status==='partial'?n(r.paidAmt):0),0);
+  const totUnpaid=totTotal-totPaid, pctPaid=totTotal>0?Math.round(totPaid/totTotal*100):0;
+
+  document.getElementById('rv-top').innerHTML =
+    mc2('청구액 (VAT 제외)', fmtM(totBill)+'원', '', BC[0]) +
+    mc2('VAT', fmtM(totVat)+'원', '', BC[2]) +
+    mc2('수금 완료', fmtM(totPaid)+'원', `수금률 ${pctPaid}%`, BC[1]) +
+    mc2('미수금', fmtM(totUnpaid)+'원', filtered.filter(r=>isOverdue(r)).length>0?`⚠ 연체 ${filtered.filter(r=>isOverdue(r)).length}건`:'', totUnpaid>0?'#dc2626':'#888');
+
+  [0,1,2].forEach(bi => {
+    const iv = invs.filter(r=>String(r.date||'').startsWith(month)&&String(r.biz)===String(bi));
+    const bill=sum(iv,'amount'), tot=sum(iv,'total');
+    const paid=iv.reduce((s,r)=>s+(r.status==='paid'?r.total:r.status==='partial'?n(r.paidAmt):0),0);
+    const unpaid=tot-paid, pct=tot>0?Math.round(paid/tot*100):0, over=iv.filter(r=>isOverdue(r)).length;
+    document.getElementById(['rv-a','rv-b','rv-c'][bi]).innerHTML = `
+      <div class="bc-row"><span class="bc-l">청구 건수</span><span class="bc-v">${iv.length}건</span></div>
+      <div class="bc-row"><span class="bc-l">청구액</span><span class="bc-v">${fmtM(bill)}원</span></div>
+      <div class="bc-row"><span class="bc-l">VAT포함</span><span class="bc-v">${fmtM(tot)}원</span></div>
+      <div class="bc-row"><span class="bc-l">수금</span><span class="bc-v" style="color:var(--b)">${fmtM(paid)}원</span></div>
+      <div class="bc-row"><span class="bc-l">미수금</span><span class="bc-v" style="color:${unpaid>0?'#dc2626':'var(--text3)'}">${fmtM(unpaid)}원</span></div>
+      <div class="prog-wrap"><div class="prog" style="width:${pct}%;background:${pct>=80?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">수금률 ${pct}%${over>0?` · <span style="color:#dc2626">연체 ${over}건</span>`:''}`;
+  });
+
+  const allUnpaid = invs.filter(r=>r.status!=='paid');
+  const aging = {'30일 이내':0,'31~60일':0,'61~90일':0,'90일 초과':0};
+  const now = new Date();
+  allUnpaid.forEach(r => {
+    if(!r.due) return;
+    const d = Math.floor((now-new Date(r.due))/(1000*86400));
+    const amt = n(r.total)-n(r.paidAmt);
+    if(d<=0) aging['30일 이내']+=amt;
+    else if(d<=30) aging['31~60일']+=amt;
+    else if(d<=60) aging['61~90일']+=amt;
+    else aging['90일 초과']+=amt;
+  });
+  const agingTotal = Object.values(aging).reduce((a,b)=>a+b,0)||1;
+  const agingColors = {'30일 이내':'#16a34a','31~60일':'#d97706','61~90일':'#ea580c','90일 초과':'#dc2626'};
+  document.getElementById('rv-aging').innerHTML = Object.entries(aging).map(([k,v])=>{
+    const pct = Math.round(v/agingTotal*100);
+    return `<div class="aging-row">
+      <div class="aging-top"><span class="aging-label">${k}</span><span class="aging-val" style="color:${agingColors[k]}">${fmtM(v)}원</span></div>
+      <div class="prog-wrap"><div class="prog" style="width:${pct}%;background:${agingColors[k]}"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('rv-cnt').textContent = filtered.length+'건';
+  const sorted = [...filtered].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const tb = document.getElementById('rv-rows');
+  if(!sorted.length) { tb.innerHTML=`<tr><td colspan="11"><div class="empty">인보이스가 없습니다</div></td></tr>`; return; }
+  tb.innerHTML = sorted.map(r => {
+    const unpaidAmt = n(r.total)-(r.status==='paid'?n(r.total):r.status==='partial'?n(r.paidAmt):0);
+    return `<tr>
+      <td>${r.date}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${r.no}</td>
+      <td style="font-weight:600;color:${BC[r.biz]}">${BN[r.biz]}</td><td>${r.customer||''}</td>
+      <td class="tr">${n(r.amount).toLocaleString()}</td><td class="tr" style="font-weight:500">${n(r.total).toLocaleString()}</td>
+      <td class="tr" style="color:var(--b)">${(r.status==='paid'?n(r.total):n(r.paidAmt)||0).toLocaleString()}</td>
+      <td class="tr" style="color:${unpaidAmt>0?'#dc2626':'var(--text3)'}">${unpaidAmt.toLocaleString()}</td>
+      <td class="tc">${statusBadge(r)}</td><td class="tc">${dday(r.due)}</td>
+      <td><button class="btn sm" onclick="markPaid(${r.id})">수금처리</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function markPaid(id) {
+  const inv = invs.find(r=>r.id==id); if(!inv) return;
+  inv.status='paid'; inv.paidDate=today(); inv.paidAmt=inv.total;
+  await apiPost({ action:'update', sheet:'invoices', id, data:inv });
+  renderRevenue(); toast('수금 완료 처리');
+}
+
+// ── LOT 이력 ──
+function renderLot() {
+  const biz=document.getElementById('lf-biz').value, month=document.getElementById('lf-month').value, q=document.getElementById('lf-q').value.toLowerCase();
+  let f=[...lots].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  if(biz!=='') f=f.filter(r=>String(r.biz)===biz);
+  if(month) f=f.filter(r=>String(r.date||'').startsWith(month));
+  if(q) f=f.filter(r=>(r.lot||'').toLowerCase().includes(q)||(r.customer||'').toLowerCase().includes(q));
+  document.getElementById('lf-cnt').textContent = f.length+'건';
+  const tb=document.getElementById('lot-rows');
+  if(!f.length) { tb.innerHTML=`<tr><td colspan="12"><div class="empty">데이터가 없습니다</div></td></tr>`; return; }
+  tb.innerHTML = f.map(r=>{
+    const wip=n(r.inQty)-n(r.outQty);
+    return `<tr>
+      <td>${r.date}</td><td style="font-weight:600;color:${BC[r.biz]}">${BN[r.biz]}</td>
+      <td>${r.customer||''}</td><td style="font-family:'DM Mono',monospace;font-size:11px">${r.lot||''}</td>
+      <td style="font-size:12px">${r.product||''}</td>
+      <td class="tr">${n(r.inQty).toLocaleString()}</td><td class="tr">${n(r.procQty).toLocaleString()}</td><td class="tr">${n(r.outQty).toLocaleString()}</td>
+      <td class="tr" style="font-weight:500;color:${wip>0?BC[1]:wip<0?'#dc2626':'var(--text3)'}">${wip.toLocaleString()}</td>
+      <td class="tc">${yBadge(r.yieldPct===''?null:n(r.yieldPct))}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:100px;overflow:hidden;text-overflow:ellipsis">${r.note||''}</td>
+      <td><button class="btn del sm" onclick="delLot(${r.id})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function delLot(id) {
+  if(!confirm('삭제하시겠습니까?')) return;
+  const res = await apiPost({ action:'delete', sheet:'lots', id });
+  if(!res.error) { lots=lots.filter(r=>r.id!=id); renderLot(); toast('삭제되었습니다'); }
+}
+
+// ── 트렌드 ──
+function renderTrend() {
+  const biz=document.getElementById('tf-biz').value, days=Number(document.getElementById('tf-days').value);
+  const dates=[]; for(let i=days-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);dates.push(d.toISOString().split('T')[0]);}
+  const labels=dates.map(d=>d.slice(5));
+  const inD=[],prD=[],ouD=[];
+  dates.forEach(dt=>{
+    const dr=lots.filter(r=>(biz===''||String(r.biz)===biz)&&r.date===dt);
+    inD.push(sum(dr,'inQty')); prD.push(sum(dr,'procQty')); ouD.push(sum(dr,'outQty'));
+  });
+  const mths=[]; for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);mths.push(d.toISOString().slice(0,7));}
+  const revD=mths.map(m=>sum(invs.filter(r=>(biz===''||String(r.biz)===biz)&&String(r.date||'').startsWith(m)),'amount'));
+  const grid='rgba(0,0,0,.05)', tick='#9aa0ad';
+  const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:10,padding:10}}},
+    scales:{x:{ticks:{color:tick,font:{size:10},maxRotation:45},grid:{color:grid}},y:{ticks:{color:tick,font:{size:10}},grid:{color:grid},beginAtZero:true}}};
+  if(charts4.v) charts4.v.destroy();
+  if(charts4.r) charts4.r.destroy();
+  charts4.v=new Chart(document.getElementById('cv-vol'),{type:'bar',data:{labels,datasets:[
+    {label:'입고',data:inD,backgroundColor:'rgba(27,79,138,.75)',borderRadius:3},
+    {label:'처리',data:prD,backgroundColor:'rgba(15,110,86,.75)',borderRadius:3},
+    {label:'출고',data:ouD,backgroundColor:'rgba(106,61,124,.75)',borderRadius:3},
+  ]},options:base});
+  charts4.r=new Chart(document.getElementById('cv-rev'),{type:'bar',data:{labels:mths.map(m=>m.slice(5)),datasets:[
+    {label:'청구액(원)',data:revD,backgroundColor:'rgba(27,79,138,.7)',borderRadius:3}
+  ]},options:{...base,scales:{x:{ticks:{color:tick,font:{size:11}},grid:{color:grid}},
+    y:{ticks:{color:tick,font:{size:10},callback:v=>fmtM(v)},grid:{color:grid},beginAtZero:true}}}});
+}
+
+// ── Init ──
+(async () => {
+  document.getElementById('fi-date').value = today();
+  document.getElementById('iv-date').value = today();
+  document.getElementById('lf-month').value = thisMonth();
+  await loadAll();
+  renderDash();
+})();
+</script>
+</body>
+</html>
