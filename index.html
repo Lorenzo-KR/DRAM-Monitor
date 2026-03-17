@@ -291,8 +291,15 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   </div>
 
   <div class="etw" id="lot-etw">
+    <!-- 일괄 삭제 툴바 -->
+    <div id="lot-bulk-bar" style="display:none;padding:8px 14px;background:#FEF2F2;border-bottom:1px solid #FECACA;display:none;align-items:center;gap:10px">
+      <span id="lot-sel-cnt" style="font-size:13px;font-weight:500;color:#991b1b"></span>
+      <button class="btn sm" style="border-color:#E24B4A;color:#991b1b;background:#fff" onclick="bulkDeleteLots()">선택 삭제</button>
+      <button class="btn sm" onclick="clearLotChecks()">선택 해제</button>
+    </div>
     <table id="lot-table">
       <thead><tr>
+        <th style="width:36px"><input type="checkbox" id="lot-chk-all" onchange="toggleAllLotChecks(this)" style="cursor:pointer;width:14px;height:14px"></th>
         <th style="width:130px">LOT번호</th>
         <th style="width:110px">사업</th>
         <th style="width:90px">국가</th>
@@ -306,7 +313,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
         <th style="width:120px">제품</th>
         <th style="width:70px">진행률</th>
         <th style="width:70px">상태</th>
-        <th style="width:90px"></th>
+        <th style="width:70px"></th>
       </tr></thead>
       <tbody id="lot-tbody"></tbody>
     </table>
@@ -328,8 +335,15 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   </div>
 
   <div class="etw">
+    <!-- 일괄 삭제 툴바 -->
+    <div id="daily-bulk-bar" style="display:none;padding:8px 14px;background:#FEF2F2;border-bottom:1px solid #FECACA;align-items:center;gap:10px">
+      <span id="daily-sel-cnt" style="font-size:13px;font-weight:500;color:#991b1b"></span>
+      <button class="btn sm" style="border-color:#E24B4A;color:#991b1b;background:#fff" onclick="bulkDeleteDaily()">선택 삭제</button>
+      <button class="btn sm" onclick="clearDailyChecks()">선택 해제</button>
+    </div>
     <table id="daily-table">
       <thead><tr>
+        <th style="width:36px"><input type="checkbox" id="daily-chk-all" onchange="toggleAllDailyChecks(this)" style="cursor:pointer;width:14px;height:14px"></th>
         <th style="width:110px">날짜</th>
         <th style="width:160px">LOT 선택</th>
         <th style="width:90px">사업</th>
@@ -341,7 +355,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
         <th style="width:70px">잔량</th>
         <th style="width:80px">완료</th>
         <th style="width:120px">비고</th>
-        <th style="width:90px"></th>
+        <th style="width:70px"></th>
       </tr></thead>
       <tbody id="daily-tbody"></tbody>
     </table>
@@ -744,6 +758,7 @@ function renderLotTable(){
 function lotRow(l){
   const pct=lotPct(l);const st=lotSt(l);
   return`<tr data-id="${l.id}">
+    <td style="padding:6px 10px;text-align:center"><input type="checkbox" class="lot-chk" value="${l.id}" onchange="updateLotBulkBar()" style="cursor:pointer;width:14px;height:14px"></td>
     ${cel(l.lotNo,'mono',`saveLotCell(this,'lotNo',${l.id})`)}
     ${csel(l.biz,[['DRAM','DRAM Test'],['SSD','SSD Test'],['MID','Mobile Ink Die']],'',`saveLotCell(this,'biz',${l.id})`)}
     ${csel(l.country,[['HK','홍콩'],['SG','싱가포르']],'',`saveLotCell(this,'country',${l.id})`)}
@@ -758,6 +773,7 @@ function lotRow(l){
     <td class="tc" style="padding:8px 10px"><div style="font-size:12px;font-weight:500;color:${pct>=100?'#16a34a':'var(--tx)'}">${pct}%</div><div class="pb-w"><div class="pb" style="width:${pct}%;background:${BC[l.biz]}"></div></div></td>
     <td class="tc" style="padding:8px 10px">${stBdg(st)}</td>
     <td style="padding:4px 8px"><div class="row-actions"><button class="ra-btn del" onclick="delLOT(${l.id})">삭제</button></div></td>
+  </tr>`;
   </tr>`;
 }
 
@@ -795,6 +811,7 @@ function dailyRow(r){
   const tot=isDram?(n(r.normal)+n(r.noBoot)+n(r.abnormal))||n(r.proc):n(r.proc);
   const pct=lot?Math.min(100,Math.round(n(r.cumul)/n(lot.qty)*100)):0;
   return`<tr data-id="${r.id}">
+    <td style="padding:6px 10px;text-align:center"><input type="checkbox" class="daily-chk" value="${r.id}" onchange="updateDailyBulkBar()" style="cursor:pointer;width:14px;height:14px"></td>
     ${cel(r.date,'',`saveDailyCell(this,'date',${r.id})`,'type="date"')}
     ${csel(r.lotId,lotOpts,'',`saveDailyLot(this,${r.id})`)}
     <td style="padding:8px 10px">${lot?btag(lot.biz):''}</td>
@@ -1240,6 +1257,66 @@ async function doLogin(){
     document.getElementById('login-pw').value='';
     document.getElementById('login-pw').focus();
   }
+}
+
+// ── 일괄 삭제 — LOT ──
+function updateLotBulkBar(){
+  const chks=document.querySelectorAll('.lot-chk:checked');
+  const bar=document.getElementById('lot-bulk-bar');
+  bar.style.display=chks.length?'flex':'none';
+  document.getElementById('lot-sel-cnt').textContent=chks.length+'개 선택됨';
+  document.getElementById('lot-chk-all').indeterminate=chks.length>0&&chks.length<document.querySelectorAll('.lot-chk').length;
+  document.getElementById('lot-chk-all').checked=chks.length>0&&chks.length===document.querySelectorAll('.lot-chk').length;
+}
+function toggleAllLotChecks(el){
+  document.querySelectorAll('.lot-chk').forEach(c=>c.checked=el.checked);
+  updateLotBulkBar();
+}
+function clearLotChecks(){
+  document.querySelectorAll('.lot-chk').forEach(c=>c.checked=false);
+  document.getElementById('lot-chk-all').checked=false;
+  document.getElementById('lot-bulk-bar').style.display='none';
+}
+async function bulkDeleteLots(){
+  const ids=[...document.querySelectorAll('.lot-chk:checked')].map(c=>c.value);
+  if(!ids.length)return;
+  if(!confirm(`선택한 LOT ${ids.length}건을 삭제하시겠습니까?\n연결된 처리 기록은 삭제되지 않습니다.`))return;
+  let done=0;
+  for(const id of ids){
+    const res=await aPost({action:'delete',sheet:'lots',id});
+    if(!res.error){lots=lots.filter(r=>String(r.id)!==String(id));done++;}
+  }
+  renderLotTable();toast(`${done}건 삭제 완료`);
+}
+
+// ── 일괄 삭제 — 일별 처리 ──
+function updateDailyBulkBar(){
+  const chks=document.querySelectorAll('.daily-chk:checked');
+  const bar=document.getElementById('daily-bulk-bar');
+  bar.style.display=chks.length?'flex':'none';
+  document.getElementById('daily-sel-cnt').textContent=chks.length+'개 선택됨';
+  document.getElementById('daily-chk-all').indeterminate=chks.length>0&&chks.length<document.querySelectorAll('.daily-chk').length;
+  document.getElementById('daily-chk-all').checked=chks.length>0&&chks.length===document.querySelectorAll('.daily-chk').length;
+}
+function toggleAllDailyChecks(el){
+  document.querySelectorAll('.daily-chk').forEach(c=>c.checked=el.checked);
+  updateDailyBulkBar();
+}
+function clearDailyChecks(){
+  document.querySelectorAll('.daily-chk').forEach(c=>c.checked=false);
+  document.getElementById('daily-chk-all').checked=false;
+  document.getElementById('daily-bulk-bar').style.display='none';
+}
+async function bulkDeleteDaily(){
+  const ids=[...document.querySelectorAll('.daily-chk:checked')].map(c=>c.value);
+  if(!ids.length)return;
+  if(!confirm(`선택한 처리 기록 ${ids.length}건을 삭제하시겠습니까?`))return;
+  let done=0;
+  for(const id of ids){
+    const res=await aPost({action:'delete',sheet:'daily',id});
+    if(!res.error){dailies=dailies.filter(r=>String(r.id)!==String(id));done++;}
+  }
+  renderDailyTable();toast(`${done}건 삭제 완료`);
 }
 
 // ── 붙여넣기 팝업 ──
