@@ -576,7 +576,7 @@ window.addEventListener('unhandledrejection',function(e){
   console.error('[Promise Error]',e.reason);
 });
 
-const API='https://script.google.com/macros/s/AKfycbwg4i_T7ulsPhLXe51GyESxGLRr51f0ywGehkw33lmPfeHtPTmWKtXrWymZb7tPjqJf/exec';
+const API='https://script.google.com/macros/s/AKfycbzqHpeedrqmZ0VSzDfkoni6FKxqHrt5GTTR8HhFTX6dmoKzYRBY0Feb0u1Zmb-uz6cA/exec';
 const BN={DRAM:'DRAM Test',SSD:'SSD Test',MID:'Mobile Ink Die'};
 const BC={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
 const CN={HK:'홍콩',SG:'싱가포르'};
@@ -594,8 +594,57 @@ function setSS(s){
   d.className='sdot'+(s==='ok'?'':s==='err'?' err':' spin');
   t.textContent=s==='ok'?'연결됨':s==='err'?'오류':s==='saving'?'저장 중...':'로딩 중...';
 }
+
+// ── 배치 저장 큐 ──
+let saveQueue=[];let saveTimer=null;let isSaving=false;
+
 async function aGet(sh){setSS('loading');try{const r=await fetch(`${API}?action=getAll&sheet=${sh}`);const d=await r.json();setSS('ok');return Array.isArray(d)?d:[];}catch(e){setSS('err');toast('연결 오류',1);return[];}}
-async function aPost(body){setSS('saving');try{const r=await fetch(API,{method:'POST',body:JSON.stringify(body)});const d=await r.json();setSS('ok');return d;}catch(e){setSS('err');toast('저장 오류',1);return{error:e.message};}}
+
+// 즉시 화면 반영 + 백그라운드 저장
+function aPost(body){
+  // 큐에 추가
+  saveQueue.push(body);
+  // 300ms 디바운스 — 연속 입력 시 묶어서 처리
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(flushQueue,300);
+  // 즉시 성공으로 반환 (optimistic)
+  return Promise.resolve({success:true,optimistic:true});
+}
+
+// Apps Script에 appendBatch가 있으면 묶어서, 없으면 순차 처리
+async function flushQueue(){
+  if(isSaving||saveQueue.length===0)return;
+  isSaving=true;
+  const batch=[...saveQueue];saveQueue=[];
+  setSS('saving');
+  try{
+    // append 작업들은 묶어서 배치로
+    const appends=batch.filter(b=>b.action==='append');
+    const others=batch.filter(b=>b.action!=='append');
+    // 시트별로 그룹화
+    const bySheet={};
+    appends.forEach(b=>{if(!bySheet[b.sheet])bySheet[b.sheet]=[];bySheet[b.sheet].push(b.data);});
+    const promises=[];
+    Object.entries(bySheet).forEach(([sheet,rows])=>{
+      if(rows.length===1){
+        promises.push(fetch(API,{method:'POST',body:JSON.stringify({action:'append',sheet,data:rows[0]})}).then(r=>r.json()).catch(e=>({error:e.message})));
+      } else {
+        // 배치 append
+        promises.push(fetch(API,{method:'POST',body:JSON.stringify({action:'appendBatch',sheet,rows})}).then(r=>r.json()).catch(e=>({error:e.message})));
+      }
+    });
+    // update/delete는 개별 처리
+    others.forEach(b=>{
+      promises.push(fetch(API,{method:'POST',body:JSON.stringify(b)}).then(r=>r.json()).catch(e=>({error:e.message})));
+    });
+    const results=await Promise.all(promises);
+    const errors=results.filter(r=>r&&r.error);
+    if(errors.length>0){setSS('err');toast('일부 저장 실패. 재시도 중...',1);saveQueue=[...batch,...saveQueue];setTimeout(flushQueue,2000);}
+    else{setSS('ok');}
+  }catch(e){setSS('err');toast('저장 오류: '+e.message,1);saveQueue=[...batch,...saveQueue];}
+  isSaving=false;
+  if(saveQueue.length>0)setTimeout(flushQueue,300);
+}
 async function loadAll(){
   setSS('loading');
   [custs,lots,dailies,invs]=await Promise.all([aGet('customers'),aGet('lots'),aGet('daily'),aGet('invoices')]);
@@ -863,7 +912,6 @@ async function saveLOT(){
   const qty=n(document.getElementById('lr-qty').value);
   if(!inDate||!qty){toast('입고일과 수량은 필수입니다',1);return;}
   if(!lrCo||!lrBiz){toast('국가와 사업을 먼저 선택하세요',1);return;}
-  const btn=document.getElementById('lr-btn');btn.disabled=true;btn.innerHTML='<span class="sp"></span>저장 중';
   const rec={id:Date.now(),biz:lrBiz,country:lrCo,
     customerName:document.getElementById('lr-cust').value.trim(),
     lotNo:document.getElementById('lr-lot').value.trim()||('LOT-'+Date.now()),
@@ -874,9 +922,14 @@ async function saveLOT(){
     product:document.getElementById('lr-prod').value.trim(),
     note:document.getElementById('lr-note').value.trim(),
     done:'0',actualDone:''};
-  const res=await aPost({action:'append',sheet:'lots',data:rec});
-  btn.disabled=false;btn.textContent='LOT 등록';
-  if(!res.error){lots.push(rec);renderLotTable();clearLrForm();const ok=document.getElementById('lr-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',2500);toast(BN[lrBiz]+' LOT 등록 완료');}
+  // 즉시 로컬 반영
+  lots.push(rec);
+  renderLotTable();
+  clearLrForm();
+  const ok=document.getElementById('lr-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',1500);
+  toast(BN[lrBiz]+' LOT 등록');
+  // 백그라운드 저장
+  aPost({action:'append',sheet:'lots',data:rec});
 }
 
 function clearLrForm(){
@@ -1085,13 +1138,19 @@ async function saveDailyAcc(lotId){
   const isDone=document.getElementById('dp-done-'+lotId).value==='1'||remNew===0;
   const rec={id:Date.now(),date,lotId:lot.id,lotNo:lot.lotNo||lot.id,biz:lot.biz,country:lot.country,customerName:lot.customerName||'',
     proc,normal,noBoot,abnormal,cumul:cumNew,remain:remNew,note:(document.getElementById('dp-note-'+lotId)||{}).value||'',done:isDone?'1':'0'};
-  const res=await aPost({action:'append',sheet:'daily',data:rec});
-  if(!res.error){
-    dailies.push(rec);
-    if(isDone){const upd={...lot,done:'1',actualDone:date};await aPost({action:'update',sheet:'lots',id:lot.id,data:upd});const idx=lots.findIndex(l=>l.id==lot.id);if(idx>=0)lots[idx]=upd;toast(lot.lotNo+' 완료 처리!');}
-    const ok=document.getElementById('dp-ok-'+lotId);if(ok){ok.style.display='inline';setTimeout(()=>ok.style.display='none',2000);}
-    toast('저장됨');renderDpCards();
+  // 즉시 로컬 반영
+  dailies.push(rec);
+  if(isDone){
+    const upd={...lot,done:'1',actualDone:date};
+    const idx=lots.findIndex(l=>l.id==lot.id);if(idx>=0)lots[idx]=upd;
+    aPost({action:'update',sheet:'lots',id:lot.id,data:upd});
+    toast(lot.lotNo+' 완료!');
   }
+  const ok=document.getElementById('dp-ok-'+lotId);if(ok){ok.style.display='inline';setTimeout(()=>ok.style.display='none',1500);}
+  toast('저장됨');
+  renderDpCards();
+  // 백그라운드 저장
+  aPost({action:'append',sheet:'daily',data:rec});
 }
 
 async function delDailyAcc(id,lotId){
@@ -1385,13 +1444,12 @@ function renderCountry(){
 async function saveCust(){
   const name=document.getElementById('cu-name').value.trim();if(!name){toast('이름 필수',1);return;}
   const rec={id:Date.now(),name,country:document.getElementById('cu-co').value,biz:document.getElementById('cu-biz').value,contact:document.getElementById('cu-contact').value.trim(),currency:document.getElementById('cu-cur').value,note:document.getElementById('cu-note').value.trim()};
-  const res=await aPost({action:'append',sheet:'customers',data:rec});
-  if(!res.error){
-    custs=await aGet('customers');
-    custs=custs.map(r=>({...r,country:String(r.country||'').trim().toUpperCase(),biz:String(r.biz||'').trim().toUpperCase(),name:String(r.name||'').trim()}));
-    const ok=document.getElementById('cu-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',2000);
-    renderCusts();toast(name+' 등록');
-  }
+  // 즉시 로컬 반영
+  custs.push(rec);
+  const ok=document.getElementById('cu-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',1500);
+  renderCusts();toast(name+' 등록');
+  // 백그라운드 저장
+  aPost({action:'append',sheet:'customers',data:rec});
 }
 function renderCusts(){
   const tb=document.getElementById('cu-tb');
