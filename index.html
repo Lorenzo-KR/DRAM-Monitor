@@ -781,7 +781,6 @@ function lotRow(l){
     <td class="tc" style="padding:8px 10px">${stBdg(st)}</td>
     <td style="padding:4px 8px"><div class="row-actions"><button class="ra-btn del" onclick="delLOT(${l.id})">삭제</button></div></td>
   </tr>`;
-  </tr>`;
 }
 
 async function saveLotCell(el,field,id){
@@ -1485,7 +1484,7 @@ async function savePasteData(){
   btn.disabled=false;
   const msg=document.getElementById('paste-save-msg');
   msg.style.display='inline';
-  msg.textContent=`✓ ${saved}건 저장 완료${skipped>0?` (LOT 미선택 ${skipped}건 제외)`:''}`;
+  msg.textContent='✓ '+saved+'건 저장 완료'+(skipped>0?' (LOT 미선택 '+skipped+'건 제외)':'');
   btn.style.display='none';
   renderDailyTable();
   toast(`${saved}건 저장 완료`);
