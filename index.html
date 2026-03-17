@@ -173,6 +173,34 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 </style>
 </head>
 <body>
+
+<!-- ── 로그인 화면 ── -->
+<div id="login-screen" style="position:fixed;inset:0;background:#F5F6F8;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:16px;padding:40px 44px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:44px;height:44px;background:#1B4F8A;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:600;color:#181c24;letter-spacing:-.02em">Test Ops Monitor</div>
+      <div style="font-size:13px;color:#9aa0ad;margin-top:4px">DRAM · SSD · Mobile Ink Die</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;color:#5a6170;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">비밀번호</label>
+      <input type="password" id="login-pw" placeholder="비밀번호 입력"
+        style="width:100%;padding:10px 14px;border:1px solid rgba(0,0,0,0.13);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;background:#F5F6F8;color:#181c24;outline:none;transition:border-color .15s"
+        onkeydown="if(event.key==='Enter')doLogin()"
+        onfocus="this.style.borderColor='#1B4F8A';this.style.background='#fff'"
+        onblur="this.style.borderColor='rgba(0,0,0,0.13)';this.style.background='#F5F6F8'">
+    </div>
+    <div id="login-err" style="font-size:12px;color:#dc2626;margin-bottom:10px;display:none;text-align:center">비밀번호가 틀렸습니다</div>
+    <button onclick="doLogin()"
+      style="width:100%;padding:11px;background:#1B4F8A;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s"
+      onmouseover="this.style.background='#2563a8'" onmouseout="this.style.background='#1B4F8A'">
+      로그인
+    </button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#c8cdd6">내부 관리자 전용</div>
+  </div>
+</div>
 <div class="layout">
 <aside class="sb">
   <div class="sb-logo">
@@ -291,15 +319,12 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 
 <!-- ── 일별 처리 입력 (인라인 테이블) ── -->
 <div class="pg" id="pg-daily">
-  <div class="ph"><h1>일별 처리 입력</h1><p>셀 클릭해서 직접 편집 · DRAM은 Normal/No Boot/Abnormal 구분 입력</p></div>
-
-  <div class="import-zone" onclick="document.getElementById('daily-import-file').click()">
-    <div class="import-icon">📋</div>
-    <div class="import-text">
-      <strong>과거 처리 데이터 불러오기</strong><br>
-      엑셀/CSV 파일 선택
-    </div>
-    <input type="file" id="daily-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importDailyFile(this)">
+  <div class="ph-row">
+    <div class="ph"><h1>일별 처리 입력</h1><p>셀 클릭해서 직접 편집 · 엑셀에서 복사 붙여넣기 가능</p></div>
+    <button class="btn pri sm" onclick="openPasteModal()" style="margin-top:4px">
+      <svg width="13" height="13" fill="none" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:5px"><rect x="5" y="2" width="9" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 4H2a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      엑셀 붙여넣기
+    </button>
   </div>
 
   <div class="etw">
@@ -324,6 +349,88 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
       <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       새 처리 기록 추가
     </button>
+  </div>
+</div>
+
+<!-- ── 붙여넣기 팝업 ── -->
+<div id="paste-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--r);width:min(860px,95vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+
+    <!-- 팝업 헤더 -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--bd);flex-shrink:0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:3px">엑셀 데이터 붙여넣기</div>
+          <div style="font-size:12px;color:var(--tx2)">엑셀에서 데이터 복사(Ctrl+C) 후 아래 텍스트박스에 붙여넣기(Ctrl+V)</div>
+        </div>
+        <button onclick="closePasteModal()" style="border:none;background:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:0 4px;line-height:1">×</button>
+      </div>
+
+      <!-- 컬럼 형식 안내 -->
+      <div style="margin-top:12px;background:#EEF4FF;border:1px solid #bfdbfe;border-radius:var(--rs);padding:10px 14px;font-size:12px;color:#1e40af">
+        <div style="font-weight:600;margin-bottom:6px">📋 엑셀 컬럼 순서 (그대로 복사하면 됩니다)</div>
+        <div style="display:grid;grid-template-columns:repeat(9,auto);gap:0;font-family:'DM Mono',monospace;font-size:11px;overflow-x:auto">
+          <div style="padding:3px 10px;background:#1e40af;color:#fff;border-radius:4px 0 0 4px;white-space:nowrap">Region</div>
+          <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch</div>
+          <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch Qt'y</div>
+          <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Date</div>
+          <div style="padding:3px 10px;background:#6b7280;color:#fff;border-left:1px solid #9ca3af;white-space:nowrap">요일 (무시)</div>
+          <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">일별 처리량 합계</div>
+          <div style="padding:3px 10px;background:#166534;color:#fff;border-left:1px solid #4ade80;white-space:nowrap">Normal</div>
+          <div style="padding:3px 10px;background:#92400e;color:#fff;border-left:1px solid #fbbf24;white-space:nowrap">No Boot</div>
+          <div style="padding:3px 10px;background:#991b1b;color:#fff;border-left:1px solid #f87171;border-radius:0 4px 4px 0;white-space:nowrap">Abnormal</div>
+        </div>
+        <div style="margin-top:6px;color:#3b82f6;font-size:11px">※ 헤더행 포함해도 자동으로 건너뜁니다 · Region에 HK/SG/홍콩/싱가포르 모두 인식</div>
+      </div>
+    </div>
+
+    <!-- 붙여넣기 영역 -->
+    <div style="padding:16px 24px;flex-shrink:0">
+      <textarea id="paste-area"
+        placeholder="여기에 Ctrl+V로 붙여넣으세요&#10;&#10;예시:&#10;2024-01-15&#9;LOT-001&#9;500&#9;480&#9;15&#9;5&#9;정상&#10;2024-01-15&#9;LOT-002&#9;300&#9;0&#9;0&#9;0&#9;&#10;2024-01-16&#9;LOT-001&#9;450&#9;440&#9;8&#9;2&#9;"
+        style="width:100%;height:140px;padding:12px;border:1px solid var(--bd2);border-radius:var(--rs);font-family:'DM Mono',monospace;font-size:12px;background:var(--bg);color:var(--tx);resize:none;line-height:1.6"
+        oninput="parsePaste()"></textarea>
+    </div>
+
+    <!-- 파싱 결과 미리보기 -->
+    <div style="flex:1;overflow:auto;padding:0 24px 16px">
+      <div id="paste-preview-wrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:500">미리보기 <span id="paste-cnt" style="font-size:12px;color:var(--tx3);font-weight:400"></span></div>
+          <div style="font-size:12px;color:var(--tx3)">LOT를 인식 못한 경우 직접 선택하세요</div>
+        </div>
+        <div style="overflow:auto;border:1px solid var(--bd);border-radius:var(--rs)">
+          <table style="width:100%;border-collapse:collapse;font-size:12px" id="paste-preview-table">
+            <thead>
+              <tr style="background:var(--bg)">
+                <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">날짜</th>
+                <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Region</th>
+                <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Batch (LOT)</th>
+                <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">처리합계</th>
+                <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#166534;border-bottom:1px solid var(--bd);white-space:nowrap">Normal</th>
+                <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#92400e;border-bottom:1px solid var(--bd);white-space:nowrap">No Boot</th>
+                <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#991b1b;border-bottom:1px solid var(--bd);white-space:nowrap">Abnormal</th>
+                <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd)">비고</th>
+                <th style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd)">상태</th>
+              </tr>
+            </thead>
+            <tbody id="paste-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="paste-empty" style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">
+        위에 데이터를 붙여넣으면 여기에 미리보기가 표시됩니다
+      </div>
+    </div>
+
+    <!-- 팝업 하단 버튼 -->
+    <div style="padding:14px 24px;border-top:1px solid var(--bd);display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <button class="btn pri" id="paste-save-btn" onclick="savePasteData()" style="display:none">
+        저장
+      </button>
+      <button class="btn" onclick="closePasteModal()">취소</button>
+      <span id="paste-save-msg" style="font-size:12px;color:#166534;display:none;font-weight:500"></span>
+    </div>
   </div>
 </div>
 
@@ -1113,8 +1220,194 @@ function xlsxExp(data,filename,sheetname){
   XLSX.utils.book_append_sheet(wb,ws,sheetname);XLSX.writeFile(wb,filename);toast('다운로드 완료');
 }
 
-// ── Init ──
+// ── 로그인 ──
+const PW_HASH='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // 기본: "password" — 아래에서 변경하세요
+async function sha256(str){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function doLogin(){
+  const pw=document.getElementById('login-pw').value;
+  const hash=await sha256(pw);
+  if(hash===PW_HASH){
+    document.getElementById('login-screen').style.display='none';
+    sessionStorage.setItem('tom_auth','1');
+    await loadAll();
+    renderDash();
+  } else {
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('login-pw').value='';
+    document.getElementById('login-pw').focus();
+  }
+}
+
+// ── 붙여넣기 팝업 ──
+let parsedRows=[];
+
+function openPasteModal(){
+  document.getElementById('paste-modal').style.display='flex';
+  document.getElementById('paste-area').value='';
+  document.getElementById('paste-preview-wrap').style.display='none';
+  document.getElementById('paste-empty').style.display='block';
+  document.getElementById('paste-save-btn').style.display='none';
+  document.getElementById('paste-save-msg').style.display='none';
+  parsedRows=[];
+  setTimeout(()=>document.getElementById('paste-area').focus(),100);
+}
+function closePasteModal(){
+  document.getElementById('paste-modal').style.display='none';
+}
+
+function parsePaste(){
+  const raw=document.getElementById('paste-area').value.trim();
+  if(!raw){
+    document.getElementById('paste-preview-wrap').style.display='none';
+    document.getElementById('paste-empty').style.display='block';
+    document.getElementById('paste-save-btn').style.display='none';
+    parsedRows=[];return;
+  }
+
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
+  parsedRows=[];
+
+  for(const line of lines){
+    const cols=line.split('\t').map(c=>c.trim());
+    if(cols.length<4)continue;
+
+    // 컬럼 순서: Region(0) | Batch(1) | Batch Qt'y(2) | Date(3) | 요일(4) | 합계(5) | Normal(6) | No Boot(7) | Abnormal(8)
+    // 헤더 감지 — Date 컬럼이 날짜 형식 아니면 건너뜀
+    const dateVal=formatDateVal(cols[3]);
+    if(!dateVal)continue;
+
+    const region=cols[0]||'';
+    const lotNo=cols[1]||'';
+    // cols[2] = Batch Qt'y (참고용, 저장 안 함)
+    // cols[4] = 요일 (무시)
+    const proc=n(cols[5]);
+    const normal=n(cols[6]);
+    const noBoot=n(cols[7]);
+    const abnormal=n(cols[8]);
+    // cols[9] 이후 = 비고 등 있을 수 있음
+    const note=cols[9]||'';
+
+    // 국가 매핑
+    const countryMap={'hk':'HK','hong kong':'HK','홍콩':'HK','sg':'SG','singapore':'SG','싱가포르':'SG'};
+    const country=countryMap[region.toLowerCase()]||region.toUpperCase()||'';
+
+    // LOT 매칭 (Batch 번호로)
+    const lot=lots.find(l=>
+      l.lotNo===lotNo||
+      String(l.id)===lotNo||
+      l.lotNo.toLowerCase()===lotNo.toLowerCase()
+    );
+
+    // 처리량: Normal+NoBoot+Abnormal 합산이 있으면 우선, 없으면 합계 컬럼
+    const totalProc=(normal+noBoot+abnormal)>0?(normal+noBoot+abnormal):proc;
+
+    parsedRows.push({
+      date:dateVal, region, country, lotNo, lot,
+      proc:totalProc, normal, noBoot, abnormal, note,
+      matched:!!lot
+    });
+  }
+
+  renderPastePreview();
+}
+
+function renderPastePreview(){
+  const wrap=document.getElementById('paste-preview-wrap');
+  const empty=document.getElementById('paste-empty');
+  const saveBtn=document.getElementById('paste-save-btn');
+
+  if(!parsedRows.length){
+    wrap.style.display='none';empty.style.display='block';saveBtn.style.display='none';return;
+  }
+  wrap.style.display='block';empty.style.display='none';
+  document.getElementById('paste-cnt').textContent=parsedRows.length+'행';
+  saveBtn.style.display='inline-block';
+  saveBtn.textContent=parsedRows.length+'건 저장';
+
+  const lotOpts=lots.map(l=>`<option value="${l.id}">${l.lotNo||l.id}</option>`).join('');
+
+  document.getElementById('paste-preview-body').innerHTML=parsedRows.map((r,i)=>{
+    const isDram=r.lot&&r.lot.biz==='DRAM';
+    const statusHtml=r.matched
+      ?`<span style="font-size:11px;font-weight:500;color:#166534;white-space:nowrap">✓ ${BN[r.lot.biz]||''}</span>`
+      :`<span style="font-size:11px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
+    return`<tr style="${i%2===0?'':'background:var(--bg)'}">
+      <td style="padding:7px 10px;white-space:nowrap;font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
+      <td style="padding:7px 10px">${r.country?ctag(r.country):`<span style="font-size:11px;color:var(--tx3)">${r.region||'-'}</span>`}</td>
+      <td style="padding:4px 6px">
+        <select onchange="setParsedLot(${i},this.value)"
+          style="padding:4px 8px;border:1px solid ${r.matched?'var(--bd2)':'#fca5a5'};border-radius:5px;font-size:12px;background:${r.matched?'var(--bg)':'#fff7f7'};color:var(--tx);width:100%;min-width:130px">
+          <option value="">-- 선택 --</option>
+          ${lots.map(l=>`<option value="${l.id}"${r.lot&&String(r.lot.id)===String(l.id)?' selected':''}>${l.lotNo||l.id} (${BN[l.biz]})</option>`).join('')}
+        </select>
+      </td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmtN(r.proc)}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#166534">${isDram||r.normal>0?fmtN(r.normal):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#92400e">${isDram||r.noBoot>0?fmtN(r.noBoot):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#991b1b">${isDram||r.abnormal>0?fmtN(r.abnormal):'—'}</td>
+      <td style="padding:7px 10px;font-size:12px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
+      <td style="padding:7px 10px">${statusHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function setParsedLot(i, lotId){
+  parsedRows[i].lot=lots.find(l=>String(l.id)===lotId)||null;
+  parsedRows[i].matched=!!parsedRows[i].lot;
+  parsedRows[i].lotNo=parsedRows[i].lot?parsedRows[i].lot.lotNo||lotId:parsedRows[i].lotNo;
+  renderPastePreview();
+}
+
+async function savePasteData(){
+  const toSave=parsedRows.filter(r=>r.lot);
+  const skipped=parsedRows.length-toSave.length;
+  if(!toSave.length){toast('저장할 데이터가 없습니다 (LOT가 선택되지 않음)',1);return;}
+
+  const btn=document.getElementById('paste-save-btn');
+  btn.disabled=true;btn.textContent='저장 중...';
+
+  let saved=0;
+  for(const r of toSave){
+    const lot=r.lot;
+    const cumNew=lotCumul(lot.id)+r.proc;
+    const remNew=Math.max(0,n(lot.qty)-cumNew);
+    const isDone=remNew===0;
+    const rec={
+      id:Date.now()+Math.random(),
+      date:r.date, lotId:lot.id, lotNo:lot.lotNo||lot.id,
+      biz:lot.biz, country:lot.country, customerName:lot.customerName||'',
+      proc:r.proc, normal:r.normal, noBoot:r.noBoot, abnormal:r.abnormal,
+      cumul:cumNew, remain:remNew, note:r.note, done:isDone?'1':'0'
+    };
+    const res=await aPost({action:'append',sheet:'daily',data:rec});
+    if(!res.error){
+      dailies.push(rec);
+      if(isDone){
+        const upd={...lot,done:'1',actualDone:r.date};
+        await aPost({action:'update',sheet:'lots',id:lot.id,data:upd});
+        const idx=lots.findIndex(l=>l.id==lot.id);if(idx>=0)lots[idx]=upd;
+      }
+      saved++;
+    }
+  }
+
+  btn.disabled=false;
+  const msg=document.getElementById('paste-save-msg');
+  msg.style.display='inline';
+  msg.textContent=`✓ ${saved}건 저장 완료${skipped>0?` (LOT 미선택 ${skipped}건 제외)`:''}`;
+  btn.style.display='none';
+  renderDailyTable();
+  toast(`${saved}건 저장 완료`);
+  setTimeout(()=>closePasteModal(),1500);
+}
+
+
 (async()=>{
+  if(sessionStorage.getItem('tom_auth')!=='1'){
+    document.getElementById('login-pw').focus();
+    return;
+  }
+  document.getElementById('login-screen').style.display='none';
   await loadAll();
   renderDash();
 })();
