@@ -593,9 +593,32 @@ async function aPost(body){setSS('saving');try{const r=await fetch(API,{method:'
 async function loadAll(){
   setSS('loading');
   [custs,lots,dailies,invs]=await Promise.all([aGet('customers'),aGet('lots'),aGet('daily'),aGet('invoices')]);
-  lots=lots.map(r=>({...r,qty:n(r.qty),price:n(r.price)}));
-  dailies=dailies.map(r=>({...r,proc:n(r.proc),normal:n(r.normal),noBoot:n(r.noBoot),abnormal:n(r.abnormal),cumul:n(r.cumul),remain:n(r.remain)}));
-  invs=invs.map(r=>({...r,amount:n(r.amount),total:n(r.total)}));
+  // 문자열 정규화 — 공백 제거, country/biz 대문자
+  lots=lots.map(r=>({...r,
+    qty:n(r.qty),price:n(r.price),
+    country:String(r.country||'').trim().toUpperCase(),
+    biz:String(r.biz||'').trim().toUpperCase(),
+    lotNo:String(r.lotNo||r.id||'').trim(),
+    customerName:String(r.customerName||'').trim(),
+    done:String(r.done||'0').trim(),
+  }));
+  dailies=dailies.map(r=>({...r,
+    proc:n(r.proc),normal:n(r.normal),noBoot:n(r.noBoot),abnormal:n(r.abnormal),cumul:n(r.cumul),remain:n(r.remain),
+    country:String(r.country||'').trim().toUpperCase(),
+    biz:String(r.biz||'').trim().toUpperCase(),
+    lotId:String(r.lotId||'').trim(),
+    done:String(r.done||'0').trim(),
+  }));
+  invs=invs.map(r=>({...r,
+    amount:n(r.amount),total:n(r.total),
+    country:String(r.country||'').trim().toUpperCase(),
+    biz:String(r.biz||'').trim().toUpperCase(),
+  }));
+  custs=custs.map(r=>({...r,
+    country:String(r.country||'').trim().toUpperCase(),
+    biz:String(r.biz||'').trim().toUpperCase(),
+    name:String(r.name||'').trim(),
+  }));
 }
 
 // ── Utils ──
@@ -634,7 +657,8 @@ function nav(p){
   document.getElementById('pg-'+p).classList.add('on');
   const idx={dash:0,progress:1,lotreg:2,daily:3,invoice:4,revenue:5,country:6,customers:7};
   document.querySelectorAll('.ni')[idx[p]].classList.add('on');
-  const map={dash:renderDash,progress:renderProg,lotreg:renderLotTable,daily:renderDailyTable,invoice:renderInvTable,revenue:renderRev,country:renderCountry,customers:renderCusts};
+  const map={dash:renderDash,progress:renderProg,lotreg:renderLotTable,daily:renderDailyTable,invoice:renderInvTable,revenue:renderRev,country:renderCountry,
+    customers:async()=>{custs=await aGet('customers');custs=custs.map(r=>({...r,country:String(r.country||'').trim().toUpperCase(),biz:String(r.biz||'').trim().toUpperCase(),name:String(r.name||'').trim()}));renderCusts();}};
   if(map[p])map[p]();
 }
 function setF(el,key){flt[key]=el.dataset.v;document.querySelectorAll(`[data-k="${key}"]`).forEach(e=>e.classList.remove('on'));el.classList.add('on');renderProg();}
@@ -1152,7 +1176,12 @@ async function saveCust(){
   const name=document.getElementById('cu-name').value.trim();if(!name){toast('이름 필수',1);return;}
   const rec={id:Date.now(),name,country:document.getElementById('cu-co').value,biz:document.getElementById('cu-biz').value,contact:document.getElementById('cu-contact').value.trim(),currency:document.getElementById('cu-cur').value,note:document.getElementById('cu-note').value.trim()};
   const res=await aPost({action:'append',sheet:'customers',data:rec});
-  if(!res.error){custs.push(rec);const ok=document.getElementById('cu-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',2000);renderCusts();toast(name+' 등록');}
+  if(!res.error){
+    custs=await aGet('customers');
+    custs=custs.map(r=>({...r,country:String(r.country||'').trim().toUpperCase(),biz:String(r.biz||'').trim().toUpperCase(),name:String(r.name||'').trim()}));
+    const ok=document.getElementById('cu-ok');ok.style.display='inline';setTimeout(()=>ok.style.display='none',2000);
+    renderCusts();toast(name+' 등록');
+  }
 }
 function renderCusts(){
   const tb=document.getElementById('cu-tb');
