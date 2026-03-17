@@ -53,7 +53,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-h
 /* Editable cell */
 .ec{width:100%;height:100%;padding:8px 10px;border:none;background:transparent;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--tx);outline:none;display:block}
 .ec:focus{background:#EEF4FF;border-radius:4px}
-.ec.mono{font-family:'DM Mono',monospace;font-size:12px}
+.ec.mono{font-family:var(--font-mono);font-size:12px}
 .ec.num{text-align:right}
 .ec.sm-num{width:80px}
 select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239aa0ad'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:10px}
@@ -149,15 +149,15 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 .dram-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .dram-field{display:flex;flex-direction:column;gap:3px}
 .dram-field label{font-size:11px;color:#1e40af;font-weight:500}
-.dram-field input{padding:7px 10px;border:1px solid #bfdbfe;border-radius:var(--rs);font-size:13px;background:#fff;font-family:'DM Mono',monospace;color:var(--tx);width:100%}
+.dram-field input{padding:7px 10px;border:1px solid #bfdbfe;border-radius:var(--rs);font-size:13px;background:#fff;font-family:var(--font-mono);color:var(--tx);width:100%}
 .dram-field input:focus{outline:none;border-color:var(--navy)}
 .dram-total{margin-top:8px;font-size:12px;color:#1e40af;font-weight:500;text-align:right}
 
 /* DRAM breakdown in table */
 .dram-mini{display:flex;gap:6px;font-size:11px}
-.dm-n{color:#166534;font-family:'DM Mono',monospace}
-.dm-b{color:#92400e;font-family:'DM Mono',monospace}
-.dm-a{color:#991b1b;font-family:'DM Mono',monospace}
+.dm-n{color:#166534;font-family:var(--font-mono)}
+.dm-b{color:#92400e;font-family:var(--font-mono)}
+.dm-a{color:#991b1b;font-family:var(--font-mono)}
 
 /* Charts */
 .cw{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:12px}
@@ -232,13 +232,6 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 <div class="pg on" id="pg-dash">
   <div class="ph"><h1>대시보드</h1><p id="dash-dt"></p></div>
   <div id="dash-al"></div>
-
-  <!-- 전체 합산 -->
-  <div class="card-t">전체 합산</div>
-  <div class="mg mg4" id="d-total"></div>
-
-  <!-- LOT Progress: 지역 × 사업 -->
-  <div class="card-t" style="margin-top:4px">LOT 진행 현황 — 지역 · 사업별</div>
   <div id="d-lot-matrix"></div>
 </div>
 
@@ -389,7 +382,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
       <!-- 컬럼 형식 안내 -->
       <div style="margin-top:12px;background:#EEF4FF;border:1px solid #bfdbfe;border-radius:var(--rs);padding:10px 14px;font-size:12px;color:#1e40af">
         <div style="font-weight:600;margin-bottom:6px">📋 엑셀 컬럼 순서 (그대로 복사하면 됩니다)</div>
-        <div style="display:grid;grid-template-columns:repeat(9,auto);gap:0;font-family:'DM Mono',monospace;font-size:11px;overflow-x:auto">
+        <div style="display:grid;grid-template-columns:repeat(9,auto);gap:0;font-family:var(--font-mono);font-size:11px;overflow-x:auto">
           <div style="padding:3px 10px;background:#1e40af;color:#fff;border-radius:4px 0 0 4px;white-space:nowrap">Region</div>
           <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch</div>
           <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch Qt'y</div>
@@ -408,7 +401,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
     <div style="padding:16px 24px;flex-shrink:0">
       <textarea id="paste-area"
         placeholder="여기에 Ctrl+V로 붙여넣으세요&#10;&#10;예시:&#10;2024-01-15&#9;LOT-001&#9;500&#9;480&#9;15&#9;5&#9;정상&#10;2024-01-15&#9;LOT-002&#9;300&#9;0&#9;0&#9;0&#9;&#10;2024-01-16&#9;LOT-001&#9;450&#9;440&#9;8&#9;2&#9;"
-        style="width:100%;height:140px;padding:12px;border:1px solid var(--bd2);border-radius:var(--rs);font-family:'DM Mono',monospace;font-size:12px;background:var(--bg);color:var(--tx);resize:none;line-height:1.6"
+        style="width:100%;height:140px;padding:12px;border:1px solid var(--bd2);border-radius:var(--rs);font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--tx);resize:none;line-height:1.6"
         oninput="parsePaste()"></textarea>
     </div>
 
@@ -725,32 +718,21 @@ function setCoPeriod(el,v){coPeriod=v;document.querySelectorAll('[data-k="co-per
 // ── 대시보드 ──
 function renderDash(){
   document.getElementById('dash-dt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
-  // 경고
+
   const over=lots.filter(l=>lotSt(l)==='overdue');
   const near=lots.filter(l=>lotSt(l)==='inprog'&&l.targetDate&&diffD(today(),l.targetDate)>=0&&diffD(today(),l.targetDate)<=3);
   const als=[];
-  if(over.length>0)als.push('<div class="alert al-bad">⚠ 지연 LOT '+over.length+'건: '+over.map(l=>l.lotNo||l.id).join(', ')+'</div>');
-  if(near.length>0)als.push('<div class="alert al-warn">완료 기한 3일 이내 LOT '+near.length+'건</div>');
+  if(over.length>0)als.push('<div class="alert al-bad"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0;margin-right:6px"></span>지연 LOT '+over.length+'건 — '+over.map(l=>l.lotNo||l.id).join(', ')+'</div>');
+  if(near.length>0)als.push('<div class="alert al-warn"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0;margin-right:6px"></span>완료 기한 3일 이내 LOT '+near.length+'건</div>');
   document.getElementById('dash-al').innerHTML=als.join('');
 
-  // ── 전체 합산 ──
   const COUNTRY_BIZ={SG:['DRAM','SSD','MID'],HK:['DRAM']};
-  const allAct=lots.filter(l=>lotSt(l)!=='done');
-  const allDone=lots.filter(l=>lotSt(l)==='done');
-  const allRem=allAct.reduce((s,l)=>s+lotRemain(l),0);
-  const allQty=lots.reduce((s,l)=>s+n(l.qty),0);
-  const allProc=lots.reduce((s,l)=>s+lotCumul(l.id),0);
-  const allPct=allQty>0?Math.round(allProc/allQty*100):0;
-
-  document.getElementById('d-total').innerHTML=
-    mc('진행 중 LOT',allAct.length+'건','완료 '+allDone.length+'건 / 전체 '+lots.length+'건',BC.DRAM)+
-    mc('전체 진행률',allPct+'%','누적 처리 '+fmtN(allProc),BC.SSD)+
-    mc('총 잔량',fmtN(allRem),'처리 필요','#92400e')+
-    mc('지연 LOT',over.length+'건',over.length>0?'즉시 확인':near.length>0?'완료 임박 '+near.length+'건':'정상',over.length>0?'#dc2626':'#888');
-
-  // ── LOT Progress 매트릭스 ──
   const lotRows=['SG','HK'].map(co=>{
+    const coLots=lots.filter(l=>l.country===co);
+    const coAct=coLots.filter(l=>lotSt(l)!=='done').length;
+    const coDone=coLots.filter(l=>lotSt(l)==='done').length;
     const bizList=COUNTRY_BIZ[co];
+
     const bizCards=bizList.map(b=>{
       const bl=lots.filter(l=>l.biz===b&&l.country===co);
       const actLots=bl.filter(l=>lotSt(l)!=='done');
@@ -758,72 +740,86 @@ function renderDash(){
       const ovLots=bl.filter(l=>lotSt(l)==='overdue');
       const totQty=bl.reduce((s,l)=>s+n(l.qty),0);
       const totProc=bl.reduce((s,l)=>s+lotCumul(l.id),0);
-      const totRem=bl.reduce((s,l)=>s+lotRemain(l),0);
+      const totRem=Math.max(0,totQty-totProc);
       const pct=totQty>0?Math.round(totProc/totQty*100):0;
-      const pbC=ovLots.length>0?'#dc2626':pct>=80?'#0F6E56':BC[b];
+      const isDelayed=ovLots.length>0;
+      const pctColor=isDelayed?'#dc2626':pct>=80?BC[b]:pct>=50?BC[b]:'#92400e';
+      const pbColor=isDelayed?'#dc2626':BC[b];
+      const bizKey=b.toLowerCase()==='mid'?'mid':b.toLowerCase();
 
-      // 진행중 LOT 목록 (최대 3개)
-      const progLots=actLots.slice(0,4).map(lot=>{
-        const lPct=lotPct(lot);
-        const lRem=lotRemain(lot);
+      // LOT 목록 (진행중만, 최대 4건)
+      const lotItems=actLots.slice(0,4).map(lot=>{
         const st=lotSt(lot);
+        const rem=lotRemain(lot);
         const dd=lot.targetDate?diffD(today(),lot.targetDate):null;
-        const ddColor=dd===null?'var(--tx3)':dd<0?'#dc2626':dd<=3?'#92400e':'var(--tx2)';
-        const ddText=dd===null?'-':dd<0?'D+'+Math.abs(dd):'D-'+dd;
-        return '<div style="padding:7px 0;border-bottom:1px solid var(--bd)">'
-          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-          +'<span style="font-size:12px;font-weight:600;font-family:\'DM Mono\',monospace">'+( lot.lotNo||lot.id)+'</span>'
-          +'<span style="font-size:11px;color:'+ddColor+';font-weight:500">'+ddText+'</span>'
-          +'</div>'
-          +'<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:5px">'
-          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">입고</div><div style="font-size:12px;font-weight:500">'+fmtN(n(lot.qty))+'</div></div>'
-          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">처리</div><div style="font-size:12px;font-weight:500;color:'+BC[b]+'">'+fmtN(lotCumul(lot.id))+'</div></div>'
-          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">잔량</div><div style="font-size:12px;font-weight:500;color:'+(lRem>0?'#92400e':'#166534')+'">'+fmtN(lRem)+'</div></div>'
-          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">진행률</div><div style="font-size:12px;font-weight:500;color:'+pbC+'">'+lPct+'%</div></div>'
-          +'</div>'
-          +'<div style="height:4px;background:var(--bd);border-radius:2px;overflow:hidden">'
-          +'<div style="height:100%;border-radius:2px;background:'+pbC+';width:'+lPct+'%"></div>'
-          +'</div>'
-          +'</div>';
+        const ddText=dd===null?'-':dd<0?'D+'+Math.abs(dd):(dd===0?'D-Day':'D-'+dd);
+        const ddColor=dd===null?'var(--tx2)':dd<0?'#dc2626':dd<=3?'#B45309':'var(--tx3)';
+        const bdg=st==='overdue'
+          ?'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fee2e2;color:#991b1b">지연</span>'
+          :'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af">진행중</span>';
+        return'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--bd)">'
+          +'<span style="font-size:12px;font-weight:600;font-family:var(--font-mono)">'+( lot.lotNo||lot.id)+'</span>'
+          +'<div style="display:flex;align-items:center;gap:8px">'
+          +'<span style="font-size:12px;color:var(--tx2)">잔량 '+fmtN(rem)+'</span>'
+          +'<span style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+'</span>'
+          +bdg
+          +'</div></div>';
       }).join('');
+      const moreMsg=actLots.length>4?'<div style="font-size:11px;color:var(--tx3);padding:6px 0;text-align:center">+'+( actLots.length-4)+'건 더</div>':'';
+      const emptyMsg=actLots.length===0?'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">'+(doneLots.length>0?'✓ 전체 완료':'LOT 없음')+'</div>':'';
+      const footColor=isDelayed?'#dc2626':'var(--tx3)';
+      const footText=(isDelayed?'지연 '+ovLots.length+'건 · ':'')+( actLots.length>0?'진행 '+actLots.length+'건 · ':'')+( doneLots.length>0?'완료 '+doneLots.length+'건':'');
 
-      const emptyMsg=actLots.length===0?'<div style="padding:12px 0;font-size:12px;color:var(--tx3);text-align:center">'+(doneLots.length>0?'✓ 전체 완료 ('+doneLots.length+'건)':'진행 중인 LOT 없음')+'</div>':'';
-      const moreMsg=actLots.length>4?'<div style="font-size:11px;color:var(--tx3);padding:6px 0;text-align:center">+'+( actLots.length-4)+'건 더 있음</div>':'';
+      const BIZ_BORDER={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
 
-      return '<div class="card" style="border-top:3px solid '+BC[b]+'">'
-        // 헤더
-        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)">'
-        +'<div>'
-        +'<div style="font-size:12px;font-weight:600;color:'+BC[b]+';margin-bottom:3px">'+BN[b]+'</div>'
-        +'<div style="font-size:11px;color:var(--tx3)">진행 '+actLots.length+'건 · 완료 '+doneLots.length+'건'+(ovLots.length>0?' · <span style="color:#dc2626">지연 '+ovLots.length+'건</span>':'')+'</div>'
+      return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;border-top:3px solid '+BIZ_BORDER[b]+'">'
+        // 사업명
+        +'<div style="font-size:17px;font-weight:600;color:'+BC[b]+';margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--bd)">'+BN[b]+'</div>'
+        // 진행률 대형
+        +'<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">'
+        +'<span style="font-size:36px;font-weight:600;letter-spacing:-.04em;line-height:1;color:'+pctColor+'">'+pct+'</span>'
+        +'<span style="font-size:13px;color:var(--tx2)">% 완료</span>'
         +'</div>'
-        +'<div style="text-align:right">'
-        +'<div style="font-size:18px;font-weight:600;color:'+pbC+'">'+pct+'%</div>'
-        +'<div style="font-size:10px;color:var(--tx3)">전체 진행률</div>'
+        // 프로그레스 바
+        +'<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:14px">'
+        +'<div style="height:100%;border-radius:3px;background:'+pbColor+';width:'+pct+'%"></div>'
         +'</div>'
-        +'</div>'
-        // 전체 집계 바
-        +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px">'
-        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">총 입고</div><div style="font-size:13px;font-weight:500">'+fmtN(totQty)+'</div></div>'
-        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">누적 처리</div><div style="font-size:13px;font-weight:500;color:'+BC[b]+'">'+fmtN(totProc)+'</div></div>'
-        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">잔량</div><div style="font-size:13px;font-weight:500;color:'+(totRem>0?'#92400e':'#166534')+'">'+fmtN(totRem)+'</div></div>'
-        +'</div>'
-        +'<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:10px">'
-        +'<div style="height:100%;border-radius:3px;background:'+pbC+';width:'+pct+'%"></div>'
+        // 수치 3개
+        +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px">'
+        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono)">'+fmtN(totQty)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">입고</div></div>'
+        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono);color:'+BC[b]+'">'+fmtN(totProc)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">처리</div></div>'
+        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono);color:'+(totRem===0?'#166534':isDelayed?'#dc2626':'#B45309')+'">'+fmtN(totRem)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">잔량</div></div>'
         +'</div>'
         // LOT 목록
-        +progLots+emptyMsg+moreMsg
+        +(actLots.length>0?lotItems+moreMsg:emptyMsg)
+        // 푸터
+        +'<div style="font-size:11px;color:'+footColor+';margin-top:10px">'+footText+'</div>'
         +'</div>';
-    }).join('');
+    });
 
-    const emptyCells=(3-bizList.length>0)?'<div></div>'.repeat(3-bizList.length):'';
-    return '<div style="margin-bottom:16px">'
-      +'<div style="font-size:14px;font-weight:600;color:'+CC[co]+';margin-bottom:8px">'+CN[co]+'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">'+bizCards+emptyCells+'</div>'
+    // 홍콩은 SSD/MID 빈 카드
+    const BIZ_BORDER={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
+    while(bizCards.length<3){
+      const emptyBiz=['SSD','MID'][bizCards.length-1]||'MID';
+      bizCards.push('<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;border-top:3px solid '+BIZ_BORDER[emptyBiz]+';opacity:.3">'
+        +'<div style="font-size:17px;font-weight:600;color:'+BC[emptyBiz]+';margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--bd)">'+BN[emptyBiz]+'</div>'
+        +'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:24px 0">해당 없음</div>'
+        +'</div>');
+    }
+
+    return'<div style="margin-bottom:8px">'
+      +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;margin-top:28px">'
+      +'<span style="font-size:22px;font-weight:600;letter-spacing:-.03em;color:'+CC[co]+'">'+CN[co]+'</span>'
+      +'<div style="width:1px;height:16px;background:var(--bd2);margin:0 2px"></div>'
+      +'<span style="font-size:13px;color:var(--tx2)">진행 '+coAct+'건 · 완료 '+coDone+'건</span>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">'+bizCards.join('')+'</div>'
       +'</div>';
   }).join('');
+
   document.getElementById('d-lot-matrix').innerHTML=lotRows;
 }
+
 
 // ── LOT 진행 현황 ──
 function renderProg(){
@@ -846,7 +842,7 @@ function renderProg(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
         <div>
           <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">${lot.lotNo||lot.id}</span>
+            <span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">${lot.lotNo||lot.id}</span>
             ${btag(lot.biz)} ${ctag(lot.country)} ${stBdg(st)}
           </div>
           <div style="font-size:12px;color:var(--tx2)">${lot.customerName||''} ${lot.product?'· '+lot.product:''}</div>
@@ -1005,7 +1001,7 @@ function renderDpCards(){
       <!-- 카드 헤더 -->
       <div onclick="toggleAcc(${lot.id})" style="padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:${isOpen?'var(--bg)':'var(--card)'};transition:.15s">
         <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
-          <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace;flex-shrink:0">${lot.lotNo||lot.id}</span>
+          <span style="font-size:14px;font-weight:600;font-family:var(--font-mono);flex-shrink:0">${lot.lotNo||lot.id}</span>
           <div style="display:flex;gap:10px;font-size:12px;color:var(--tx2)">
             <span>입고 <b style="color:var(--tx)">${fmtN(n(lot.qty))}</b></span>
             <span>처리 <b style="color:${BC[dpBiz]}">${fmtN(cum)}</b></span>
@@ -1048,11 +1044,11 @@ function renderAccBody(lot){
     :hist.map(r=>{
       const tot=isDram?(n(r.normal)+n(r.noBoot)+n(r.abnormal))||n(r.proc):n(r.proc);
       return`<div style="display:grid;grid-template-columns:90px ${isDram?'55px 55px 55px ':' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px;align-items:center">
-        <span style="font-family:'DM Mono',monospace">${r.date}</span>
-        ${isDram?`<span style="font-family:'DM Mono',monospace;color:#166534">${fmtN(n(r.normal))}</span><span style="font-family:'DM Mono',monospace;color:#92400e">${fmtN(n(r.noBoot))}</span><span style="font-family:'DM Mono',monospace;color:#991b1b">${fmtN(n(r.abnormal))}</span>`:''}
-        <span style="font-family:'DM Mono',monospace;font-weight:600">${fmtN(tot)}</span>
-        <span style="font-family:'DM Mono',monospace;color:var(--tx2)">${fmtN(n(r.cumul))}</span>
-        <span style="font-family:'DM Mono',monospace;color:${n(r.remain)>0?'#92400e':'#166534'}">${fmtN(n(r.remain))}</span>
+        <span style="font-family:var(--font-mono)">${r.date}</span>
+        ${isDram?`<span style="font-family:var(--font-mono);color:#166534">${fmtN(n(r.normal))}</span><span style="font-family:var(--font-mono);color:#92400e">${fmtN(n(r.noBoot))}</span><span style="font-family:var(--font-mono);color:#991b1b">${fmtN(n(r.abnormal))}</span>`:''}
+        <span style="font-family:var(--font-mono);font-weight:600">${fmtN(tot)}</span>
+        <span style="font-family:var(--font-mono);color:var(--tx2)">${fmtN(n(r.cumul))}</span>
+        <span style="font-family:var(--font-mono);color:${n(r.remain)>0?'#92400e':'#166534'}">${fmtN(n(r.remain))}</span>
         <span>${r.done==='1'?'<span class="bdg b-done" style="font-size:10px">완료</span>':''}</span>
         <span style="color:var(--tx3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
         <button class="btn del sm" style="padding:2px 6px;font-size:11px" onclick="delDailyAcc(${r.id},${lot.id})">✕</button>
@@ -1302,11 +1298,11 @@ function renderRev(){
           <tbody>
           ${rows.map((r,i)=>`<tr style="${i%2===0?'':'background:var(--bg)'}">
             <td style="padding:7px 12px;font-weight:500">${r.label}</td>
-            <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${BC.DRAM}">${fmtM(r.amt)}</td>
-            <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:${CC.HK}">${r.hk>0?fmtM(r.hk):'—'}</td>
-            <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:${CC.SG}">${r.sg>0?fmtM(r.sg):'—'}</td>
+            <td style="padding:7px 12px;text-align:right;font-family:var(--font-mono);font-weight:600;color:${BC.DRAM}">${fmtM(r.amt)}</td>
+            <td style="padding:7px 12px;text-align:right;font-family:var(--font-mono);color:${CC.HK}">${r.hk>0?fmtM(r.hk):'—'}</td>
+            <td style="padding:7px 12px;text-align:right;font-family:var(--font-mono);color:${CC.SG}">${r.sg>0?fmtM(r.sg):'—'}</td>
             <td style="padding:7px 12px;text-align:right;color:var(--tx2)">${r.cnt}건</td>
-            <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--tx2)">${fmtM(cumul[i])}</td>
+            <td style="padding:7px 12px;text-align:right;font-family:var(--font-mono);color:var(--tx2)">${fmtM(cumul[i])}</td>
             <td style="padding:7px 12px">
               <div style="display:flex;align-items:center;gap:6px">
                 <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden;min-width:60px">
@@ -1318,9 +1314,9 @@ function renderRev(){
           </tr>`).join('')}
           <tr style="border-top:2px solid var(--bd);background:var(--bg)">
             <td style="padding:8px 12px;font-weight:600">합계</td>
-            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${BC.DRAM}">${fmtM(totB)}</td>
-            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${CC.HK}">${fmtM(hkB)}</td>
-            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${CC.SG}">${fmtM(sgB)}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:var(--font-mono);font-weight:700;color:${BC.DRAM}">${fmtM(totB)}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:var(--font-mono);font-weight:600;color:${CC.HK}">${fmtM(hkB)}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:var(--font-mono);font-weight:600;color:${CC.SG}">${fmtM(sgB)}</td>
             <td style="padding:8px 12px;text-align:right;font-weight:600">${cntB}건</td>
             <td colspan="2"></td>
           </tr>
@@ -1376,11 +1372,11 @@ function renderRev(){
   if(!sorted.length){tb.innerHTML=`<tr><td colspan="11"><div class="empty">인보이스가 없습니다</div></td></tr>`;return;}
   tb.innerHTML=sorted.map(r=>`<tr>
     <td style="padding:8px 10px">${r.date}</td>
-    <td style="padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px">${r.no}</td>
-    <td style="padding:8px 10px;font-family:'DM Mono',monospace;font-size:11px;color:var(--tx2)">${r.lotNo||'-'}</td>
+    <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px">${r.no}</td>
+    <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;color:var(--tx2)">${r.lotNo||'-'}</td>
     <td style="padding:8px 10px">${btag(r.biz)}</td><td style="padding:8px 10px">${ctag(r.country)}</td>
     <td style="padding:8px 10px">${r.customerName||''}</td>
-    <td style="padding:8px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:500">${fmtN(n(r.amount))}</td>
+    <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-weight:500">${fmtN(n(r.amount))}</td>
     <td style="padding:8px 10px">${r.currency||'USD'}</td>
     <td style="padding:8px 10px">${dday(r.due)}</td>
     <td style="padding:8px 10px">${ivStBdg(r)}</td>
@@ -1682,7 +1678,7 @@ function renderPastePreview(){
       ?`<span style="font-size:11px;font-weight:500;color:#166534;white-space:nowrap">✓ ${BN[r.lot.biz]||''}</span>`
       :`<span style="font-size:11px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
     return`<tr style="${i%2===0?'':'background:var(--bg)'}">
-      <td style="padding:7px 10px;white-space:nowrap;font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
+      <td style="padding:7px 10px;white-space:nowrap;font-family:var(--font-mono);font-size:12px">${r.date}</td>
       <td style="padding:7px 10px">${r.country?ctag(r.country):`<span style="font-size:11px;color:var(--tx3)">${r.region||'-'}</span>`}</td>
       <td style="padding:4px 6px">
         <select onchange="setParsedLot(${i},this.value)"
@@ -1691,10 +1687,10 @@ function renderPastePreview(){
           ${lots.map(l=>`<option value="${l.id}"${r.lot&&String(r.lot.id)===String(l.id)?' selected':''}>${l.lotNo||l.id} (${BN[l.biz]})</option>`).join('')}
         </select>
       </td>
-      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmtN(r.proc)}</td>
-      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#166534">${isDram||r.normal>0?fmtN(r.normal):'—'}</td>
-      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#92400e">${isDram||r.noBoot>0?fmtN(r.noBoot):'—'}</td>
-      <td style="padding:7px 10px;text-align:right;font-family:'DM Mono',monospace;color:#991b1b">${isDram||r.abnormal>0?fmtN(r.abnormal):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-weight:600">${fmtN(r.proc)}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#166534">${isDram||r.normal>0?fmtN(r.normal):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#92400e">${isDram||r.noBoot>0?fmtN(r.noBoot):'—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#991b1b">${isDram||r.abnormal>0?fmtN(r.abnormal):'—'}</td>
       <td style="padding:7px 10px;font-size:12px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
       <td style="padding:7px 10px">${statusHtml}</td>
     </tr>`;
