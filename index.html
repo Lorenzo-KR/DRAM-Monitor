@@ -230,14 +230,26 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 
 <!-- ── 대시보드 ── -->
 <div class="pg on" id="pg-dash">
-  <div class="ph"><h1>대시보드</h1><p id="dash-dt"></p></div>
+  <div class="ph-row">
+    <div class="ph"><h1>대시보드</h1><p id="dash-dt"></p></div>
+    <select id="dash-mo" onchange="renderDash()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx);margin-top:4px">
+      <option value="month">이달</option>
+      <option value="all">전체 누적</option>
+    </select>
+  </div>
   <div id="dash-al"></div>
-  <div class="card-t">LOT 진행 현황</div>
-  <div class="mg mg4" id="d-lot"></div>
-  <div class="card-t">이달 매출</div>
-  <div class="mg mg3" id="d-rev"></div>
-  <div class="card-t">사업별 요약 — 국가별</div>
-  <div id="d-biz"></div>
+
+  <!-- 전체 합산 -->
+  <div class="card-t">전체 합산</div>
+  <div class="mg mg4" id="d-total"></div>
+
+  <!-- 매출: 지역 × 사업 -->
+  <div class="card-t" id="d-rev-title">매출 — 지역 · 사업별</div>
+  <div id="d-rev-matrix"></div>
+
+  <!-- LOT Progress: 지역 × 사업 -->
+  <div class="card-t" style="margin-top:4px">LOT 진행 현황 — 지역 · 사업별</div>
+  <div id="d-lot-matrix"></div>
 </div>
 
 <!-- ── LOT 진행 현황 ── -->
@@ -667,61 +679,138 @@ function setCoPeriod(el,v){coPeriod=v;document.querySelectorAll('[data-k="co-per
 // ── 대시보드 ──
 function renderDash(){
   document.getElementById('dash-dt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
-  const active=lots.filter(l=>lotSt(l)!=='done');
-  const done=lots.filter(l=>lotSt(l)==='done');
+  const isMonth=document.getElementById('dash-mo').value==='month';
+  const period=isMonth?thisMonth():null;
+  const filterInv=r=>period?String(r.date||'').startsWith(period):true;
+
+  // 경고
   const over=lots.filter(l=>lotSt(l)==='overdue');
   const near=lots.filter(l=>lotSt(l)==='inprog'&&l.targetDate&&diffD(today(),l.targetDate)>=0&&diffD(today(),l.targetDate)<=3);
-  const totalRem=active.reduce((s,l)=>s+lotRemain(l),0);
+  const als=[];
+  if(over.length>0)als.push('<div class="alert al-bad">⚠ 지연 LOT '+over.length+'건: '+over.map(l=>l.lotNo||l.id).join(', ')+'</div>');
+  if(near.length>0)als.push('<div class="alert al-warn">완료 기한 3일 이내 LOT '+near.length+'건</div>');
+  document.getElementById('dash-al').innerHTML=als.join('');
 
-  document.getElementById('d-lot').innerHTML=
-    mc('진행 중 LOT',active.length+'건','전체 '+lots.length+'건',BC.DRAM)+
-    mc('완료 LOT',done.length+'건','누적',BC.SSD)+
-    mc('지연 LOT',over.length+'건',over.length>0?'즉시 확인':'정상',over.length>0?'#dc2626':'#888')+
-    mc('총 잔량',fmtN(totalRem),'처리 필요','#92400e');
+  // ── 전체 합산 ──
+  const allAct=lots.filter(l=>lotSt(l)!=='done');
+  const allDone=lots.filter(l=>lotSt(l)==='done');
+  const allRem=allAct.reduce((s,l)=>s+lotRemain(l),0);
+  const allInv=invs.filter(filterInv);
+  const allBill=sum(allInv,'amount');
+  const allQty=lots.reduce((s,l)=>s+n(l.qty),0);
+  const allProc=lots.reduce((s,l)=>s+lotCumul(l.id),0);
+  const allPct=allQty>0?Math.round(allProc/allQty*100):0;
 
-  const mi=invs.filter(r=>String(r.date||'').startsWith(thisMonth()));
-  const totB=sum(mi,'amount');
-  document.getElementById('d-rev').innerHTML=
-    mc('이달 청구액',fmtM(totB),'VAT 제외',BC.DRAM)+
-    mc('홍콩',fmtM(sum(mi.filter(r=>r.country==='HK'),'amount')),'',CC.HK)+
-    mc('싱가포르',fmtM(sum(mi.filter(r=>r.country==='SG'),'amount')),'',CC.SG);
+  document.getElementById('d-total').innerHTML=
+    mc('진행 중 LOT',allAct.length+'건','완료 '+allDone.length+'건 / 전체 '+lots.length+'건',BC.DRAM)+
+    mc('총 입고',fmtN(allQty),'누적 처리 '+fmtN(allProc)+' ('+allPct+'%)',BC.SSD)+
+    mc('총 잔량',fmtN(allRem),'처리 필요','#92400e')+
+    mc((isMonth?'이달':'전체')+' 청구액',fmtM(allBill),'전 사업 합산',BC.DRAM);
 
-  // 국가 상위 > 사업 하위 (싱가포르: DRAM+SSD+MID, 홍콩: DRAM만)
+  // ── 매출 매트릭스: 지역별 상단, 사업별 하단 ──
   const COUNTRY_BIZ={SG:['DRAM','SSD','MID'],HK:['DRAM']};
-  document.getElementById('d-biz').innerHTML=['SG','HK'].map(co=>{
+  const revRows=['SG','HK'].map(co=>{
     const bizList=COUNTRY_BIZ[co];
-    const coLabel=CN[co];const coColor=CC[co];
+    const coInv=invs.filter(r=>r.country===co&&filterInv(r));
+    const coTotal=sum(coInv,'amount');
+    const bizCells=bizList.map(b=>{
+      const bInv=coInv.filter(r=>r.biz===b);
+      const amt=sum(bInv,'amount');
+      const lotCnt=invs.filter(r=>r.country===co&&r.biz===b&&filterInv(r)).length;
+      return '<div class="card" style="border-top:3px solid '+BC[b]+'">'
+        +'<div style="font-size:11px;font-weight:600;color:'+BC[b]+';margin-bottom:8px">'+BN[b]+'</div>'
+        +'<div style="font-size:20px;font-weight:600;letter-spacing:-.02em;color:'+BC[b]+'">'+fmtM(amt)+'</div>'
+        +'<div style="font-size:11px;color:var(--tx3);margin-top:3px">'+lotCnt+'건</div>'
+        +'</div>';
+    }).join('');
+    // 빈 칸 채우기 (홍콩은 1개 사업이라 2칸 여백)
+    const emptyCells=(3-bizList.length>0)?'<div></div>'.repeat(3-bizList.length):'';
+    return '<div style="margin-bottom:14px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+      +'<span style="font-size:14px;font-weight:600;color:'+CC[co]+'">'+CN[co]+'</span>'
+      +'<span style="font-size:13px;font-weight:600;color:var(--tx)">합계 '+fmtM(coTotal)+'</span>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">'+bizCells+emptyCells+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('d-rev-title').textContent=(isMonth?'이달 매출':'전체 누적 매출')+' — 지역 · 사업별';
+  document.getElementById('d-rev-matrix').innerHTML=revRows;
+
+  // ── LOT Progress 매트릭스: 지역 × 사업별 진행 LOT 카드 ──
+  const lotRows=['SG','HK'].map(co=>{
+    const bizList=COUNTRY_BIZ[co];
     const bizCards=bizList.map(b=>{
       const bl=lots.filter(l=>l.biz===b&&l.country===co);
-      const actB=bl.filter(l=>lotSt(l)!=='done');
-      const doneB=bl.filter(l=>lotSt(l)==='done');
-      const ovB=bl.filter(l=>lotSt(l)==='overdue');
-      const remB=actB.reduce((s,l)=>s+lotRemain(l),0);
-      const iv=invs.filter(r=>r.biz===b&&r.country===co&&String(r.date||'').startsWith(thisMonth()));
-      const bB=sum(iv,'amount');
-      return`<div class="card" style="border-top:3px solid ${BC[b]}">
-        <div style="font-size:12px;font-weight:600;color:${BC[b]};margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--bd)">${BN[b]}</div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--tx2)">진행</span><span style="font-weight:500">${actB.length}건${ovB.length>0?` <span style="color:#dc2626">(지연 ${ovB.length})</span>`:''}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--tx2)">완료</span><span style="font-weight:500;color:#166534">${doneB.length}건</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--tx2)">잔량</span><span style="font-weight:500">${fmtN(remB)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span style="color:var(--tx2)">이달 청구</span><span style="font-weight:500">${fmtM(bB)}</span></div>
-      </div>`;
-    }).join('');
-    const gridCols='repeat(3,minmax(0,1fr))';
-    return`<div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:14px;font-weight:600;color:${coColor}">${coLabel}</span>
-        <span style="font-size:11px;color:var(--tx3);font-weight:400">${bizList.length}개 사업</span>
-      </div>
-      <div style="display:grid;grid-template-columns:${gridCols};gap:10px">${bizCards}</div>
-    </div>`;
-  }).join('');
+      const actLots=bl.filter(l=>lotSt(l)!=='done');
+      const doneLots=bl.filter(l=>lotSt(l)==='done');
+      const ovLots=bl.filter(l=>lotSt(l)==='overdue');
+      const totQty=bl.reduce((s,l)=>s+n(l.qty),0);
+      const totProc=bl.reduce((s,l)=>s+lotCumul(l.id),0);
+      const totRem=bl.reduce((s,l)=>s+lotRemain(l),0);
+      const pct=totQty>0?Math.round(totProc/totQty*100):0;
+      const pbC=ovLots.length>0?'#dc2626':pct>=80?'#0F6E56':BC[b];
 
-  const als=[];
-  if(over.length>0)als.push(`<div class="alert al-bad">⚠ 지연 LOT ${over.length}건: ${over.map(l=>l.lotNo||l.id).join(', ')}</div>`);
-  if(near.length>0)als.push(`<div class="alert al-warn">완료 기한 3일 이내 LOT ${near.length}건</div>`);
-  if(custs.length===0)als.push(`<div class="alert al-info"><a href="#" onclick="nav('customers');return false;" style="font-weight:600;text-decoration:underline">고객사 관리</a>에서 고객사를 먼저 등록하세요.</div>`);
-  document.getElementById('dash-al').innerHTML=als.join('');
+      // 진행중 LOT 목록 (최대 3개)
+      const progLots=actLots.slice(0,4).map(lot=>{
+        const lPct=lotPct(lot);
+        const lRem=lotRemain(lot);
+        const st=lotSt(lot);
+        const dd=lot.targetDate?diffD(today(),lot.targetDate):null;
+        const ddColor=dd===null?'var(--tx3)':dd<0?'#dc2626':dd<=3?'#92400e':'var(--tx2)';
+        const ddText=dd===null?'-':dd<0?'D+'+Math.abs(dd):'D-'+dd;
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--bd)">'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+          +'<span style="font-size:12px;font-weight:600;font-family:\'DM Mono\',monospace">'+( lot.lotNo||lot.id)+'</span>'
+          +'<span style="font-size:11px;color:'+ddColor+';font-weight:500">'+ddText+'</span>'
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:5px">'
+          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">입고</div><div style="font-size:12px;font-weight:500">'+fmtN(n(lot.qty))+'</div></div>'
+          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">처리</div><div style="font-size:12px;font-weight:500;color:'+BC[b]+'">'+fmtN(lotCumul(lot.id))+'</div></div>'
+          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">잔량</div><div style="font-size:12px;font-weight:500;color:'+(lRem>0?'#92400e':'#166534')+'">'+fmtN(lRem)+'</div></div>'
+          +'<div><div style="font-size:9px;color:var(--tx3);text-transform:uppercase;margin-bottom:1px">진행률</div><div style="font-size:12px;font-weight:500;color:'+pbC+'">'+lPct+'%</div></div>'
+          +'</div>'
+          +'<div style="height:4px;background:var(--bd);border-radius:2px;overflow:hidden">'
+          +'<div style="height:100%;border-radius:2px;background:'+pbC+';width:'+lPct+'%"></div>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+
+      const emptyMsg=actLots.length===0?'<div style="padding:12px 0;font-size:12px;color:var(--tx3);text-align:center">'+(doneLots.length>0?'✓ 전체 완료 ('+doneLots.length+'건)':'진행 중인 LOT 없음')+'</div>':'';
+      const moreMsg=actLots.length>4?'<div style="font-size:11px;color:var(--tx3);padding:6px 0;text-align:center">+'+( actLots.length-4)+'건 더 있음</div>':'';
+
+      return '<div class="card" style="border-top:3px solid '+BC[b]+'">'
+        // 헤더
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)">'
+        +'<div>'
+        +'<div style="font-size:12px;font-weight:600;color:'+BC[b]+';margin-bottom:3px">'+BN[b]+'</div>'
+        +'<div style="font-size:11px;color:var(--tx3)">진행 '+actLots.length+'건 · 완료 '+doneLots.length+'건'+(ovLots.length>0?' · <span style="color:#dc2626">지연 '+ovLots.length+'건</span>':'')+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:18px;font-weight:600;color:'+pbC+'">'+pct+'%</div>'
+        +'<div style="font-size:10px;color:var(--tx3)">전체 진행률</div>'
+        +'</div>'
+        +'</div>'
+        // 전체 집계 바
+        +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px">'
+        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">총 입고</div><div style="font-size:13px;font-weight:500">'+fmtN(totQty)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">누적 처리</div><div style="font-size:13px;font-weight:500;color:'+BC[b]+'">'+fmtN(totProc)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">잔량</div><div style="font-size:13px;font-weight:500;color:'+(totRem>0?'#92400e':'#166534')+'">'+fmtN(totRem)+'</div></div>'
+        +'</div>'
+        +'<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:10px">'
+        +'<div style="height:100%;border-radius:3px;background:'+pbC+';width:'+pct+'%"></div>'
+        +'</div>'
+        // LOT 목록
+        +progLots+emptyMsg+moreMsg
+        +'</div>';
+    }).join('');
+
+    const emptyCells=(3-bizList.length>0)?'<div></div>'.repeat(3-bizList.length):'';
+    return '<div style="margin-bottom:16px">'
+      +'<div style="font-size:14px;font-weight:600;color:'+CC[co]+';margin-bottom:8px">'+CN[co]+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">'+bizCards+emptyCells+'</div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('d-lot-matrix').innerHTML=lotRows;
 }
 
 // ── LOT 진행 현황 ──
