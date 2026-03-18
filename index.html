@@ -170,6 +170,54 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 .tw-wrap{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
 .tw-item{background:#1e293b;color:#fff;padding:9px 16px;border-radius:var(--rs);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .25s}
 .tw-item.show{opacity:1;transform:none}
+
+/* ── 모바일 최적화 ── */
+@media(max-width:768px){
+  .layout{flex-direction:column}
+  .sb{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--bd);padding:8px 0;flex-shrink:0;overflow-x:auto}
+  .sb-logo{display:none}
+  .sb-nav{display:flex;flex-direction:row;gap:2px;padding:0 8px;overflow-x:auto;white-space:nowrap}
+  .sb-sec{display:none}
+  .ni{padding:8px 12px;font-size:12px;border-radius:20px;flex-shrink:0}
+  .ni svg{display:none}
+  .main{padding:16px 14px}
+  .ph h1{font-size:20px}
+  .ph-row{flex-direction:column;gap:8px;align-items:flex-start}
+  .fb{gap:6px;flex-wrap:wrap}
+  .pill{font-size:11px;padding:5px 10px}
+  .mg.mg4{grid-template-columns:1fr 1fr}
+  .mg.mg3{grid-template-columns:1fr 1fr}
+  .fg.fg4{grid-template-columns:1fr 1fr}
+  .fg.fg2{grid-template-columns:1fr}
+  .etw{overflow-x:auto}
+  /* 대시보드 카드 그리드 모바일 */
+  #d-lot-matrix .lot-grid-3{grid-template-columns:1fr}
+  /* 일별 처리 아코디언 */
+  .lot-acc-card .acc-nums{grid-template-columns:1fr 1fr 1fr}
+  /* 인보이스 패널 */
+  #inv-panel{width:100vw}
+  /* LOT 진행 카드 */
+  .lc .lot-5col{grid-template-columns:repeat(3,1fr)}
+  /* 저장 피드백 */
+  #ss-bar{left:50%;transform:translateX(-50%)}
+}
+
+/* ── 저장 피드백 강화 ── */
+#ss-bar{
+  position:fixed;bottom:24px;right:24px;
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);border:0.5px solid var(--bd);
+  border-radius:20px;padding:8px 16px;
+  font-size:13px;font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+  z-index:400;transition:all .3s;
+}
+#ss-bar.saving{border-color:#1B4F8A;background:#EEF4FF;color:#1B4F8A}
+#ss-bar.ok{border-color:#0F6E56;background:#E1F5EE;color:#0F6E56}
+#ss-bar.err{border-color:#dc2626;background:#fef2f2;color:#dc2626}
+.sdot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.sdot.spin{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 </head>
 <body>
@@ -202,6 +250,11 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   </div>
 </div>
 <div class="layout">
+<!-- 저장 상태 고정 바 -->
+<div id="ss-bar" class="ok">
+  <div class="sdot" id="sdot"></div>
+  <span id="stext">연결됨</span>
+</div>
 <aside class="sb">
   <div class="sb-logo">
     <div class="sb-logo-t">Test Ops Monitor</div>
@@ -284,7 +337,12 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
       <div class="fld"><label>LOT 번호</label><input type="text" id="lr-lot" placeholder="예: LOT-2024-001"></div>
       <div class="fld"><label>입고일</label><input type="date" id="lr-in" onchange="calcLrTgt()"></div>
       <div class="fld"><label>목표 완료일 (+14일)</label><input type="date" id="lr-tgt" readonly></div>
-      <div class="fld"><label>고객사</label><input type="text" id="lr-cust" placeholder="고객사명"></div>
+      <div class="fld"><label>고객사</label>
+        <select id="lr-cust" onchange="handleLrCust(this)">
+          <option value="">-- 선택 --</option>
+        </select>
+        <input type="text" id="lr-cust-manual" placeholder="직접 입력" style="display:none;margin-top:4px">
+      </div>
     </div>
     <div class="fg fg4">
       <div class="fld"><label>수량</label><input type="number" id="lr-qty" placeholder="0" min="0"></div>
@@ -450,34 +508,90 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   </div>
 </div>
 
-<!-- ── 인보이스 입력 (인라인 테이블) ── -->
+<!-- ── 인보이스 입력 ── -->
 <div class="pg" id="pg-invoice">
   <div class="ph-row">
-    <div class="ph"><h1>인보이스 입력</h1><p>LOT 완료 후 건별 청구</p></div>
-    <button class="btn xl sm" onclick="exportRevenue()" style="margin-top:4px">↓ 엑셀</button>
+    <div class="ph"><h1>인보이스</h1><p>LOT 완료 후 건별 청구 관리</p></div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="btn pri sm" onclick="openInvPanel(null)">+ 새 인보이스</button>
+      <button class="btn xl sm" onclick="exportRevenue()">↓ 엑셀</button>
+    </div>
   </div>
-  <div class="etw">
-    <table id="inv-table">
-      <thead><tr>
-        <th style="width:110px">발행일</th>
-        <th style="width:130px">인보이스번호</th>
-        <th style="width:130px">연결 LOT</th>
-        <th style="width:100px">사업</th>
-        <th style="width:80px">국가</th>
-        <th style="width:140px">고객사</th>
-        <th style="width:110px">청구금액</th>
-        <th style="width:70px">통화</th>
-        <th style="width:100px">결제기한</th>
-        <th style="width:80px">수금상태</th>
-        <th style="width:90px"></th>
-      </tr></thead>
-      <tbody id="inv-tbody"></tbody>
-    </table>
-    <button class="add-row-btn" onclick="addInvRow()">
-      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      새 인보이스 추가
-    </button>
+
+  <!-- 인보이스 카드 목록 -->
+  <div id="inv-cards"></div>
+
+  <!-- 인보이스 입력 패널 (슬라이드) -->
+  <div id="inv-panel" style="display:none;position:fixed;top:0;right:0;width:min(480px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
+      <div style="font-size:16px;font-weight:600" id="inv-panel-title">새 인보이스</div>
+      <button onclick="closeInvPanel()" style="border:none;background:none;font-size:22px;color:var(--tx3);cursor:pointer;line-height:1;padding:0 4px">×</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div class="fld"><label>연결 LOT</label>
+        <select id="ip-lot" onchange="fillInvFromLot(this.value)">
+          <option value="">-- LOT 선택 (선택 시 자동 입력) --</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld"><label>인보이스 번호</label><input type="text" id="ip-no" placeholder="INV-2024-001"></div>
+        <div class="fld"><label>발행일</label><input type="date" id="ip-date"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld"><label>사업</label>
+          <select id="ip-biz">
+            <option value="DRAM">DRAM Test</option>
+            <option value="SSD">SSD Test</option>
+            <option value="MID">Mobile Ink Die</option>
+          </select>
+        </div>
+        <div class="fld"><label>국가</label>
+          <select id="ip-country">
+            <option value="HK">홍콩</option>
+            <option value="SG">싱가포르</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld"><label>고객사</label><input type="text" id="ip-cust" placeholder="고객사명"></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+        <div class="fld"><label>청구금액</label><input type="number" id="ip-amount" placeholder="0" min="0" oninput="calcInvTotal()"></div>
+        <div class="fld"><label>통화</label>
+          <select id="ip-currency" onchange="calcInvTotal()">
+            <option value="USD">USD</option>
+            <option value="HKD">HKD</option>
+            <option value="SGD">SGD</option>
+            <option value="KRW">KRW</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld"><label>VAT</label><input type="number" id="ip-vat" placeholder="0" min="0" oninput="calcInvTotal()"></div>
+        <div class="fld"><label>합계</label><input type="text" id="ip-total" readonly style="color:var(--tx2);font-weight:600"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld"><label>결제기한</label><input type="date" id="ip-due"></div>
+        <div class="fld"><label>수금 상태</label>
+          <select id="ip-status" onchange="togglePaidRow(this.value)">
+            <option value="unpaid">미수금</option>
+            <option value="partial">부분수금</option>
+            <option value="paid">수금완료</option>
+          </select>
+        </div>
+      </div>
+      <div id="ip-paid-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;display:none">
+        <div class="fld"><label>수금일</label><input type="date" id="ip-paid-date"></div>
+        <div class="fld"><label>수금액</label><input type="number" id="ip-paid-amt" placeholder="0"></div>
+      </div>
+      <div class="fld"><label>비고</label><input type="text" id="ip-note" placeholder="특이사항"></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn pri" id="ip-save-btn" onclick="saveInvPanel()" style="flex:1;padding:11px">저장</button>
+        <button class="btn" onclick="closeInvPanel()" style="padding:11px 20px">취소</button>
+      </div>
+      <span id="ip-ok" style="font-size:12px;color:#166534;display:none;text-align:center;font-weight:500">✓ 저장됨</span>
+    </div>
   </div>
+  <!-- 패널 배경 오버레이 -->
+  <div id="inv-overlay" onclick="closeInvPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:299"></div>
 </div>
 
 <!-- ── 매출 현황 ── -->
@@ -583,9 +697,11 @@ let pendingRows={lots:{},daily:{},inv:{}};
 
 // ── API ──
 function setSS(s){
-  const d=document.getElementById('sdot'),t=document.getElementById('stext');
+  const d=document.getElementById('sdot'),t=document.getElementById('stext'),bar=document.getElementById('ss-bar');
   d.className='sdot'+(s==='ok'?'':s==='err'?' err':' spin');
-  t.textContent=s==='ok'?'연결됨':s==='err'?'오류':s==='saving'?'저장 중...':'로딩 중...';
+  t.textContent=s==='ok'?'저장됨':s==='err'?'저장 오류':s==='saving'?'저장 중...':'로딩 중...';
+  if(bar){bar.className=s==='ok'?'ok':s==='err'?'err':'saving';}
+  if(s==='ok'){setTimeout(()=>{if(t.textContent==='저장됨')t.textContent='연결됨';},2000);}
 }
 
 // ── 배치 저장 큐 ──
@@ -958,7 +1074,22 @@ function renderLotRegPage(){
   document.getElementById('lr-sub').textContent=CN[lrCo]+' · '+BN[lrBiz];
   document.getElementById('lr-form-title').textContent='새 LOT 추가 — '+CN[lrCo]+' · '+BN[lrBiz];
   document.getElementById('lr-table-title').textContent=CN[lrCo]+' · '+BN[lrBiz]+' LOT 목록';
+  // 고객사 드롭다운 채우기 — 현재 국가/사업 필터
+  const custSel=document.getElementById('lr-cust');
+  const filteredCusts=custs.filter(c=>(!c.country||c.country===lrCo)&&(!c.biz||c.biz===lrBiz||c.biz==='ALL'));
+  custSel.innerHTML='<option value="">-- 선택 --</option>'
+    +filteredCusts.map(c=>`<option value="${c.name}">${c.name}</option>`).join('')
+    +'<option value="__manual__">직접 입력...</option>';
   renderLotTable();
+}
+
+function handleLrCust(sel){
+  const manual=document.getElementById('lr-cust-manual');
+  if(sel.value==='__manual__'){
+    manual.style.display='block';manual.focus();
+  } else {
+    manual.style.display='none';manual.value='';
+  }
 }
 
 function calcLrTgt(){const d=document.getElementById('lr-in').value;if(d)document.getElementById('lr-tgt').value=addD(d,14);}
@@ -972,7 +1103,7 @@ async function saveLOT(){
     id:Date.now(),
     biz:lrBiz,
     country:lrCo,
-    customerName:document.getElementById('lr-cust').value.trim(),
+    customerName:(()=>{const sel=document.getElementById('lr-cust');const manual=document.getElementById('lr-cust-manual');return sel.value==='__manual__'?manual.value.trim():sel.value;})(),
     lotNo:document.getElementById('lr-lot').value.trim()||('LOT-'+Date.now()),
     inDate,
     targetDate:document.getElementById('lr-tgt').value,
@@ -995,7 +1126,9 @@ async function saveLOT(){
 }
 
 function clearLrForm(){
-  ['lr-lot','lr-cust','lr-qty','lr-price','lr-prod','lr-note','lr-in','lr-tgt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['lr-lot','lr-qty','lr-price','lr-prod','lr-note','lr-in','lr-tgt','lr-cust-manual'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const custSel=document.getElementById('lr-cust');if(custSel)custSel.selectedIndex=0;
+  const manual=document.getElementById('lr-cust-manual');if(manual)manual.style.display='none';
 }
 
 function renderLotTable(){
@@ -1248,46 +1381,181 @@ function clearDailyAccChecks(lotId){document.querySelectorAll('.dacc-chk-'+lotId
 function renderDailyTable(){renderDpCards();}
 
 
-// ── 인보이스 테이블 ──
+// ── 인보이스 ──
+let invEditId=null;
+
 function renderInvTable(){
   const sorted=[...invs].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  const tb=document.getElementById('inv-tbody');
-  tb.innerHTML=sorted.map(r=>invRow(r)).join('');
+  const el=document.getElementById('inv-cards');
+  if(!el)return;
+  if(!sorted.length){
+    el.innerHTML='<div class="empty" style="padding:48px">인보이스가 없습니다<br><button class="btn pri sm" onclick="openInvPanel(null)" style="margin-top:12px">+ 새 인보이스 추가</button></div>';
+    return;
+  }
+  const stMap={unpaid:'<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#fee2e2;color:#991b1b">미수금</span>',
+    partial:'<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#fef3c7;color:#92400e">부분수금</span>',
+    paid:'<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#dcfce7;color:#166534">수금완료</span>'};
+  el.innerHTML=sorted.map(r=>{
+    const lot=lots.find(l=>String(l.id)===String(r.lotId));
+    const due=r.due?diffD(today(),r.due):null;
+    const dueColor=r.status==='paid'?'#166534':due!==null&&due<0?'#dc2626':due!==null&&due<=7?'#92400e':'var(--tx2)';
+    const dueText=r.status==='paid'?'수금완료':due===null?'-':due<0?'D+'+Math.abs(due):(due===0?'오늘':'D-'+due);
+    return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'
+      +'<div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +'<span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">'+( r.no||r.id)+'</span>'
+      +btag(r.biz)+' '+ctag(r.country)
+      +(stMap[r.status]||stMap.unpaid)
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--tx2)">'+(r.customerName||'')+(lot?' · '+( lot.lotNo||lot.id):'')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<div style="font-size:18px;font-weight:600;letter-spacing:-.02em">'+fmtM(n(r.amount))+'</div>'
+      +'<div style="font-size:11px;color:var(--tx3)">'+(r.currency||'USD')+(r.vat>0?' (VAT +'+fmtM(n(r.vat))+')':'')+'</div>'
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:0.5px solid var(--bd)">'
+      +'<div style="font-size:12px;color:var(--tx2)">발행 '+( r.date||'-')+(r.due?' &nbsp;·&nbsp; 기한 <span style="color:'+dueColor+';font-weight:500">'+( r.due)+' ('+dueText+')</span>':'')+'</div>'
+      +'<div style="display:flex;gap:6px">'
+      +(r.status!=='paid'?'<button class="btn sm" style="font-size:11px" onclick="quickMarkPaid('+r.id+')">수금 처리</button>':'')
+      +'<button class="btn sm" style="font-size:11px" onclick="openInvPanel('+r.id+')">수정</button>'
+      +'<button class="btn del sm" style="font-size:11px" onclick="delInv('+r.id+')">삭제</button>'
+      +'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
 }
-function invRow(r){
-  const lotOpts=[['','없음'],...lots.map(l=>[l.id,`${l.lotNo||l.id}`])];
-  return`<tr data-id="${r.id}">
-    ${cel(r.date,'',`saveInvCell(this,'date',${r.id})`,'type="date"')}
-    ${cel(r.no,'mono',`saveInvCell(this,'no',${r.id})`)}
-    ${csel(r.lotId||'',lotOpts,'',`saveInvLot(this,${r.id})`)}
-    ${csel(r.biz||'DRAM',[['DRAM','DRAM Test'],['SSD','SSD Test'],['MID','Mobile Ink Die']],'',`saveInvCell(this,'biz',${r.id})`)}
-    ${csel(r.country||'HK',[['HK','홍콩'],['SG','싱가포르']],'',`saveInvCell(this,'country',${r.id})`)}
-    ${cel(r.customerName||'','',`saveInvCell(this,'customerName',${r.id})`)}
-    ${cel(r.amount,'num',`saveInvCell(this,'amount',${r.id})`,'type="number" min="0"')}
-    ${csel(r.currency||'USD',[['USD','USD'],['HKD','HKD'],['SGD','SGD'],['KRW','KRW']],'',`saveInvCell(this,'currency',${r.id})`)}
-    ${cel(r.due||'','',`saveInvCell(this,'due',${r.id})`,'type="date"')}
-    ${csel(r.status||'unpaid',[['unpaid','미수금'],['paid','수금완료'],['partial','부분수금']],'',`saveInvCell(this,'status',${r.id})`)}
-    <td style="padding:4px 8px"><div class="row-actions"><button class="ra-btn del" onclick="delInv(${r.id})">삭제</button></div></td>
-  </tr>`;
+
+function openInvPanel(id){
+  invEditId=id;
+  const panel=document.getElementById('inv-panel');
+  const overlay=document.getElementById('inv-overlay');
+  const title=document.getElementById('inv-panel-title');
+  // LOT 드롭다운 채우기
+  const lotSel=document.getElementById('ip-lot');
+  lotSel.innerHTML='<option value="">-- LOT 선택 --</option>'
+    +lots.map(l=>`<option value="${l.id}">[${CN[l.country]||l.country}] ${l.lotNo||l.id} (${BN[l.biz]})</option>`).join('');
+  if(id){
+    title.textContent='인보이스 수정';
+    const r=invs.find(x=>x.id==id);
+    if(r){
+      document.getElementById('ip-no').value=r.no||'';
+      document.getElementById('ip-date').value=r.date||'';
+      document.getElementById('ip-biz').value=r.biz||'DRAM';
+      document.getElementById('ip-country').value=r.country||'HK';
+      document.getElementById('ip-cust').value=r.customerName||'';
+      document.getElementById('ip-amount').value=r.amount||'';
+      document.getElementById('ip-vat').value=r.vat||'';
+      document.getElementById('ip-total').value=fmtM(n(r.amount)+n(r.vat));
+      document.getElementById('ip-currency').value=r.currency||'USD';
+      document.getElementById('ip-due').value=r.due||'';
+      document.getElementById('ip-status').value=r.status||'unpaid';
+      document.getElementById('ip-paid-date').value=r.paidDate||'';
+      document.getElementById('ip-paid-amt').value=r.paidAmt||'';
+      document.getElementById('ip-note').value=r.note||'';
+      document.getElementById('ip-lot').value=r.lotId||'';
+      togglePaidRow(r.status);
+    }
+  } else {
+    title.textContent='새 인보이스';
+    ['ip-no','ip-date','ip-biz','ip-cust','ip-amount','ip-vat','ip-total','ip-due','ip-paid-date','ip-paid-amt','ip-note'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value='';
+    });
+    document.getElementById('ip-date').value=today();
+    document.getElementById('ip-status').value='unpaid';
+    document.getElementById('ip-currency').value='USD';
+    document.getElementById('ip-lot').value='';
+    togglePaidRow('unpaid');
+  }
+  panel.style.display='block';overlay.style.display='block';
+  document.body.style.overflow='hidden';
 }
-async function saveInvCell(el,field,id){
+
+function closeInvPanel(){
+  document.getElementById('inv-panel').style.display='none';
+  document.getElementById('inv-overlay').style.display='none';
+  document.body.style.overflow='';
+  invEditId=null;
+}
+
+function togglePaidRow(status){
+  const row=document.getElementById('ip-paid-row');
+  if(row)row.style.display=status==='paid'||status==='partial'?'grid':'none';
+}
+
+function fillInvFromLot(lotId){
+  const lot=lots.find(l=>String(l.id)===lotId);
+  if(!lot)return;
+  document.getElementById('ip-biz').value=lot.biz||'DRAM';
+  document.getElementById('ip-country').value=lot.country||'HK';
+  document.getElementById('ip-cust').value=lot.customerName||'';
+  if(lot.price)document.getElementById('ip-amount').value=lot.price;
+  if(lot.currency)document.getElementById('ip-currency').value=lot.currency;
+  calcInvTotal();
+}
+
+function calcInvTotal(){
+  const amt=n(document.getElementById('ip-amount').value);
+  const vat=n(document.getElementById('ip-vat').value);
+  document.getElementById('ip-total').value=fmtM(amt+vat);
+}
+
+async function saveInvPanel(){
+  const date=document.getElementById('ip-date').value;
+  const amount=n(document.getElementById('ip-amount').value);
+  if(!date||!amount){toast('발행일과 청구금액은 필수입니다',1);return;}
+  const vat=n(document.getElementById('ip-vat').value);
+  const status=document.getElementById('ip-status').value;
+  const lotId=document.getElementById('ip-lot').value;
+  const lot=lots.find(l=>String(l.id)===lotId);
+  const rec={
+    id:invEditId||Date.now(),
+    no:document.getElementById('ip-no').value.trim()||('INV-'+Date.now()),
+    date,
+    due:document.getElementById('ip-due').value,
+    lotId:lotId||'',
+    lotNo:lot?lot.lotNo||lot.id:'',
+    biz:document.getElementById('ip-biz').value,
+    country:document.getElementById('ip-country').value,
+    customerName:document.getElementById('ip-cust').value.trim(),
+    amount,vat,
+    total:amount+vat,
+    currency:document.getElementById('ip-currency').value,
+    status,
+    paidDate:document.getElementById('ip-paid-date').value,
+    paidAmt:n(document.getElementById('ip-paid-amt').value),
+    note:document.getElementById('ip-note').value.trim()
+  };
+  if(invEditId){
+    const idx=invs.findIndex(x=>x.id==invEditId);if(idx>=0)invs[idx]=rec;
+    aPost({action:'update',sheet:'invoices',id:invEditId,data:rec});
+  } else {
+    invs.push(rec);
+    aPost({action:'append',sheet:'invoices',data:rec});
+  }
+  const ok=document.getElementById('ip-ok');ok.style.display='block';setTimeout(()=>{ok.style.display='none';closeInvPanel();},1000);
+  renderInvTable();toast('저장됨');
+}
+
+async function delInv(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  const res=await aPost({action:'delete',sheet:'invoices',id});
+  if(!res.error){invs=invs.filter(r=>r.id!=id);renderInvTable();toast('삭제됨');}
+}
+
+async function quickMarkPaid(id){
   const r=invs.find(x=>x.id==id);if(!r)return;
-  r[field]=el.tagName==='SELECT'?el.value:(el.type==='number'?n(el.value):el.value);
-  if(field==='amount')r.total=r.amount;
-  await aPost({action:'update',sheet:'invoices',id,data:r});toast('저장됨');
+  r.status='paid';r.paidDate=today();r.paidAmt=r.amount;
+  const idx=invs.findIndex(x=>x.id==id);if(idx>=0)invs[idx]=r;
+  aPost({action:'update',sheet:'invoices',id,data:r});
+  renderInvTable();renderRev();toast('수금 완료 처리됨');
 }
-async function saveInvLot(el,id){
-  const r=invs.find(x=>x.id==id);if(!r)return;r.lotId=el.value;
-  const lot=lots.find(l=>String(l.id)===String(r.lotId));
-  if(lot){r.biz=lot.biz;r.country=lot.country;r.customerName=lot.customerName||'';if(lot.price){r.amount=lot.price;r.total=lot.price;}}
-  await aPost({action:'update',sheet:'invoices',id,data:r});renderInvTable();
-}
-async function addInvRow(){
-  const rec={id:Date.now(),no:`INV-${Date.now()}`,date:today(),due:'',lotId:'',lotNo:'',biz:'DRAM',country:'HK',customerName:'',amount:0,vat:0,total:0,currency:'USD',status:'unpaid',paidDate:'',paidAmt:0,note:''};
-  const res=await aPost({action:'append',sheet:'invoices',data:rec});
-  if(!res.error){invs.unshift(rec);renderInvTable();toast('새 행 추가됨');}
-}
-async function delInv(id){if(!confirm('삭제?'))return;const res=await aPost({action:'delete',sheet:'invoices',id});if(!res.error){invs=invs.filter(r=>r.id!=id);renderInvTable();toast('삭제됨');}}
+
+async function markPaid(id){quickMarkPaid(id);}
+
+function addInvRow(){openInvPanel(null);}
+
 
 // ── 매출 현황 ──
 let rvMode='month';
