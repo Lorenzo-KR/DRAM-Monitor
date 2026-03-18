@@ -746,7 +746,10 @@ function renderDash(){
           ?'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fee2e2;color:#991b1b">지연</span>'
           :'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af">진행중</span>';
         return'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--bd)">'
+          +'<div>'
           +'<span style="font-size:12px;font-weight:600;font-family:var(--font-mono)">'+( lot.lotNo||lot.id)+'</span>'
+          +(lot.inDate?'<span style="font-size:10px;color:var(--tx3);margin-left:6px">입고 '+lot.inDate+'</span>':'')
+          +'</div>'
           +'<div style="display:flex;align-items:center;gap:8px">'
           +'<span style="font-size:12px;color:var(--tx2)">잔량 '+fmtN(rem)+'</span>'
           +'<span style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+'</span>'
@@ -774,9 +777,9 @@ function renderDash(){
         +'</div>'
         // 수치 3개
         +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px">'
-        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono)">'+fmtN(totQty)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">입고</div></div>'
-        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono);color:'+BC[b]+'">'+fmtN(totProc)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">처리</div></div>'
-        +'<div style="background:var(--bg);border-radius:8px;padding:8px 10px;text-align:center"><div style="font-size:15px;font-weight:600;font-family:var(--font-mono);color:'+(totRem===0?'#166534':isDelayed?'#dc2626':'#B45309')+'">'+fmtN(totRem)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">잔량</div></div>'
+        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono)">'+fmtN(totQty)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">입고</div></div>'
+        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono);color:'+BC[b]+'">'+fmtN(totProc)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">처리</div></div>'
+        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono);color:'+(totRem===0?'#166534':isDelayed?'#dc2626':'#B45309')+'">'+fmtN(totRem)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">잔량</div></div>'
         +'</div>'
         // LOT 목록
         +(actLots.length>0?lotItems+moreMsg:emptyMsg)
@@ -1755,15 +1758,24 @@ function renderPastePreview(){
     const statusHtml=r.matched
       ?`<span style="font-size:11px;font-weight:500;color:#166534;white-space:nowrap">✓ ${BN[r.lot.biz]||''}</span>`
       :`<span style="font-size:11px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
-    return`<tr style="${i%2===0?'':'background:var(--bg)'}">
+    const lotSelColor=r.matched?'var(--bd2)':'#fca5a5';
+    const lotSelBg=r.matched?'var(--bg)':'#fff7f7';
+    const lotOptions=lots.filter(l=>(dpCo?l.country===dpCo:true)&&(dpBiz?l.biz===dpBiz:true))
+      .map(l=>`<option value="${l.id}"${r.lot&&String(r.lot.id)===String(l.id)?' selected':''}>${l.lotNo||l.id}</option>`).join('');
+    return`<tr style="${i%2===0?'':'background:var(--bg)}'}>
       <td style="padding:7px 10px;white-space:nowrap;font-family:var(--font-mono);font-size:12px">${r.date}</td>
       <td style="padding:7px 10px">${r.country?ctag(r.country):`<span style="font-size:11px;color:var(--tx3)">${r.region||'-'}</span>`}</td>
       <td style="padding:4px 6px">
-        <select onchange="setParsedLot(${i},this.value)"
-          style="padding:4px 8px;border:1px solid ${r.matched?'var(--bd2)':'#fca5a5'};border-radius:5px;font-size:12px;background:${r.matched?'var(--bg)':'#fff7f7'};color:var(--tx);width:100%;min-width:130px">
-          <option value="">-- 선택 --</option>
-          ${lots.filter(l=>(dpCo?l.country===dpCo:true)&&(dpBiz?l.biz===dpBiz:true)).map(l=>`<option value="${l.id}"${r.lot&&String(r.lot.id)===String(l.id)?' selected':''}>${l.lotNo||l.id} (${BN[l.biz]})</option>`).join('')}
-        </select>
+        <div style="display:flex;gap:4px;align-items:center">
+          <select onchange="setParsedLot(${i},this.value,false)"
+            style="padding:4px 8px;border:1px solid ${lotSelColor};border-radius:5px;font-size:12px;background:${lotSelBg};color:var(--tx);flex:1;min-width:110px">
+            <option value="">-- 선택 --</option>
+            ${lotOptions}
+          </select>
+          <button onclick="setParsedLot(${i},this.previousElementSibling.value,true)"
+            style="padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:10px;font-weight:600;background:#EEF4FF;color:#1e40af;cursor:pointer;white-space:nowrap;flex-shrink:0"
+            title="이 LOT를 전체 행에 적용">전체↓</button>
+        </div>
       </td>
       <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-weight:600">${fmtN(r.proc)}</td>
       <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#166534">${isDram||r.normal>0?fmtN(r.normal):'—'}</td>
@@ -1775,10 +1787,18 @@ function renderPastePreview(){
   }).join('');
 }
 
-function setParsedLot(i, lotId){
-  parsedRows[i].lot=lots.find(l=>String(l.id)===lotId)||null;
-  parsedRows[i].matched=!!parsedRows[i].lot;
-  parsedRows[i].lotNo=parsedRows[i].lot?parsedRows[i].lot.lotNo||lotId:parsedRows[i].lotNo;
+function setParsedLot(i, lotId, applyAll){
+  const lot=lots.find(l=>String(l.id)===lotId)||null;
+  if(applyAll){
+    // 전체 행에 동일 LOT 적용
+    parsedRows.forEach(function(r){
+      r.lot=lot;r.matched=!!lot;r.lotNo=lot?lot.lotNo||lotId:r.lotNo;
+    });
+  } else {
+    parsedRows[i].lot=lot;
+    parsedRows[i].matched=!!lot;
+    parsedRows[i].lotNo=lot?lot.lotNo||lotId:parsedRows[i].lotNo;
+  }
   renderPastePreview();
 }
 
