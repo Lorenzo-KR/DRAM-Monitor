@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--navy:#1B4F8A;--navy2:#2563a8;--teal:#0F6E56;--purple:#6A3D7C;--hk:#B45309;--sg:#0F6E56;--dram:#1B4F8A;--ssd:#0F6E56;--mid:#6A3D7C;--bg:#F5F6F8;--card:#fff;--bd:rgba(0,0,0,0.08);--bd2:rgba(0,0,0,0.13);--tx:#181c24;--tx2:#5a6170;--tx3:#9aa0ad;--r:12px;--rs:8px}
@@ -301,16 +302,26 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 
   <!-- 월별 처리량 그래프 -->
   <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <!-- 헤더 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-size:14px;font-weight:600">월별 처리량</div>
-      <div style="display:flex;gap:6px">
-        <button class="pill pd on" data-chart-biz="" onclick="setChartBiz(this)">전체</button>
-        <button class="pill pd" data-chart-biz="DRAM" onclick="setChartBiz(this)">DRAM</button>
-        <button class="pill ps" data-chart-biz="SSD" onclick="setChartBiz(this)">SSD</button>
-        <button class="pill pm" data-chart-biz="MID" onclick="setChartBiz(this)">MID</button>
-      </div>
+      <!-- 연도 탭 -->
+      <div style="display:flex;gap:4px" id="chart-year-tabs"></div>
     </div>
-    <div style="position:relative;height:200px"><canvas id="monthly-chart"></canvas></div>
+    <!-- 필터 행: 지역 + 사업 -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+      <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">지역</span>
+      <button class="pill pa on" data-chart-co="" onclick="setChartCo(this)">전체</button>
+      <button class="pill phk" data-chart-co="HK" onclick="setChartCo(this)">홍콩</button>
+      <button class="pill psg" data-chart-co="SG" onclick="setChartCo(this)">싱가포르</button>
+      <span class="sep"></span>
+      <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">사업</span>
+      <button class="pill pa on" data-chart-biz="" onclick="setChartBiz(this)">전체</button>
+      <button class="pill pd" data-chart-biz="DRAM" onclick="setChartBiz(this)">DRAM</button>
+      <button class="pill ps" data-chart-biz="SSD" onclick="setChartBiz(this)">SSD</button>
+      <button class="pill pm" data-chart-biz="MID" onclick="setChartBiz(this)">MID</button>
+    </div>
+    <div style="position:relative;height:220px"><canvas id="monthly-chart"></canvas></div>
     <div id="monthly-totals" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px"></div>
   </div>
 
@@ -894,7 +905,7 @@ function nav(p){
   document.getElementById('pg-'+p).classList.add('on');
   const idx={dash:0,progress:1,lotreg:2,daily:3,invoice:4,revenue:5,country:6,customers:7};
   document.querySelectorAll('.ni')[idx[p]].classList.add('on');
-  const map={dash:renderDash,progress:()=>{renderProg();renderMonthlyChart();},
+  const map={dash:renderDash,progress:()=>{initChartYearTabs();renderProg();renderMonthlyChart();},
     lotreg:()=>{renderLotRegPage();},
     daily:()=>{renderDpCards();},
     shipment:()=>{renderShipCards();},
@@ -1044,7 +1055,36 @@ function renderDash(){
 
 
 // ── LOT 진행 현황 ──
-let monthlyChart=null;let chartBiz='';
+let monthlyChart=null;
+let chartBiz='';
+let chartCo='';
+let chartYear=new Date().getFullYear();
+const CHART_START_YEAR=2026;
+
+function initChartYearTabs(){
+  const curYear=new Date().getFullYear();
+  const endYear=Math.max(curYear,CHART_START_YEAR);
+  const tabs=document.getElementById('chart-year-tabs');
+  if(!tabs)return;
+  let html='';
+  for(let y=CHART_START_YEAR;y<=endYear;y++){
+    html+=`<button onclick="setChartYear(this,${y})" data-chart-year="${y}"
+      style="padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid;transition:.15s;font-family:'DM Sans',sans-serif;
+      ${y===chartYear?'background:var(--navy);color:#fff;border-color:var(--navy)':'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
+  }
+  tabs.innerHTML=html;
+}
+
+function setChartYear(el,y){
+  chartYear=y;
+  document.querySelectorAll('[data-chart-year]').forEach(e=>{
+    const active=Number(e.dataset.chartYear)===chartYear;
+    e.style.background=active?'var(--navy)':'none';
+    e.style.color=active?'#fff':'var(--tx2)';
+    e.style.borderColor=active?'var(--navy)':'var(--bd2)';
+  });
+  renderMonthlyChart();
+}
 
 function setChartBiz(el){
   document.querySelectorAll('[data-chart-biz]').forEach(e=>e.classList.remove('on'));
@@ -1053,60 +1093,153 @@ function setChartBiz(el){
   renderMonthlyChart();
 }
 
+function setChartCo(el){
+  document.querySelectorAll('[data-chart-co]').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+  chartCo=el.dataset.chartCo;
+  renderMonthlyChart();
+}
+
 function renderMonthlyChart(){
   const canvas=document.getElementById('monthly-chart');
   if(!canvas)return;
-  // 최근 6개월
+
+  // 선택 연도의 1~12월
   const mths=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date();d.setMonth(d.getMonth()-i);
-    mths.push(d.toISOString().slice(0,7));
+  for(let mo=1;mo<=12;mo++){
+    mths.push(chartYear+'-'+(mo<10?'0':'')+mo);
   }
-  const labels=mths.map(m=>{const[y,mo]=m.split('-');return mo+'월';});
+  const labels=mths.map(m=>{const mo=m.split('-')[1];return mo+'월';});
+
   const BIZ_LIST=chartBiz?[chartBiz]:['DRAM','SSD','MID'];
   const BIZ_COLORS={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
 
-  const datasets=BIZ_LIST.map(b=>({
-    label:BN[b],
-    data:mths.map(m=>dailies.filter(r=>String(r.date||'').startsWith(m)&&(chartBiz?r.biz===chartBiz:r.biz===b)).reduce((s,r)=>s+n(r.proc),0)),
-    backgroundColor:BIZ_COLORS[b]+'33',
-    borderColor:BIZ_COLORS[b],
-    borderWidth:2,
-    borderRadius:4,
-    borderSkipped:false,
-  }));
+  // 지역별 구분: 지역 필터가 있으면 단일, 없으면 HK/SG 분리해서 stacked
+  let datasets=[];
+  const CO_COLORS={HK:'#B45309',SG:'#0F6E56'};
+  const CO_NAMES={HK:'홍콩',SG:'싱가포르'};
+
+  if(chartCo){
+    // 단일 지역
+    datasets=BIZ_LIST.map(b=>({
+      label:BN[b],
+      data:mths.map(m=>dailies.filter(r=>String(r.date||'').startsWith(m)&&r.biz===b&&r.country===chartCo).reduce((s,r)=>s+n(r.proc),0)),
+      backgroundColor:BIZ_COLORS[b]+'55',
+      borderColor:BIZ_COLORS[b],
+      borderWidth:2,borderRadius:3,borderSkipped:false,
+    }));
+  } else if(chartBiz){
+    // 사업 선택 + 지역 전체 → HK/SG 분리 표시
+    datasets=['HK','SG'].map(co=>({
+      label:CO_NAMES[co],
+      data:mths.map(m=>dailies.filter(r=>String(r.date||'').startsWith(m)&&r.biz===chartBiz&&r.country===co).reduce((s,r)=>s+n(r.proc),0)),
+      backgroundColor:CO_COLORS[co]+'55',
+      borderColor:CO_COLORS[co],
+      borderWidth:2,borderRadius:3,borderSkipped:false,
+    }));
+  } else {
+    // 전체: 사업별 표시
+    datasets=BIZ_LIST.map(b=>({
+      label:BN[b],
+      data:mths.map(m=>dailies.filter(r=>String(r.date||'').startsWith(m)&&r.biz===b).reduce((s,r)=>s+n(r.proc),0)),
+      backgroundColor:BIZ_COLORS[b]+'55',
+      borderColor:BIZ_COLORS[b],
+      borderWidth:2,borderRadius:3,borderSkipped:false,
+    }));
+  }
 
   if(monthlyChart){monthlyChart.destroy();monthlyChart=null;}
-  const isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
-  const textColor=isDark?'#9aa0ad':'#888';
+  const textColor='#888';
+  const gridColor='rgba(0,0,0,0.06)';
+
+  // datalabels plugin 등록
+  const plugins=[window.ChartDataLabels].filter(Boolean);
+
   monthlyChart=new Chart(canvas,{
     type:'bar',
+    plugins:plugins,
     data:{labels,datasets},
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:BIZ_LIST.length>1,labels:{font:{size:11},color:textColor,boxWidth:12}},tooltip:{mode:'index',intersect:false}},
+      plugins:{
+        legend:{display:datasets.length>1,labels:{font:{size:11},color:textColor,boxWidth:10,padding:12}},
+        tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmtN(ctx.raw)}`}},
+        datalabels:{
+          display:ctx=>{
+            // 값이 0이면 숨김, 너무 작은 값도 숨김
+            const v=ctx.dataset.data[ctx.dataIndex];
+            const maxV=Math.max(...ctx.dataset.data);
+            return v>0&&(maxV===0||v/maxV>0.03);
+          },
+          anchor:'end',align:'end',
+          color:ctx=>{
+            const BIZ_COLORS={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
+            const CO_COLORS={HK:'#B45309',SG:'#0F6E56'};
+            const lbl=ctx.dataset.label;
+            return BIZ_COLORS[Object.keys(BIZ_COLORS).find(k=>BN[k]===lbl)]
+              ||CO_COLORS[Object.keys(CO_COLORS).find(k=>CO_NAMES[k]===lbl)]
+              ||'#555';
+          },
+          font:{size:10,weight:'600',family:'DM Mono, monospace'},
+          formatter:v=>v>0?fmtN(v):'',
+          offset:2,
+          clip:false,
+        }
+      },
       scales:{
         x:{grid:{display:false},ticks:{color:textColor,font:{size:11}}},
-        y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:11},callback:v=>fmtN(v)},beginAtZero:true}
-      }
+        y:{
+          grid:{color:gridColor},
+          ticks:{color:textColor,font:{size:11},callback:v=>fmtN(v)},
+          beginAtZero:true,
+          // 위쪽 여백 확보 (datalabel 공간)
+          grace:'15%',
+        }
+      },
+      layout:{padding:{top:20}},
     }
   });
 
-  // 총계 카드
-  const totals=BIZ_LIST.map(b=>{
-    const total=dailies.filter(r=>chartBiz?r.biz===chartBiz:r.biz===b).reduce((s,r)=>s+n(r.proc),0);
-    const thisM=dailies.filter(r=>(chartBiz?r.biz===chartBiz:r.biz===b)&&String(r.date||'').startsWith(thisMonth())).reduce((s,r)=>s+n(r.proc),0);
-    return'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">'
-      +'<div style="font-size:11px;font-weight:600;color:'+BIZ_COLORS[b]+';margin-bottom:4px">'+BN[b]+'</div>'
-      +'<div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">'+fmtN(total)+'</div>'
-      +'<div style="font-size:10px;color:var(--tx3);margin-top:2px">전체 누적</div>'
-      +'<div style="font-size:12px;font-weight:500;color:var(--tx2);margin-top:4px">이달 '+fmtN(thisM)+'</div>'
-      +'</div>';
-  });
+  // ── 총계 요약 카드 ──
+  const coFilter=chartCo;
+  const bizFilter=chartBiz;
+  const yearStr=String(chartYear);
+
+  let summaryItems=[];
+  if(bizFilter){
+    // 사업 고정: 지역별 합산
+    const coList=coFilter?[coFilter]:['HK','SG'];
+    summaryItems=coList.map(co=>{
+      const yearTotal=dailies.filter(r=>r.biz===bizFilter&&r.country===co&&String(r.date||'').startsWith(yearStr)).reduce((s,r)=>s+n(r.proc),0);
+      const thisM=dailies.filter(r=>r.biz===bizFilter&&r.country===co&&String(r.date||'').startsWith(thisMonth())).reduce((s,r)=>s+n(r.proc),0);
+      const color=CO_COLORS[co];
+      return{label:CO_NAMES[co],color,yearTotal,thisM};
+    });
+  } else {
+    // 사업별 합산
+    summaryItems=BIZ_LIST.map(b=>{
+      const yearTotal=dailies.filter(r=>r.biz===b&&(coFilter?r.country===coFilter:true)&&String(r.date||'').startsWith(yearStr)).reduce((s,r)=>s+n(r.proc),0);
+      const thisM=dailies.filter(r=>r.biz===b&&(coFilter?r.country===coFilter:true)&&String(r.date||'').startsWith(thisMonth())).reduce((s,r)=>s+n(r.proc),0);
+      return{label:BN[b],color:BIZ_COLORS[b],yearTotal,thisM};
+    });
+  }
+
   const totEl=document.getElementById('monthly-totals');
-  if(totEl)totEl.style.gridTemplateColumns='repeat('+BIZ_LIST.length+',1fr)',totEl.innerHTML=totals.join('');
+  if(totEl){
+    totEl.style.gridTemplateColumns='repeat('+summaryItems.length+',1fr)';
+    totEl.innerHTML=summaryItems.map(it=>`
+      <div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:11px;font-weight:600;color:${it.color};margin-bottom:4px">${it.label}</div>
+        <div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">${fmtN(it.yearTotal)}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">${chartYear}년 누적</div>
+        <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${fmtN(it.thisM)}</div>
+      </div>`).join('');
+  }
 }
+
+// chart 변수 미리 정의
+const CO_COLORS={HK:'#B45309',SG:'#0F6E56'};
+const CO_NAMES={HK:'홍콩',SG:'싱가포르'};
 
 
 let progOpenId=null;
