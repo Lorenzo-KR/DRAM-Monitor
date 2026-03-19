@@ -267,6 +267,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
     <div class="sb-sec">입력</div>
     <button class="ni" onclick="nav('lotreg')"><svg fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>LOT 등록</button>
     <button class="ni" onclick="nav('daily')"><svg fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>일별 처리 입력</button>
+    <button class="ni" onclick="nav('shipment')"><svg fill="none" viewBox="0 0 16 16"><path d="M1 10l3-7h8l3 7H1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 10v3a1 1 0 001 1h12a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5"/><path d="M6 7v3M10 7v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>입고 예정</button>
     <div class="sb-sec">재무</div>
     <button class="ni" onclick="nav('invoice')"><svg fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>인보이스 입력</button>
     <button class="ni" onclick="nav('revenue')"><svg fill="none" viewBox="0 0 16 16"><path d="M1 12l4-4 3 3 4-5 3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>매출 현황</button>
@@ -285,7 +286,10 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 <div class="pg on" id="pg-dash">
   <div class="ph"><h1>대시보드</h1><p id="dash-dt"></p></div>
   <div id="dash-al"></div>
+  <!-- 진행 중 배치 -->
   <div id="d-lot-matrix"></div>
+  <!-- 입고 예정 -->
+  <div id="d-shipment"></div>
 </div>
 
 <!-- ── LOT 진행 현황 ── -->
@@ -294,6 +298,22 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
     <div class="ph"><h1>LOT 진행 현황</h1></div>
     <button class="btn xl sm" onclick="exportLots()" style="margin-top:4px">↓ 엑셀</button>
   </div>
+
+  <!-- 월별 처리량 그래프 -->
+  <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:600">월별 처리량</div>
+      <div style="display:flex;gap:6px">
+        <button class="pill pd on" data-chart-biz="" onclick="setChartBiz(this)">전체</button>
+        <button class="pill pd" data-chart-biz="DRAM" onclick="setChartBiz(this)">DRAM</button>
+        <button class="pill ps" data-chart-biz="SSD" onclick="setChartBiz(this)">SSD</button>
+        <button class="pill pm" data-chart-biz="MID" onclick="setChartBiz(this)">MID</button>
+      </div>
+    </div>
+    <div style="position:relative;height:200px"><canvas id="monthly-chart"></canvas></div>
+    <div id="monthly-totals" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px"></div>
+  </div>
+
   <div class="fb">
     <button class="pill pa on" data-k="biz" data-v="" onclick="setF(this,'biz')">전체</button>
     <button class="pill pd" data-k="biz" data-v="DRAM" onclick="setF(this,'biz')">DRAM Test</button>
@@ -394,6 +414,55 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   <div id="lr-empty" class="empty" style="padding:48px">
     위에서 국가와 사업을 선택하면 해당 LOT 목록과 등록 폼이 표시됩니다
   </div>
+</div>
+
+<!-- ── 입고 예정 ── -->
+<div class="pg" id="pg-shipment">
+  <div class="ph-row">
+    <div class="ph"><h1>입고 예정</h1><p>입고 예정 Shipment 관리</p></div>
+    <button class="btn pri sm" onclick="openShipPanel(null)" style="margin-top:4px">+ 새 Shipment</button>
+  </div>
+  <div id="ship-cards">
+    <div class="empty" style="padding:48px">등록된 입고 예정이 없습니다</div>
+  </div>
+  <div id="ship-panel" style="display:none;position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
+      <div style="font-size:16px;font-weight:600" id="ship-panel-title">새 Shipment</div>
+      <button onclick="closeShipPanel()" style="border:none;background:none;font-size:22px;color:var(--tx3);cursor:pointer;padding:0 4px">×</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fld"><label>사업</label>
+          <select id="sp-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+        </div>
+        <div class="fld"><label>국가</label>
+          <select id="sp-country"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
+        </div>
+      </div>
+      <div class="fld"><label>고객사</label><input type="text" id="sp-cust" placeholder="고객사명"></div>
+      <div class="fld"><label>LOT 번호 (예정)</label><input type="text" id="sp-lot" placeholder="예: HK_DRAM_Batch_3"></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+        <div class="fld"><label>예정 수량</label><input type="number" id="sp-qty" placeholder="0" min="0"></div>
+        <div class="fld"><label>단위</label>
+          <select id="sp-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
+        </div>
+      </div>
+      <div class="fld"><label>입고 예정일</label><input type="date" id="sp-date"></div>
+      <div class="fld"><label>상태</label>
+        <select id="sp-status">
+          <option value="confirmed">확정</option>
+          <option value="pending">미확정</option>
+        </select>
+      </div>
+      <div class="fld"><label>비고</label><input type="text" id="sp-note" placeholder="특이사항"></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn pri" onclick="saveShipment()" style="flex:1;padding:11px">저장</button>
+        <button class="btn" onclick="closeShipPanel()" style="padding:11px 20px">취소</button>
+      </div>
+      <span id="sp-ok" style="font-size:12px;color:#166534;display:none;text-align:center;font-weight:500">✓ 저장됨</span>
+    </div>
+  </div>
+  <div id="ship-overlay" onclick="closeShipPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:299"></div>
 </div>
 
 <!-- ── 일별 처리 입력 ── -->
@@ -745,6 +814,7 @@ async function loadAll(){
   // 헤더 자동 설정 (데이터 행은 건드리지 않음)
   await fetch(`${API}?action=setupAll`).catch(()=>{});
   [custs,lots,dailies,invs]=await Promise.all([aGet('customers'),aGet('lots'),aGet('daily'),aGet('invoices')]);
+  await loadShipments();
   // 날짜 필드 정규화 — ISO 문자열에서 YYYY-MM-DD만 추출
   const fmtD=v=>v?String(v).split('T')[0].trim():'';
   // 문자열 정규화 — 공백 제거, country/biz 대문자
@@ -824,9 +894,10 @@ function nav(p){
   document.getElementById('pg-'+p).classList.add('on');
   const idx={dash:0,progress:1,lotreg:2,daily:3,invoice:4,revenue:5,country:6,customers:7};
   document.querySelectorAll('.ni')[idx[p]].classList.add('on');
-  const map={dash:renderDash,progress:renderProg,
+  const map={dash:renderDash,progress:()=>{renderProg();renderMonthlyChart();},
     lotreg:()=>{renderLotRegPage();},
     daily:()=>{renderDpCards();},
+    shipment:()=>{renderShipCards();},
     invoice:renderInvTable,revenue:renderRev,country:renderCountry,
     customers:async()=>{custs=await aGet('customers');custs=custs.map(r=>({...r,country:String(r.country||'').trim().toUpperCase(),biz:String(r.biz||'').trim().toUpperCase(),name:String(r.name||'').trim()}));renderCusts();}};
   if(map[p])map[p]();
@@ -940,10 +1011,104 @@ function renderDash(){
   }).join('');
 
   document.getElementById('d-lot-matrix').innerHTML=lotRows;
+
+  // ── 입고 예정 Shipment 섹션 ──
+  const upcomingShips=[...ships]
+    .filter(s=>s.expectedDate>=today())
+    .sort((a,b)=>String(a.expectedDate||'').localeCompare(String(b.expectedDate||'')));
+  const shipHTML=upcomingShips.length===0?'':
+    '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-top:32px;margin-bottom:12px">입고 예정</div>'
+    +upcomingShips.map(s=>{
+      const dd=s.expectedDate?diffD(today(),s.expectedDate):null;
+      const ddText=dd===null?'-':dd===0?'입고일!':'D-'+dd;
+      const ddColor=dd===null?'var(--tx3)':dd<=3?'#B45309':'var(--tx2)';
+      const stBg=s.status==='confirmed'?'#dbeafe':'#fef3c7';
+      const stColor=s.status==='confirmed'?'#1e40af':'#92400e';
+      return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'
+        +'<div>'
+        +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">'
+        +'<span style="font-size:13px;font-weight:600;font-family:var(--font-mono)">'+(s.lotNo||'-')+'</span>'
+        +btag(s.biz)+' '+ctag(s.country)
+        +'<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:'+stBg+';color:'+stColor+'">'+(s.status==='confirmed'?'확정':'미확정')+'</span>'
+        +'</div>'
+        +'<div style="font-size:12px;color:var(--tx2)">'+(s.customerName||'')+'</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:18px;font-weight:600">'+fmtN(n(s.qty))+'<span style="font-size:12px;font-weight:400;color:var(--tx3)"> '+(s.unit||'개')+'</span></div>'
+        +'<div style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+' · '+(s.expectedDate||'')+'</div>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  document.getElementById('d-shipment').innerHTML=shipHTML;
 }
 
 
 // ── LOT 진행 현황 ──
+let monthlyChart=null;let chartBiz='';
+
+function setChartBiz(el){
+  document.querySelectorAll('[data-chart-biz]').forEach(e=>e.classList.remove('on'));
+  el.classList.add('on');
+  chartBiz=el.dataset.chartBiz;
+  renderMonthlyChart();
+}
+
+function renderMonthlyChart(){
+  const canvas=document.getElementById('monthly-chart');
+  if(!canvas)return;
+  // 최근 6개월
+  const mths=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date();d.setMonth(d.getMonth()-i);
+    mths.push(d.toISOString().slice(0,7));
+  }
+  const labels=mths.map(m=>{const[y,mo]=m.split('-');return mo+'월';});
+  const BIZ_LIST=chartBiz?[chartBiz]:['DRAM','SSD','MID'];
+  const BIZ_COLORS={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
+
+  const datasets=BIZ_LIST.map(b=>({
+    label:BN[b],
+    data:mths.map(m=>dailies.filter(r=>String(r.date||'').startsWith(m)&&(chartBiz?r.biz===chartBiz:r.biz===b)).reduce((s,r)=>s+n(r.proc),0)),
+    backgroundColor:BIZ_COLORS[b]+'33',
+    borderColor:BIZ_COLORS[b],
+    borderWidth:2,
+    borderRadius:4,
+    borderSkipped:false,
+  }));
+
+  if(monthlyChart){monthlyChart.destroy();monthlyChart=null;}
+  const isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';
+  const textColor=isDark?'#9aa0ad':'#888';
+  monthlyChart=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:BIZ_LIST.length>1,labels:{font:{size:11},color:textColor,boxWidth:12}},tooltip:{mode:'index',intersect:false}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:textColor,font:{size:11}}},
+        y:{grid:{color:gridColor},ticks:{color:textColor,font:{size:11},callback:v=>fmtN(v)},beginAtZero:true}
+      }
+    }
+  });
+
+  // 총계 카드
+  const totals=BIZ_LIST.map(b=>{
+    const total=dailies.filter(r=>chartBiz?r.biz===chartBiz:r.biz===b).reduce((s,r)=>s+n(r.proc),0);
+    const thisM=dailies.filter(r=>(chartBiz?r.biz===chartBiz:r.biz===b)&&String(r.date||'').startsWith(thisMonth())).reduce((s,r)=>s+n(r.proc),0);
+    return'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">'
+      +'<div style="font-size:11px;font-weight:600;color:'+BIZ_COLORS[b]+';margin-bottom:4px">'+BN[b]+'</div>'
+      +'<div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">'+fmtN(total)+'</div>'
+      +'<div style="font-size:10px;color:var(--tx3);margin-top:2px">전체 누적</div>'
+      +'<div style="font-size:12px;font-weight:500;color:var(--tx2);margin-top:4px">이달 '+fmtN(thisM)+'</div>'
+      +'</div>';
+  });
+  const totEl=document.getElementById('monthly-totals');
+  if(totEl)totEl.style.gridTemplateColumns='repeat('+BIZ_LIST.length+',1fr)',totEl.innerHTML=totals.join('');
+}
+
+
 let progOpenId=null;
 
 function renderProg(){
@@ -1555,6 +1720,105 @@ async function quickMarkPaid(id){
 async function markPaid(id){quickMarkPaid(id);}
 
 function addInvRow(){openInvPanel(null);}
+
+
+// ── Shipment ──
+let ships=[];let shipEditId=null;
+
+async function loadShipments(){
+  ships=await aGet('shipments');
+  ships=ships.map(r=>({...r,
+    country:String(r.country||'').trim().toUpperCase(),
+    biz:String(r.biz||'').trim().toUpperCase(),
+  }));
+}
+
+function renderShipCards(){
+  const el=document.getElementById('ship-cards');if(!el)return;
+  const sorted=[...ships].sort((a,b)=>String(a.expectedDate||'').localeCompare(String(b.expectedDate||'')));
+  if(!sorted.length){el.innerHTML='<div class="empty" style="padding:48px">등록된 입고 예정이 없습니다</div>';return;}
+  el.innerHTML=sorted.map(s=>{
+    const dd=s.expectedDate?diffD(today(),s.expectedDate):null;
+    const ddText=dd===null?'-':dd<0?'D+'+Math.abs(dd):(dd===0?'입고일!':'D-'+dd);
+    const ddColor=dd===null?'var(--tx3)':dd<0?'#dc2626':dd<=3?'#B45309':'var(--tx2)';
+    const stBg=s.status==='confirmed'?'#dbeafe':'#fef3c7';
+    const stColor=s.status==='confirmed'?'#1e40af':'#92400e';
+    const stText=s.status==='confirmed'?'확정':'미확정';
+    return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'      +'<div>'      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'      +'<span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">'+(s.lotNo||'-')+'</span>'      +btag(s.biz)+' '+ctag(s.country)      +'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:'+stBg+';color:'+stColor+'">'+stText+'</span>'      +'</div>'      +'<div style="font-size:12px;color:var(--tx2)">'+(s.customerName||'')+(s.note?' · '+s.note:'')+'</div>'      +'</div>'      +'<div style="text-align:right">'      +'<div style="font-size:20px;font-weight:600;letter-spacing:-.02em">'+fmtN(n(s.qty))+'<span style="font-size:13px;font-weight:400;color:var(--tx3)"> '+(s.unit||'개')+'</span></div>'      +'<div style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+'</div>'      +'<div style="font-size:11px;color:var(--tx3)">'+(s.expectedDate||'')+'</div>'      +'<div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end">'      +(s.status!=='confirmed'?'<button class="btn sm" style="font-size:11px" onclick="confirmShipment('+s.id+')">확정</button>':'')
+      +'<button class="btn sm" style="font-size:11px" onclick="openShipPanel('+s.id+')">수정</button>'      +'<button class="btn del sm" style="font-size:11px" onclick="delShipment('+s.id+')">삭제</button>'      +'</div></div></div>';
+  }).join('');
+}
+
+function openShipPanel(id){
+  shipEditId=id;
+  const panel=document.getElementById('ship-panel');
+  const overlay=document.getElementById('ship-overlay');
+  document.getElementById('ship-panel-title').textContent=id?'Shipment 수정':'새 Shipment';
+  if(id){
+    const s=ships.find(x=>x.id==id);
+    if(s){
+      document.getElementById('sp-biz').value=s.biz||'DRAM';
+      document.getElementById('sp-country').value=s.country||'HK';
+      document.getElementById('sp-cust').value=s.customerName||'';
+      document.getElementById('sp-lot').value=s.lotNo||'';
+      document.getElementById('sp-qty').value=s.qty||'';
+      document.getElementById('sp-unit').value=s.unit||'개';
+      document.getElementById('sp-date').value=s.expectedDate||'';
+      document.getElementById('sp-status').value=s.status||'pending';
+      document.getElementById('sp-note').value=s.note||'';
+    }
+  } else {
+    ['sp-cust','sp-lot','sp-qty','sp-note','sp-date'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+    document.getElementById('sp-status').value='pending';
+  }
+  panel.style.display='block';overlay.style.display='block';
+  document.body.style.overflow='hidden';
+}
+
+function closeShipPanel(){
+  document.getElementById('ship-panel').style.display='none';
+  document.getElementById('ship-overlay').style.display='none';
+  document.body.style.overflow='';shipEditId=null;
+}
+
+async function saveShipment(){
+  const rec={
+    id:shipEditId||Date.now(),
+    biz:document.getElementById('sp-biz').value,
+    country:document.getElementById('sp-country').value,
+    customerName:document.getElementById('sp-cust').value.trim(),
+    lotNo:document.getElementById('sp-lot').value.trim(),
+    qty:n(document.getElementById('sp-qty').value),
+    unit:document.getElementById('sp-unit').value,
+    expectedDate:document.getElementById('sp-date').value,
+    status:document.getElementById('sp-status').value,
+    note:document.getElementById('sp-note').value.trim()
+  };
+  if(shipEditId){
+    const idx=ships.findIndex(x=>x.id==shipEditId);if(idx>=0)ships[idx]=rec;
+    aPost({action:'update',sheet:'shipments',id:shipEditId,data:rec});
+  } else {
+    ships.push(rec);
+    aPost({action:'append',sheet:'shipments',data:rec});
+  }
+  const ok=document.getElementById('sp-ok');ok.style.display='block';
+  setTimeout(()=>{ok.style.display='none';closeShipPanel();renderShipCards();renderDash();},800);
+  toast('저장됨');
+}
+
+async function confirmShipment(id){
+  const s=ships.find(x=>x.id==id);if(!s)return;
+  s.status='confirmed';
+  const idx=ships.findIndex(x=>x.id==id);if(idx>=0)ships[idx]=s;
+  aPost({action:'update',sheet:'shipments',id,data:s});
+  renderShipCards();renderDash();toast('확정 처리됨');
+}
+
+async function delShipment(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  const res=await aPost({action:'delete',sheet:'shipments',id});
+  if(!res.error){ships=ships.filter(x=>x.id!=id);renderShipCards();renderDash();toast('삭제됨');}
+}
 
 
 // ── 매출 현황 ──
