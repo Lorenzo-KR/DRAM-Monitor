@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Ops Monitor</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+
+  <!-- External libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════════════ -->
+<div id="login-screen"
+  style="position:fixed;inset:0;background:#F5F6F8;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:16px;padding:40px 44px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:44px;height:44px;background:#1B4F8A;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
+          <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div style="font-size:18px;font-weight:600;color:#181c24;letter-spacing:-.02em">Test Ops Monitor</div>
+      <div style="font-size:13px;color:#9aa0ad;margin-top:4px">DRAM · SSD · Mobile Ink Die</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;color:#5a6170;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">비밀번호</label>
+      <input type="password" id="login-pw" placeholder="비밀번호 입력"
+        style="width:100%;padding:10px 14px;border:1px solid rgba(0,0,0,0.13);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;background:#F5F6F8;color:#181c24;outline:none;transition:border-color .15s"
+        onkeydown="if(event.key==='Enter') Auth.login()"
+        onfocus="this.style.borderColor='#1B4F8A';this.style.background='#fff'"
+        onblur="this.style.borderColor='rgba(0,0,0,0.13)';this.style.background='#F5F6F8'">
+    </div>
+    <div id="login-err" style="font-size:12px;color:#dc2626;margin-bottom:10px;display:none;text-align:center">
+      비밀번호가 틀렸습니다
+    </div>
+    <button onclick="Auth.login()"
+      style="width:100%;padding:11px;background:#1B4F8A;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s"
+      onmouseover="this.style.background='#2563a8'"
+      onmouseout="this.style.background='#1B4F8A'">
+      로그인
+    </button>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:#c8cdd6">내부 관리자 전용</div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- Save status bar (bottom-right) -->
+  <div id="ss-bar" class="ok">
+    <div class="sdot" id="sdot"></div>
+    <span id="stext">연결됨</span>
+  </div>
+
+  <!-- ─── Sidebar ─────────────────────────────────────────── -->
+  <aside class="sb">
+    <div class="sb-logo">
+      <div class="sb-logo-t">Test Ops Monitor</div>
+      <div class="sb-logo-s">DRAM · SSD · Mobile Ink Die</div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-sec">Overview</div>
+      <button class="ni on" onclick="Nav.go('dash')">
+        <svg fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+        대시보드
+      </button>
+      <button class="ni" onclick="Nav.go('opsdash')">
+        <svg fill="none" viewBox="0 0 16 16"><path d="M2 12V6l6-4 6 4v6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><rect x="5" y="8" width="3" height="4" rx=".5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="6" width="3" height="6" rx=".5" stroke="currentColor" stroke-width="1.3"/></svg>
+        Ops Dashboard
+      </button>
+      <button class="ni" onclick="Nav.go('progress')">
+        <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        LOT 진행 현황
+      </button>
+
+      <div class="sb-sec">입력</div>
+      <button class="ni" onclick="Nav.go('lotreg')">
+        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        LOT 등록
+      </button>
+      <button class="ni" onclick="Nav.go('daily')">
+        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        일별 처리 입력
+      </button>
+      <button class="ni" onclick="Nav.go('shipment')">
+        <svg fill="none" viewBox="0 0 16 16"><path d="M1 10l3-7h8l3 7H1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 10v3a1 1 0 001 1h12a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5"/><path d="M6 7v3M10 7v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        입고 예정
+      </button>
+
+      <div class="sb-sec">재무</div>
+      <button class="ni" onclick="Nav.go('invoice')">
+        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        인보이스 입력
+      </button>
+      <button class="ni" onclick="Nav.go('revenue')">
+        <svg fill="none" viewBox="0 0 16 16"><path d="M1 12l4-4 3 3 4-5 3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        매출 현황
+      </button>
+
+      <div class="sb-sec">관리</div>
+      <button class="ni" onclick="Nav.go('kpitarget')">
+        <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r=".8" fill="currentColor"/></svg>
+        KPI 목표 설정
+      </button>
+      <button class="ni" onclick="Nav.go('country')">
+        <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 8h13M8 1.5C6.5 4 5.5 6 5.5 8s1 4 2.5 6.5M8 1.5C9.5 4 10.5 6 10.5 8s-1 4-2.5 6.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        국가별 현황
+      </button>
+      <button class="ni" onclick="Nav.go('customers')">
+        <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        고객사 관리
+      </button>
+    </nav>
+
+    <div class="sb-bot">
+      <div class="sync">
+        <div class="sdot" id="sdot"></div>
+        <span id="stext">연결됨</span>
+      </div>
+    </div>
+  </aside>
+
+
+  <!-- ─── Main Content ─────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- 대시보드 -->
+    <div class="pg on" id="pg-dash">
+      <div id="dash-root"></div>
+    </div>
+
+    <!-- Ops Dashboard -->
+    <div class="pg" id="pg-opsdash">
+      <div class="ph">
+        <h1>Ops Dashboard</h1>
+        <p id="opsdash-dt"></p>
+      </div>
+      <div id="opsdash-body"></div>
+    </div>
+
+    <!-- LOT 진행 현황 -->
+    <div class="pg" id="pg-progress">
+      <div class="ph-row">
+        <div class="ph"><h1>LOT 진행 현황</h1></div>
+        <button class="btn xl sm" onclick="Pages.Progress.exportExcel()" style="margin-top:4px">↓ 엑셀</button>
+      </div>
+      <!-- 월별 처리량 차트 -->
+      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:14px;font-weight:600">월별 처리량</div>
+          <div style="display:flex;gap:4px" id="chart-year-tabs"></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+          <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">지역</span>
+          <button class="pill pa on" data-chart-co="" onclick="Pages.Progress.setChartCountry(this)">전체</button>
+          <button class="pill phk" data-chart-co="HK" onclick="Pages.Progress.setChartCountry(this)">홍콩</button>
+          <button class="pill psg" data-chart-co="SG" onclick="Pages.Progress.setChartCountry(this)">싱가포르</button>
+          <span class="sep"></span>
+          <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">사업</span>
+          <button class="pill pa on" data-chart-biz="" onclick="Pages.Progress.setChartBiz(this)">전체</button>
+          <button class="pill pd" data-chart-biz="DRAM" onclick="Pages.Progress.setChartBiz(this)">DRAM</button>
+          <button class="pill ps" data-chart-biz="SSD" onclick="Pages.Progress.setChartBiz(this)">SSD</button>
+          <button class="pill pm" data-chart-biz="MID" onclick="Pages.Progress.setChartBiz(this)">MID</button>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="monthly-chart"></canvas></div>
+        <div id="monthly-totals" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px"></div>
+      </div>
+      <!-- LOT 목록 필터 -->
+      <div class="fb">
+        <button class="pill pa on" data-k="biz" data-v="" onclick="Pages.Progress.setFilter(this,'biz')">전체</button>
+        <button class="pill pd" data-k="biz" data-v="DRAM" onclick="Pages.Progress.setFilter(this,'biz')">DRAM Test</button>
+        <button class="pill ps" data-k="biz" data-v="SSD" onclick="Pages.Progress.setFilter(this,'biz')">SSD Test</button>
+        <button class="pill pm" data-k="biz" data-v="MID" onclick="Pages.Progress.setFilter(this,'biz')">Mobile Ink Die</button>
+        <span class="sep"></span>
+        <button class="pill pa on" data-k="co" data-v="" onclick="Pages.Progress.setFilter(this,'co')">전체</button>
+        <button class="pill phk" data-k="co" data-v="HK" onclick="Pages.Progress.setFilter(this,'co')">홍콩</button>
+        <button class="pill psg" data-k="co" data-v="SG" onclick="Pages.Progress.setFilter(this,'co')">싱가포르</button>
+        <span class="sep"></span>
+        <button class="pill pa on" data-k="st" data-v="" onclick="Pages.Progress.setFilter(this,'st')">전체</button>
+        <button class="pill" style="border-color:#2563eb;color:#2563eb" data-k="st" data-v="inprog" onclick="Pages.Progress.setFilter(this,'st')">진행중</button>
+        <button class="pill" style="border-color:#dc2626;color:#dc2626" data-k="st" data-v="overdue" onclick="Pages.Progress.setFilter(this,'st')">지연</button>
+        <button class="pill" style="border-color:#16a34a;color:#16a34a" data-k="st" data-v="done" onclick="Pages.Progress.setFilter(this,'st')">완료</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="pr-cnt"></span>
+      </div>
+      <div id="pr-cards"></div>
+    </div>
+
+    <!-- LOT 등록 -->
+    <div class="pg" id="pg-lotreg">
+      <div class="ph-row">
+        <div class="ph"><h1>LOT 등록</h1><p id="lr-sub">국가와 사업을 선택하세요</p></div>
+        <button class="btn xl sm" onclick="Pages.LotRegister.exportExcel()" style="margin-top:4px">↓ 엑셀</button>
+      </div>
+      <div class="fb" style="margin-bottom:16px">
+        <button class="pill phk" id="lr-hk" data-co="HK" onclick="Pages.LotRegister.setFilter(this,'co')">홍콩</button>
+        <button class="pill psg" id="lr-sg" data-co="SG" onclick="Pages.LotRegister.setFilter(this,'co')">싱가포르</button>
+        <span class="sep"></span>
+        <button class="pill pd" data-biz="DRAM" onclick="Pages.LotRegister.setFilter(this,'biz')">DRAM Test</button>
+        <button class="pill ps" data-biz="SSD" onclick="Pages.LotRegister.setFilter(this,'biz')">SSD Test</button>
+        <button class="pill pm" data-biz="MID" onclick="Pages.LotRegister.setFilter(this,'biz')">Mobile Ink Die</button>
+      </div>
+      <!-- LOT 등록 폼 -->
+      <div class="fw" id="lr-form" style="display:none">
+        <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:12px" id="lr-form-title"></div>
+        <div class="fg fg4">
+          <div class="fld"><label>LOT 번호</label><input type="text" id="lr-lot" placeholder="예: LOT-2024-001"></div>
+          <div class="fld"><label>입고일</label><input type="date" id="lr-in" onchange="Pages.LotRegister.calcTargetDate()"></div>
+          <div class="fld"><label>목표 완료일 (+14일)</label><input type="date" id="lr-tgt" readonly></div>
+          <div class="fld"><label>고객사</label>
+            <select id="lr-cust" onchange="Pages.LotRegister.handleCustomerSelect(this)">
+              <option value="">-- 선택 --</option>
+            </select>
+            <input type="text" id="lr-cust-manual" placeholder="직접 입력" style="display:none;margin-top:4px">
+          </div>
+        </div>
+        <div class="fg fg4">
+          <div class="fld"><label>수량</label><input type="number" id="lr-qty" placeholder="0" min="0"></div>
+          <div class="fld"><label>단위</label>
+            <select id="lr-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
+          </div>
+          <div class="fld"><label>단가</label><input type="number" id="lr-price" placeholder="0"></div>
+          <div class="fld"><label>통화</label>
+            <select id="lr-cur"><option value="USD">USD</option><option value="HKD">HKD</option><option value="SGD">SGD</option><option value="KRW">KRW</option></select>
+          </div>
+        </div>
+        <div class="fg fg2">
+          <div class="fld"><label>제품</label><input type="text" id="lr-prod" placeholder="예: DDR5-8GB"></div>
+          <div class="fld"><label>비고</label><input type="text" id="lr-note" placeholder="특이사항"></div>
+        </div>
+        <div class="br">
+          <button class="btn pri" id="lr-btn" onclick="Pages.LotRegister.save()">LOT 등록</button>
+          <button class="btn" onclick="Pages.LotRegister.clearForm()">초기화</button>
+          <span id="lr-ok" style="font-size:12px;color:#166534;display:none;font-weight:500">✓ 등록 완료</span>
+        </div>
+      </div>
+      <!-- LOT 목록 테이블 -->
+      <div id="lr-table-wrap" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-t" style="margin:0" id="lr-table-title"></div>
+          <div style="display:flex;gap:8px">
+            <div id="lot-bulk-bar" style="display:none;align-items:center;gap:8px">
+              <span id="lot-sel-cnt" style="font-size:12px;font-weight:500;color:#991b1b"></span>
+              <button class="btn sm" style="border-color:#E24B4A;color:#991b1b" onclick="Pages.LotRegister.bulkDelete()">선택 삭제</button>
+              <button class="btn sm" onclick="Pages.LotRegister.clearChecks()">선택 해제</button>
+            </div>
+          </div>
+        </div>
+        <div class="etw">
+          <table id="lot-table">
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" id="lot-chk-all" onchange="Pages.LotRegister.toggleAllChecks(this)" style="cursor:pointer;width:14px;height:14px"></th>
+              <th>LOT번호</th><th>고객사</th><th>입고일</th><th>목표완료</th><th>실완료</th>
+              <th>수량</th><th>단위</th><th>단가</th><th>통화</th><th>제품</th>
+              <th>진행률</th><th>상태</th><th></th>
+            </tr></thead>
+            <tbody id="lot-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="lr-empty" class="empty" style="padding:48px">
+        위에서 국가와 사업을 선택하면 해당 LOT 목록과 등록 폼이 표시됩니다
+      </div>
+    </div>
+
+    <!-- 입고 예정 -->
+    <div class="pg" id="pg-shipment">
+      <div class="ph-row">
+        <div class="ph"><h1>입고 예정</h1><p>입고 예정 Shipment 관리</p></div>
+        <button class="btn pri sm" onclick="Pages.Shipment.openPanel(null)" style="margin-top:4px">+ 새 Shipment</button>
+      </div>
+      <div id="ship-cards"><div class="empty" style="padding:48px">등록된 입고 예정이 없습니다</div></div>
+      <!-- 입력 패널 (slide-in) -->
+      <div id="ship-panel" style="display:none;position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
+          <div style="font-size:16px;font-weight:600" id="ship-panel-title">새 Shipment</div>
+          <button onclick="Pages.Shipment.closePanel()" style="border:none;background:none;font-size:22px;color:var(--tx3);cursor:pointer;padding:0 4px">×</button>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fld"><label>사업</label>
+              <select id="sp-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+            </div>
+            <div class="fld"><label>국가</label>
+              <select id="sp-country"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
+            </div>
+          </div>
+          <div class="fld"><label>고객사</label><input type="text" id="sp-cust" placeholder="고객사명"></div>
+          <div class="fld"><label>LOT 번호 (예정)</label><input type="text" id="sp-lot" placeholder="예: HK_DRAM_Batch_3"></div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+            <div class="fld"><label>예정 수량</label><input type="number" id="sp-qty" placeholder="0" min="0"></div>
+            <div class="fld"><label>단위</label>
+              <select id="sp-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
+            </div>
+          </div>
+          <div class="fld"><label>입고 예정일</label><input type="date" id="sp-date"></div>
+          <div class="fld"><label>상태</label>
+            <select id="sp-status"><option value="confirmed">확정</option><option value="pending">미확정</option></select>
+          </div>
+          <div class="fld"><label>비고</label><input type="text" id="sp-note" placeholder="특이사항"></div>
+          <div style="display:flex;gap:10px;margin-top:4px">
+            <button class="btn pri" onclick="Pages.Shipment.save()" style="flex:1;padding:11px">저장</button>
+            <button class="btn" onclick="Pages.Shipment.closePanel()" style="padding:11px 20px">취소</button>
+          </div>
+          <span id="sp-ok" style="font-size:12px;color:#166534;display:none;text-align:center;font-weight:500">✓ 저장됨</span>
+        </div>
+      </div>
+      <div id="ship-overlay" onclick="Pages.Shipment.closePanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:299"></div>
+    </div>
+
+    <!-- 일별 처리 입력 -->
+    <div class="pg" id="pg-daily">
+      <div class="ph-row">
+        <div class="ph"><h1>일별 처리 입력</h1><p>국가 · 사업 선택 → LOT 카드 클릭 → 처리 입력</p></div>
+        <button class="btn pri sm" onclick="Pages.DailyInput.openPasteModal()" style="margin-top:4px">
+          <svg width="13" height="13" fill="none" viewBox="0 0 16 16" style="vertical-align:middle;margin-right:4px">
+            <rect x="5" y="2" width="9" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M3 4H2a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          엑셀 붙여넣기
+        </button>
+      </div>
+      <div class="fb" style="margin-bottom:16px">
+        <button class="pill phk" data-co="HK" onclick="Pages.DailyInput.setFilter(this,'co')">홍콩</button>
+        <button class="pill psg" data-co="SG" onclick="Pages.DailyInput.setFilter(this,'co')">싱가포르</button>
+        <span class="sep"></span>
+        <button class="pill pd" data-biz="DRAM" onclick="Pages.DailyInput.setFilter(this,'biz')">DRAM Test</button>
+        <button class="pill ps" data-biz="SSD" onclick="Pages.DailyInput.setFilter(this,'biz')">SSD Test</button>
+        <button class="pill pm" data-biz="MID" onclick="Pages.DailyInput.setFilter(this,'biz')">Mobile Ink Die</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="dp-filter-info"></span>
+      </div>
+      <div id="dp-lot-cards">
+        <div class="empty" style="padding:48px">위에서 국가와 사업을 선택하면 LOT 목록이 표시됩니다</div>
+      </div>
+    </div>
+
+    <!-- 엑셀 붙여넣기 팝업 -->
+    <div id="paste-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center">
+      <div style="background:var(--card);border-radius:var(--r);width:min(860px,95vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid var(--bd);flex-shrink:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:16px;font-weight:600;margin-bottom:3px">엑셀 데이터 붙여넣기</div>
+              <div style="font-size:12px;color:var(--tx2)">엑셀에서 복사(Ctrl+C) 후 아래에 붙여넣기(Ctrl+V)</div>
+            </div>
+            <button onclick="Pages.DailyInput.closePasteModal()" style="border:none;background:none;font-size:20px;color:var(--tx3);cursor:pointer;padding:0 4px;line-height:1">×</button>
+          </div>
+          <!-- 컬럼 형식 안내 -->
+          <div style="margin-top:12px;background:#EEF4FF;border:1px solid #bfdbfe;border-radius:var(--rs);padding:10px 14px;font-size:12px;color:#1e40af">
+            <div style="font-weight:600;margin-bottom:6px">📋 엑셀 컬럼 순서</div>
+            <div style="display:grid;grid-template-columns:repeat(9,auto);gap:0;font-family:var(--font-mono);font-size:11px;overflow-x:auto">
+              <div style="padding:3px 10px;background:#1e40af;color:#fff;border-radius:4px 0 0 4px;white-space:nowrap">Region</div>
+              <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch</div>
+              <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Batch Qt'y</div>
+              <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">Date</div>
+              <div style="padding:3px 10px;background:#6b7280;color:#fff;border-left:1px solid #9ca3af;white-space:nowrap">요일 (무시)</div>
+              <div style="padding:3px 10px;background:#1e40af;color:#fff;border-left:1px solid #3b82f6;white-space:nowrap">일별 처리량</div>
+              <div style="padding:3px 10px;background:#166534;color:#fff;border-left:1px solid #4ade80;white-space:nowrap">Normal</div>
+              <div style="padding:3px 10px;background:#92400e;color:#fff;border-left:1px solid #fbbf24;white-space:nowrap">No Boot</div>
+              <div style="padding:3px 10px;background:#991b1b;color:#fff;border-left:1px solid #f87171;border-radius:0 4px 4px 0;white-space:nowrap">Abnormal</div>
+            </div>
+            <div style="margin-top:6px;color:#3b82f6;font-size:11px">※ 헤더행 포함해도 자동으로 건너뜁니다</div>
+          </div>
+        </div>
+        <div style="padding:16px 24px;flex-shrink:0">
+          <textarea id="paste-area" placeholder="여기에 Ctrl+V로 붙여넣으세요"
+            style="width:100%;height:140px;padding:12px;border:1px solid var(--bd2);border-radius:var(--rs);font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--tx);resize:none;line-height:1.6"
+            oninput="Pages.DailyInput.parsePaste()"></textarea>
+        </div>
+        <div style="flex:1;overflow:auto;padding:0 24px 16px">
+          <div id="paste-preview-wrap" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <div style="font-size:13px;font-weight:500">미리보기 <span id="paste-cnt" style="font-size:12px;color:var(--tx3);font-weight:400"></span></div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:12px;color:var(--tx3)">LOT 미인식 시 직접 선택하세요</div>
+                <button class="btn pri sm" id="paste-save-btn-top" onclick="Pages.DailyInput.savePaste()" style="display:none"></button>
+              </div>
+            </div>
+            <div style="overflow:auto;border:1px solid var(--bd);border-radius:var(--rs)">
+              <table style="width:100%;border-collapse:collapse;font-size:12px" id="paste-preview-table">
+                <thead>
+                  <tr style="background:var(--bg)">
+                    <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">날짜</th>
+                    <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Region</th>
+                    <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Batch (LOT)</th>
+                    <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">처리합계</th>
+                    <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#166534;border-bottom:1px solid var(--bd);white-space:nowrap">Normal</th>
+                    <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#92400e;border-bottom:1px solid var(--bd);white-space:nowrap">No Boot</th>
+                    <th style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600;color:#991b1b;border-bottom:1px solid var(--bd);white-space:nowrap">Abnormal</th>
+                    <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd)">비고</th>
+                    <th style="padding:7px 10px;font-size:11px;font-weight:600;color:var(--tx3);border-bottom:1px solid var(--bd)">상태</th>
+                  </tr>
+                </thead>
+                <tbody id="paste-preview-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="paste-empty" style="text-align:center;padding:24px;color:var(--tx3);font-size:13px">
+            위에 데이터를 붙여넣으면 여기에 미리보기가 표시됩니다
+          </div>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid var(--bd);display:flex;gap:8px;align-items:center;flex-shrink:0;background:var(--card)">
+          <button class="btn pri" id="paste-save-btn" onclick="Pages.DailyInput.savePaste()" style="display:none">저장</button>
+          <button class="btn" onclick="Pages.DailyInput.closePasteModal()">취소</button>
+          <span id="paste-save-msg" style="font-size:12px;color:#166534;display:none;font-weight:500"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인보이스 입력 -->
+    <div class="pg" id="pg-invoice">
+      <div class="ph-row">
+        <div class="ph"><h1>인보이스</h1><p>LOT 완료 후 건별 청구 관리</p></div>
+        <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+          <button class="btn pri sm" onclick="Pages.Invoice.openPanel(null)">+ 새 인보이스</button>
+          <button class="btn xl sm" onclick="Pages.Invoice.exportExcel()">↓ 엑셀</button>
+        </div>
+      </div>
+      <div id="inv-cards"></div>
+      <!-- 인보이스 입력 패널 -->
+      <div id="inv-panel" style="display:none;position:fixed;top:0;right:0;width:min(480px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
+          <div style="font-size:16px;font-weight:600" id="inv-panel-title">새 인보이스</div>
+          <button onclick="Pages.Invoice.closePanel()" style="border:none;background:none;font-size:22px;color:var(--tx3);cursor:pointer;line-height:1;padding:0 4px">×</button>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <div class="fld"><label>연결 LOT</label>
+            <select id="ip-lot" onchange="Pages.Invoice.fillFromLot(this.value)">
+              <option value="">-- LOT 선택 --</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fld"><label>인보이스 번호</label><input type="text" id="ip-no" placeholder="INV-2024-001"></div>
+            <div class="fld"><label>발행일</label><input type="date" id="ip-date"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fld"><label>사업</label>
+              <select id="ip-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+            </div>
+            <div class="fld"><label>국가</label>
+              <select id="ip-co"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
+            </div>
+          </div>
+          <div class="fld"><label>고객사</label><input type="text" id="ip-cust" placeholder="고객사명"></div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">
+            <div class="fld"><label>청구액</label><input type="number" id="ip-amount" placeholder="0" oninput="Pages.Invoice.calcTotal()"></div>
+            <div class="fld"><label>통화</label>
+              <select id="ip-cur"><option value="USD">USD</option><option value="HKD">HKD</option><option value="SGD">SGD</option><option value="KRW">KRW</option></select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fld"><label>VAT</label><input type="number" id="ip-vat" placeholder="0" min="0" oninput="Pages.Invoice.calcTotal()"></div>
+            <div class="fld"><label>합계</label><input type="text" id="ip-total" readonly style="color:var(--tx2);font-weight:600"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fld"><label>결제기한</label><input type="date" id="ip-due"></div>
+            <div class="fld"><label>수금 상태</label>
+              <select id="ip-status" onchange="Pages.Invoice.togglePaidFields(this.value)">
+                <option value="unpaid">미수금</option>
+                <option value="partial">부분수금</option>
+                <option value="paid">수금완료</option>
+              </select>
+            </div>
+          </div>
+          <div id="ip-paid-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;display:none">
+            <div class="fld"><label>수금일</label><input type="date" id="ip-paid-date"></div>
+            <div class="fld"><label>수금액</label><input type="number" id="ip-paid-amt" placeholder="0"></div>
+          </div>
+          <div class="fld"><label>비고</label><input type="text" id="ip-note" placeholder="특이사항"></div>
+          <div style="display:flex;gap:10px;margin-top:4px">
+            <button class="btn pri" id="ip-save-btn" onclick="Pages.Invoice.save()" style="flex:1;padding:11px">저장</button>
+            <button class="btn" onclick="Pages.Invoice.closePanel()" style="padding:11px 20px">취소</button>
+          </div>
+          <span id="ip-ok" style="font-size:12px;color:#166534;display:none;text-align:center;font-weight:500">✓ 저장됨</span>
+        </div>
+      </div>
+      <div id="inv-overlay" onclick="Pages.Invoice.closePanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:299"></div>
+    </div>
+
+    <!-- 매출 현황 -->
+    <div class="pg" id="pg-revenue">
+      <div class="ph-row">
+        <div class="ph"><h1>매출 현황</h1></div>
+        <button class="btn xl sm" onclick="Pages.Revenue.exportExcel()" style="margin-top:4px">↓ 엑셀</button>
+      </div>
+      <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--bd2);border-radius:var(--rs);overflow:hidden;width:fit-content">
+        <button id="rv-mode-month" class="btn" style="border:none;border-radius:0;border-right:1px solid var(--bd2);background:var(--navy);color:#fff;font-size:12px;padding:6px 16px" onclick="Pages.Revenue.setMode('month')">월별</button>
+        <button id="rv-mode-year" class="btn" style="border:none;border-radius:0;border-right:1px solid var(--bd2);font-size:12px;padding:6px 16px" onclick="Pages.Revenue.setMode('year')">연도별 누적</button>
+        <button id="rv-mode-all" class="btn" style="border:none;border-radius:0;font-size:12px;padding:6px 16px" onclick="Pages.Revenue.setMode('all')">전체 누적</button>
+      </div>
+      <div class="fb">
+        <select id="rv-mo" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)"></select>
+        <select id="rv-yr" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx);display:none"></select>
+        <select id="rv-biz" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)">
+          <option value="">전체 사업</option><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option>
+        </select>
+        <select id="rv-co" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)">
+          <option value="">전체 국가</option><option value="HK">홍콩</option><option value="SG">싱가포르</option>
+        </select>
+      </div>
+      <div class="mg mg4" id="rv-top"></div>
+      <div id="rv-year-breakdown" style="display:none;margin-bottom:14px"></div>
+      <div class="two">
+        <div class="cw"><div class="ct" id="rv-chart-title">청구액 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
+        <div class="cw"><div class="ct">사업별 청구 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
+      </div>
+      <div class="etw">
+        <table id="rv-table">
+          <thead><tr>
+            <th>발행일</th><th>번호</th><th>LOT</th><th>사업</th><th>국가</th><th>고객사</th><th>청구액</th><th>통화</th><th>결제기한</th><th>수금상태</th><th></th>
+          </tr></thead>
+          <tbody id="rv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 국가별 현황 -->
+    <div class="pg" id="pg-country">
+      <div class="ph"><h1>국가별 현황</h1><p>홍콩 · 싱가포르 × 사업별 상태</p></div>
+      <div class="fb">
+        <button class="pill pa on" data-k="co-period" data-v="month" onclick="Pages.Country.setPeriod(this,'month')">이달</button>
+        <button class="pill pa" data-k="co-period" data-v="all" onclick="Pages.Country.setPeriod(this,'all')">전체 누적</button>
+      </div>
+      <div id="co-content"></div>
+    </div>
+
+    <!-- KPI 목표 설정 -->
+    <div class="pg" id="pg-kpitarget">
+      <div class="ph-row">
+        <div class="ph"><h1>KPI 목표 설정</h1><p>연도별 사업별 매출 목표 관리</p></div>
+      </div>
+      <div id="kpitarget-body"></div>
+    </div>
+
+    <!-- 고객사 관리 -->
+    <div class="pg" id="pg-customers">
+      <div class="ph"><h1>고객사 관리</h1></div>
+      <div class="fw">
+        <div class="sect">고객사 등록</div>
+        <div class="fg fg3">
+          <div class="fld"><label>고객사명</label><input type="text" id="cu-name" placeholder="예: Samsung Electronics HK"></div>
+          <div class="fld"><label>국가 법인</label><select id="cu-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select></div>
+          <div class="fld"><label>주요 사업</label><select id="cu-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="ALL">전체</option></select></div>
+        </div>
+        <div class="fg fg3">
+          <div class="fld"><label>담당자 연락처</label><input type="text" id="cu-contact" placeholder="담당자명 / 이메일"></div>
+          <div class="fld"><label>기본 통화</label><select id="cu-cur"><option value="USD">USD</option><option value="HKD">HKD</option><option value="SGD">SGD</option><option value="KRW">KRW</option></select></div>
+          <div class="fld"><label>비고</label><input type="text" id="cu-note"></div>
+        </div>
+        <div class="br">
+          <button class="btn pri" id="cu-btn" onclick="Pages.Customers.save()">등록</button>
+          <span id="cu-ok" style="font-size:12px;color:#166534;display:none;font-weight:500">✓ 완료</span>
+        </div>
+      </div>
+      <div class="etw"><table>
+        <thead><tr><th>고객사명</th><th>국가</th><th>사업</th><th>담당자</th><th>통화</th><th>비고</th><th></th></tr></thead>
+        <tbody id="cu-tb"></tbody>
+      </table></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="tw-wrap" id="tw-wrap"></div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT — 로드 순서 중요:
+       1. config      (상수)
+       2. store       (상태)
+       3. utils       (순수 함수)
+       4. api         (서버 통신)
+       5. dataLoader  (데이터 로드 & 정규화)
+       6. auth        (인증)
+       7. nav         (라우팅)
+       8. pages/*     (각 페이지 모듈)
+       9. app         (진입점)
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Core -->
+<script src="js/config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/dataLoader.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nav.js"></script>
+
+<!-- Pages namespace -->
+<script>
+  /**
+   * Pages 네임스페이스
+   * 모든 페이지 모듈은 Pages.{Name} 으로 등록됩니다.
+   */
+  const Pages = {};
+</script>
+
+<!-- Page modules -->
+<script src="js/pages/dashboard.js"></script>
+<script src="js/pages/opsDashboard.js"></script>
+<script src="js/pages/progress.js"></script>
+<script src="js/pages/lotRegister.js"></script>
+<script src="js/pages/dailyInput.js"></script>
+<script src="js/pages/shipment.js"></script>
+<script src="js/pages/invoice.js"></script>
+<script src="js/pages/revenue.js"></script>
+<script src="js/pages/country.js"></script>
+<script src="js/pages/kpiTarget.js"></script>
+<script src="js/pages/customers.js"></script>
+
+<!-- App entry point -->
+<script src="js/app.js"></script>
+
+</body>
+</html>
