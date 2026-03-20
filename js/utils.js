@@ -232,6 +232,8 @@ function _xlsxExport(data, filename, sheetName) {
   UI.toast('다운로드 완료');
 }
 
+/**
+ * HTML 속성값 안전 이스케이프 (value="" 안에 쓸 때)
  * @param {*} value
  * @returns {string}
  */
