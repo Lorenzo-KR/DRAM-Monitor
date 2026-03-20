@@ -160,35 +160,46 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 6px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97';
+    const tdS = 'padding:5px 6px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97;vertical-align:middle';
+    // 헤더 순서: ▼ | 지역 | 사업 | LOT번호 | 고객사 | 수량 | 처리 | 잔량 | 진행률 | 입고일 | 목표완료 | 상태 | (삭제)
     return `
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:#3B6D11;font-size:18px;font-weight:500">+</td>
         <td style="${tdS}">
-          <select id="nl-co" style="width:60px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
+          <select id="nl-co" style="width:56px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
             <option value="HK">HK</option><option value="SG">SG</option>
           </select>
         </td>
         <td style="${tdS}">
-          <select id="nl-biz" style="width:62px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
+          <select id="nl-biz" style="width:60px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
             <option>DRAM</option><option>SSD</option><option>MID</option>
           </select>
         </td>
-        <td style="${tdS}"><input id="nl-lot" placeholder="LOT 번호" style="width:130px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px;font-family:var(--font-mono)"></td>
         <td style="${tdS}">
-          <select id="nl-cust" style="width:110px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
+          <input id="nl-lot" placeholder="LOT 번호" style="width:130px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px;font-family:var(--font-mono)">
+        </td>
+        <td style="${tdS}">
+          <select id="nl-cust" style="width:110px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff" onchange="if(this.value==='__manual__'){document.getElementById('nl-cust-manual').style.display='block'}else{document.getElementById('nl-cust-manual').style.display='none'}">
             <option value="">-- 고객사 --</option>${custOpts}<option value="__manual__">직접 입력...</option>
           </select>
-          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;width:110px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;margin-top:2px" onblur="Pages.Progress.handleNewCust(this)">
+          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;width:110px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;margin-top:2px">
         </td>
-        <td style="${tdS}" colspan="3">
-          <input id="nl-indate" type="date" style="width:130px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px" onchange="Pages.Progress.calcNewTgt()">
+        <td style="${tdS}">
+          <input id="nl-qty" type="number" placeholder="수량" min="0" style="width:75px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px;text-align:right">
         </td>
-        <td style="${tdS}"><input id="nl-qty" type="number" placeholder="수량" min="0" style="width:80px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px"></td>
-        <td style="${tdS}"><input id="nl-tgt" type="date" style="width:130px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px"></td>
-        <td style="${tdS}" colspan="2">
-          <button onclick="Pages.Progress.saveLot()" style="padding:5px 14px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer">+ 등록</button>
-          <span id="nl-ok" style="display:none;font-size:11px;color:#3B6D11;font-weight:500;margin-left:6px">✓ 등록됨</span>
+        <td style="${tdS};color:var(--tx3);font-size:11px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:11px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:11px">—</td>
+        <td style="${tdS}">
+          <input id="nl-indate" type="date" style="width:125px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px" onchange="Pages.Progress.calcNewTgt()">
+        </td>
+        <td style="${tdS}">
+          <input id="nl-tgt" type="date" style="width:125px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px">
+        </td>
+        <td style="${tdS}"></td>
+        <td style="${tdS}">
+          <button onclick="Pages.Progress.saveLot()" style="padding:5px 12px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">+ 등록</button>
+          <span id="nl-ok" style="display:none;font-size:11px;color:#3B6D11;font-weight:500;margin-left:4px">✓</span>
         </td>
       </tr>`;
   }
