@@ -17,17 +17,15 @@ const Nav = (() => {
    * render   : 페이지 진입 시 호출할 함수
    */
   const PAGES = {
-    dash:       { index: 0,  render: () => Pages.Dashboard.render() },
-    opsdash:    { index: 1,  render: () => Pages.OpsDashboard.render() },
-    progress:   { index: 2,  render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
-    lotreg:     { index: 3,  render: () => Pages.LotRegister.render() },
-    daily:      { index: 4,  render: () => Pages.DailyInput.render() },
-    shipment:   { index: 5,  render: () => Pages.Shipment.render() },
-    invoice:    { index: 6,  render: () => Pages.Invoice.render() },
-    revenue:    { index: 7,  render: () => Pages.Revenue.render() },
-    kpitarget:  { index: 8,  render: () => Pages.KpiTarget.render() },
-    country:    { index: 9,  render: () => Pages.Country.render() },
-    customers:  { index: 10, render: () => Pages.Customers.render() },
+    dash:       { index: 0, render: () => Pages.Dashboard.render() },
+    opsdash:    { index: 1, render: () => Pages.OpsDashboard.render() },
+    progress:   { index: 2, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
+    invoice:    { index: 3, render: () => Pages.Invoice.render() },
+    revenue:    { index: 4, render: () => Pages.Revenue.render() },
+    kpitarget:  { index: 5, render: () => Pages.KpiTarget.render() },
+    country:    { index: 6, render: () => Pages.Country.render() },
+    verify:     { index: 7, render: () => Pages.Verify.render() },
+    customers:  { index: 8, render: () => Pages.Customers.render() },
   };
 
   let _current = null;
