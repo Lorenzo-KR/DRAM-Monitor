@@ -16,11 +16,11 @@ Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
   const S = {
-    th:  'padding:7px 10px;text-align:left;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
-    thr: 'padding:7px 10px;text-align:right;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
-    td:  'padding:7px 10px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle',
-    tdr: 'padding:7px 10px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:11px',
-    tdm: 'padding:7px 10px;border-bottom:0.5px solid var(--bd);color:var(--tx3);vertical-align:middle;font-size:11px',
+    th:  'padding:9px 12px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
+    thr: 'padding:9px 12px;text-align:right;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
+    td:  'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle',
+    tdr: 'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:13px',
+    tdm: 'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx3);vertical-align:middle;font-size:13px',
   };
 
   // ── 배지 헬퍼 ───────────────────────────────────────────────
@@ -175,51 +175,63 @@ Pages.Dashboard = (() => {
       </div>`;
   }
 
-  // ── 5. Active Job Orders 표 ─────────────────────────────────
+  // ── 5. Active + Upcoming Job Orders 표 ─────────────────────
   function _renderActiveTable(activeLots, dailies) {
-    if (!activeLots.length) return '';
-    const rows = activeLots.map(lot => {
-      const cum   = getLotCumulative(lot.id, dailies);
-      const qty   = parseNumber(lot.qty);
-      const rem   = Math.max(0, qty - cum);
-      const pct   = qty > 0 ? Math.min(100, Math.round(cum / qty * 100)) : 0;
-      const st    = getLotStatus(lot);
-      const dd    = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
+    // 입고예정(미래 입고일) 포함
+    const upcomingLots = activeLots.filter(l => l.inDate > today());
+    const inProgressLots = activeLots.filter(l => l.inDate <= today());
+    const allLots = [...upcomingLots, ...inProgressLots];
+    if (!allLots.length) return '';
+
+    const rows = allLots.map(lot => {
+      const isUpcoming = lot.inDate > today();
+      const cum    = isUpcoming ? 0 : getLotCumulative(lot.id, dailies);
+      const qty    = parseNumber(lot.qty);
+      const rem    = Math.max(0, qty - cum);
+      const pct    = (qty > 0 && !isUpcoming) ? Math.min(100, Math.round(cum / qty * 100)) : 0;
+      const st     = isUpcoming ? 'upcoming' : getLotStatus(lot);
+      const dd     = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
+      const ddIn   = isUpcoming ? diffDays(today(), lot.inDate) : null;
       const pctColor = st === 'overdue' ? '#A32D2D' : pct >= 80 ? '#BA7517' : '#0C447C';
-      const barColor = st === 'overdue' ? '#E24B4A' : pct >= 80 ? '#EF9F27' : '#185FA5';
+      const barColor = st === 'overdue' ? '#E24B4A' : st === 'upcoming' ? '#378ADD' : pct >= 80 ? '#EF9F27' : '#185FA5';
+      const stStyle  = st === 'upcoming' ? 'background:#E6F1FB;color:#0C447C' : ST_STYLE[st] || '';
+      const stLabel  = st === 'upcoming' ? '입고예정' : ST_LABEL[st] || st;
+
       return `
-        <tr>
-          <td style="${S.td};font-family:var(--font-mono);font-size:11px;font-weight:500">${lot.lotNo || lot.id}</td>
+        <tr style="${isUpcoming ? 'background:#F5F9FF' : ''}">
+          <td style="${S.td};font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-          <td style="${S.tdm}">${lot.customerName || '—'}</td>
-          <td style="${S.tdr}">${formatNumber(qty)}</td>
-          <td style="${S.tdr};color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${formatNumber(cum)}</td>
-          <td style="${S.tdr};color:${rem > 0 ? '#BA7517' : 'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="${S.td};min-width:110px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">
-                <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
-              </div>
-              <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:26px;text-align:right">${pct}%</span>
-            </div>
+          <td style="${S.tdm};font-size:13px">${lot.customerName || '—'}</td>
+          <td style="${S.tdr};font-size:13px">${formatNumber(qty)}</td>
+          <td style="${S.tdr};font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${isUpcoming ? '—' : formatNumber(cum)}</td>
+          <td style="${S.tdr};font-size:13px;color:${rem > 0 ? '#BA7517' : 'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="${S.td};min-width:120px">
+            ${isUpcoming
+              ? `<span style="font-size:13px;color:#0C447C;font-weight:500">D-${ddIn}</span>`
+              : `<div style="display:flex;align-items:center;gap:6px">
+                  <div style="flex:1;height:5px;background:var(--bd);border-radius:2px;overflow:hidden">
+                    <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
+                  </div>
+                  <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                </div>`}
           </td>
-          <td style="${S.tdm}">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
-            ${lot.targetDate || '—'}${dd !== null ? `<span style="font-size:10px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
+          <td style="${S.tdm};font-size:13px;color:${isUpcoming ? '#0C447C' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
+          <td style="${S.tdm};font-size:13px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
+            ${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:11px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
           </td>
-          <td style="${S.td}">${badge(ST_LABEL[st], ST_STYLE[st] || '')}</td>
+          <td style="${S.td}">${badge(stLabel, stStyle)}</td>
         </tr>`;
     }).join('');
 
     return `
-      <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Active job orders</div>
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Active & Upcoming Job Orders</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
             <th style="${S.thr}">입고량</th><th style="${S.thr}">처리</th><th style="${S.thr}">잔량</th>
-            <th style="${S.th};min-width:110px">진행률</th>
+            <th style="${S.th};min-width:120px">진행률</th>
             <th style="${S.th}">입고일</th><th style="${S.th}">목표완료</th><th style="${S.th}">상태</th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -242,10 +254,10 @@ Pages.Dashboard = (() => {
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
           <td style="${S.tdm}">${lot.customerName || '—'}</td>
           <td style="${S.tdr}">${formatNumber(parseNumber(lot.qty))}</td>
-          <td style="${S.tdm}">${lot.inDate || '—'}</td>
-          <td style="${S.tdm}">${lot.actualDone || '—'}</td>
-          <td style="${S.tdm}">${tat}</td>
-          <td style="${S.tdr};color:${rev > 0 ? '#085041' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(rev) : '—'}</td>
+          <td style="${S.tdm};font-size:13px">${lot.inDate || '—'}</td>
+          <td style="${S.tdm};font-size:13px">${lot.actualDone || '—'}</td>
+          <td style="${S.tdm};font-size:13px">${tat}</td>
+          <td style="${S.tdr};font-size:13px;color:${rev > 0 ? '#085041' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—'}</td>
         </tr>`;
     }).join('');
 
@@ -255,21 +267,21 @@ Pages.Dashboard = (() => {
     }, 0);
 
     return `
-      <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Completed job orders</div>
+      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Completed job orders</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
             <th style="${S.thr}">수량</th><th style="${S.th}">입고일</th><th style="${S.th}">완료일</th>
-            <th style="${S.th}">TAT</th><th style="${S.thr}">Revenue</th>
+            <th style="${S.th}">TAT</th><th style="${S.thr}">매출액</th>
           </tr></thead>
           <tbody>
             ${rows}
             <tr style="background:var(--bg)">
-              <td colspan="4" style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
-              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
+              <td colspan="4" style="padding:8px 12px;font-size:13px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
+              <td style="${S.tdr};font-size:13px;border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
-              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(totalRev) : '—'}</td>
+              <td style="${S.tdr};font-size:13px;border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
             </tr>
           </tbody>
         </table>

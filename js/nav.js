@@ -18,14 +18,13 @@ const Nav = (() => {
    */
   const PAGES = {
     dash:       { index: 0, render: () => Pages.Dashboard.render() },
-    opsdash:    { index: 1, render: () => Pages.OpsDashboard.render() },
-    progress:   { index: 2, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
-    invoice:    { index: 3, render: () => Pages.Invoice.render() },
-    revenue:    { index: 4, render: () => Pages.Revenue.render() },
-    kpitarget:  { index: 5, render: () => Pages.KpiTarget.render() },
-    country:    { index: 6, render: () => Pages.Country.render() },
-    verify:     { index: 7, render: () => Pages.Verify.render() },
-    customers:  { index: 8, render: () => Pages.Customers.render() },
+    progress:   { index: 1, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
+    invoice:    { index: 2, render: () => Pages.Invoice.render() },
+    revenue:    { index: 3, render: () => Pages.Revenue.render() },
+    kpitarget:  { index: 4, render: () => Pages.KpiTarget.render() },
+    country:    { index: 5, render: () => Pages.Country.render() },
+    verify:     { index: 6, render: () => Pages.Verify.render() },
+    customers:  { index: 7, render: () => Pages.Customers.render() },
   };
 
   let _current = null;
