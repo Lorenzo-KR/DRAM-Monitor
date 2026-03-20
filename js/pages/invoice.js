@@ -1,64 +1,136 @@
 /**
  * pages/invoice.js
- * 인보이스 관리 — 카드 목록 + 슬라이드 패널 입력
+ * 인보이스 관리 — 표 목록(필터/정렬/합계) + 슬라이드 패널 입력
  */
 
 Pages.Invoice = (() => {
 
-  let _editId = null;
+  let _editId   = null;
+  let _filterCo  = '';
+  let _filterBiz = '';
+  let _sortKey   = 'date';
+  let _sortDir   = -1;
 
+  // ── 목록 렌더 ───────────────────────────────────────────────
   function render() {
-    const el     = document.getElementById('inv-cards'); if (!el) return;
-    const sorted = [...Store.getInvoices()].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    const el = document.getElementById('inv-cards'); if (!el) return;
 
-    if (!sorted.length) {
-      el.innerHTML = '<div class="empty" style="padding:48px">인보이스가 없습니다<br><button class="btn pri sm" onclick="Pages.Invoice.openPanel(null)" style="margin-top:12px">+ 새 인보이스 추가</button></div>';
-      return;
+    let list = [...Store.getInvoices()];
+    if (_filterCo)  list = list.filter(r => r.country === _filterCo);
+    if (_filterBiz) list = list.filter(r => r.biz === _filterBiz);
+
+    list.sort((a, b) => {
+      let av = a[_sortKey] || '', bv = b[_sortKey] || '';
+      if (_sortKey === 'amount' || _sortKey === 'total') { av = parseNumber(a.amount); bv = parseNumber(b.amount); }
+      return typeof av === 'number' ? (av - bv) * _sortDir : String(av).localeCompare(String(bv)) * _sortDir;
+    });
+
+    const totalAmt  = list.reduce((s, r) => s + parseNumber(r.amount), 0);
+    const paidAmt   = list.filter(r => r.status === 'paid').reduce((s, r) => s + parseNumber(r.amount), 0);
+    const unpaidAmt = list.filter(r => r.status !== 'paid').reduce((s, r) => s + parseNumber(r.amount), 0);
+
+    const CO_STYLE  = { HK: 'background:#FAEEDA;color:#633806', SG: 'background:#E1F5EE;color:#085041' };
+    const BIZ_STYLE = { DRAM: 'background:#E6F1FB;color:#0C447C', SSD: 'background:#E1F5EE;color:#085041', MID: 'background:#EEEDFE;color:#3C3489' };
+    const ST_STYLE  = { paid: 'background:#E1F5EE;color:#085041', partial: 'background:#FAEEDA;color:#633806', unpaid: 'background:#FCEBEB;color:#791F1F' };
+    const ST_LABEL  = { paid: '수금완료', partial: '부분수금', unpaid: '미수금' };
+
+    function badge(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
+    function th(label, key, align = 'left') {
+      const active = _sortKey === key;
+      const arrow  = active ? (_sortDir > 0 ? ' ↑' : ' ↓') : '';
+      return `<th onclick="Pages.Invoice.sort('${key}')" style="padding:7px 10px;text-align:${align};font-size:10px;font-weight:500;color:${active ? 'var(--tx)' : 'var(--tx3)'};text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;cursor:pointer">${label}${arrow}</th>`;
     }
 
-    const stMap = {
-      unpaid:  '<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#fee2e2;color:#991b1b">미수금</span>',
-      partial: '<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#fef3c7;color:#92400e">부분수금</span>',
-      paid:    '<span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:4px;background:#dcfce7;color:#166534">수금완료</span>',
-    };
+    const rows = list.length === 0
+      ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tx3);font-size:13px">인보이스가 없습니다</td></tr>`
+      : list.map((r, i) => {
+          const lot     = Store.getLotById(r.lotId);
+          const due     = r.due ? diffDays(today(), r.due) : null;
+          const dueColor = r.status === 'paid' ? '#085041' : due !== null && due < 0 ? '#A32D2D' : due !== null && due <= 7 ? '#BA7517' : 'var(--tx2)';
+          const dueText  = r.status === 'paid' ? '수금완료' : due === null ? '—' : due < 0 ? 'D+' + Math.abs(due) : 'D-' + due;
+          return `
+            <tr style="border-bottom:0.5px solid var(--bd)">
+              <td style="padding:7px 10px;color:var(--tx3);font-size:11px;text-align:center">${i + 1}</td>
+              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${r.date || '—'}</td>
+              <td style="padding:7px 10px;font-family:var(--font-mono);font-size:11px">${r.no || '—'}</td>
+              <td style="padding:7px 10px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
+              <td style="padding:7px 10px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customerName || '—'}</td>
+              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
+              <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
+              <td style="padding:7px 10px;font-size:11px;color:${dueColor}">${r.due || '—'}${due !== null && r.status !== 'paid' ? ` (${dueText})` : ''}</td>
+              <td style="padding:7px 10px">${badge(ST_LABEL[r.status] || '미수금', ST_STYLE[r.status] || ST_STYLE.unpaid)}</td>
+              <td style="padding:4px 8px;white-space:nowrap">
+                ${r.status !== 'paid' ? `<button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.quickPaid(${r.id})">수금</button>` : ''}
+                <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${r.id})">수정</button>
+                <button class="btn del sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.delete(${r.id})">삭제</button>
+              </td>
+            </tr>`;
+        }).join('');
 
-    el.innerHTML = sorted.map(r => {
-      const lot     = Store.getLotById(r.lotId);
-      const due     = r.due ? diffDays(today(), r.due) : null;
-      const dueColor = r.status === 'paid' ? '#166534' : due !== null && due < 0 ? '#dc2626' : due !== null && due <= 7 ? '#92400e' : 'var(--tx2)';
-      const dueText  = r.status === 'paid' ? '수금완료' : due === null ? '-' : due < 0 ? 'D+' + Math.abs(due) : due === 0 ? '오늘' : 'D-' + due;
-      return `
-        <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-            <div>
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                <span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">${r.no || r.id}</span>
-                ${renderBizTag(r.biz)} ${renderCountryTag(r.country)}
-                ${stMap[r.status] || stMap.unpaid}
-              </div>
-              <div style="font-size:12px;color:var(--tx2)">${r.customerName || ''}${lot ? ' · ' + (lot.lotNo || lot.id) : ''}</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:18px;font-weight:600;letter-spacing:-.02em">${formatNumberShort(parseNumber(r.amount))}</div>
-              <div style="font-size:11px;color:var(--tx3)">${r.currency || 'USD'}${parseNumber(r.vat) > 0 ? ' (VAT +' + formatNumberShort(parseNumber(r.vat)) + ')' : ''}</div>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:0.5px solid var(--bd)">
-            <div style="font-size:12px;color:var(--tx2)">발행 ${r.date || '-'}${r.due ? ` &nbsp;·&nbsp; 기한 <span style="color:${dueColor};font-weight:500">${r.due} (${dueText})</span>` : ''}</div>
-            <div style="display:flex;gap:6px">
-              ${r.status !== 'paid' ? `<button class="btn sm" style="font-size:11px" onclick="Pages.Invoice.quickPaid(${r.id})">수금 처리</button>` : ''}
-              <button class="btn sm" style="font-size:11px" onclick="Pages.Invoice.openPanel(${r.id})">수정</button>
-              <button class="btn del sm" style="font-size:11px" onclick="Pages.Invoice.delete(${r.id})">삭제</button>
-            </div>
-          </div>
-        </div>`;
-    }).join('');
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;gap:4px">
+          ${['', 'HK', 'SG'].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:11px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
+        </div>
+        <div style="display:flex;gap:4px">
+          ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:11px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
+        </div>
+        <span style="font-size:11px;color:var(--tx3);margin-left:auto">${list.length}건</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 청구액</div>
+          <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalAmt))}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">수금 완료</div>
+          <div style="font-size:18px;font-weight:600;color:#085041">$${formatNumber(Math.round(paidAmt))}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">미수금</div>
+          <div style="font-size:18px;font-weight:600;color:${unpaidAmt > 0 ? '#A32D2D' : 'var(--tx3)'}">$${formatNumber(Math.round(unpaidAmt))}</div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd);width:32px">#</th>
+            ${th('발행일', 'date')}
+            ${th('번호', 'no')}
+            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">지역/사업</th>
+            ${th('고객사', 'customerName')}
+            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">LOT</th>
+            ${th('청구액', 'amount', 'right')}
+            ${th('결제기한', 'due')}
+            ${th('상태', 'status')}
+            <th style="padding:7px 10px;background:var(--bg);border-bottom:0.5px solid var(--bd);width:100px"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+          ${list.length > 0 ? `
+          <tfoot>
+            <tr style="background:var(--bg)">
+              <td colspan="6" style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
+              <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+              <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
+            </tr>
+          </tfoot>` : ''}
+        </table>
+      </div>`;
   }
 
+  // ── 필터 / 정렬 ─────────────────────────────────────────────
+  function filterCo(co)   { _filterCo  = co;  render(); }
+  function filterBiz(biz) { _filterBiz = biz; render(); }
+  function sort(key) {
+    if (_sortKey === key) _sortDir *= -1; else { _sortKey = key; _sortDir = -1; }
+    render();
+  }
+
+  // ── 패널 ────────────────────────────────────────────────────
   function openPanel(id) {
     _editId = id;
-    const panel   = document.getElementById('inv-panel');
-    const overlay = document.getElementById('inv-overlay');
     document.getElementById('inv-panel-title').textContent = id ? '인보이스 수정' : '새 인보이스';
 
     const lotSel = document.getElementById('ip-lot');
@@ -67,32 +139,34 @@ Pages.Invoice = (() => {
 
     if (id) {
       const r = Store.getInvoiceById(id); if (!r) return;
-      document.getElementById('ip-no').value        = r.no         || '';
-      document.getElementById('ip-date').value      = r.date       || '';
-      document.getElementById('ip-biz').value       = r.biz        || 'DRAM';
-      document.getElementById('ip-co').value        = r.country    || 'HK';
+      document.getElementById('ip-no').value        = r.no           || '';
+      document.getElementById('ip-date').value      = r.date         || '';
+      document.getElementById('ip-biz').value       = r.biz          || 'DRAM';
+      document.getElementById('ip-co').value        = r.country      || 'HK';
       document.getElementById('ip-cust').value      = r.customerName || '';
-      document.getElementById('ip-amount').value    = r.amount     || '';
-      document.getElementById('ip-vat').value       = r.vat        || '';
+      document.getElementById('ip-amount').value    = r.amount       || '';
+      document.getElementById('ip-vat').value       = r.vat          || '';
       document.getElementById('ip-total').value     = formatNumberShort(parseNumber(r.amount) + parseNumber(r.vat));
-      document.getElementById('ip-cur').value       = r.currency   || 'USD';
-      document.getElementById('ip-due').value       = r.due        || '';
-      document.getElementById('ip-status').value    = r.status     || 'unpaid';
-      document.getElementById('ip-paid-date').value = r.paidDate   || '';
-      document.getElementById('ip-paid-amt').value  = r.paidAmt    || '';
-      document.getElementById('ip-note').value      = r.note       || '';
-      document.getElementById('ip-lot').value       = r.lotId      || '';
+      document.getElementById('ip-cur').value       = r.currency     || 'USD';
+      document.getElementById('ip-due').value       = r.due          || '';
+      document.getElementById('ip-status').value    = r.status       || 'unpaid';
+      document.getElementById('ip-paid-date').value = r.paidDate     || '';
+      document.getElementById('ip-paid-amt').value  = r.paidAmt      || '';
+      document.getElementById('ip-note').value      = r.note         || '';
+      document.getElementById('ip-lot').value       = r.lotId        || '';
       togglePaidFields(r.status);
     } else {
       ['ip-no','ip-date','ip-biz','ip-cust','ip-amount','ip-vat','ip-total','ip-due','ip-paid-date','ip-paid-amt','ip-note'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
       document.getElementById('ip-date').value      = today();
-      document.getElementById('ip-status').value    = 'paid';       // 기본값: 수금완료
-      document.getElementById('ip-paid-date').value = today();      // 수금일도 오늘로
+      document.getElementById('ip-status').value    = 'paid';
+      document.getElementById('ip-paid-date').value = today();
       document.getElementById('ip-cur').value       = 'USD';
       document.getElementById('ip-lot').value       = '';
       togglePaidFields('paid');
     }
-    panel.style.display = 'block'; overlay.style.display = 'block'; document.body.style.overflow = 'hidden';
+    document.getElementById('inv-panel').style.display   = 'block';
+    document.getElementById('inv-overlay').style.display = 'block';
+    document.body.style.overflow = 'hidden';
   }
 
   function closePanel() {
@@ -108,12 +182,11 @@ Pages.Invoice = (() => {
 
   function fillFromLot(lotId) {
     const lot = Store.getLots().find(l => String(l.id) === lotId); if (!lot) return;
-    document.getElementById('ip-biz').value  = lot.biz          || 'DRAM';
-    document.getElementById('ip-co').value   = lot.country      || 'HK';
-    document.getElementById('ip-cust').value = lot.customerName || '';
-    // 발행일 → LOT 완료일 (없으면 오늘)
-    document.getElementById('ip-date').value      = lot.actualDone || today();
-    document.getElementById('ip-paid-date').value = lot.actualDone || today();
+    document.getElementById('ip-biz').value       = lot.biz          || 'DRAM';
+    document.getElementById('ip-co').value        = lot.country      || 'HK';
+    document.getElementById('ip-cust').value      = lot.customerName || '';
+    document.getElementById('ip-date').value      = lot.actualDone   || today();
+    document.getElementById('ip-paid-date').value = lot.actualDone   || today();
     if (lot.price)    document.getElementById('ip-amount').value = lot.price;
     if (lot.currency) document.getElementById('ip-cur').value    = lot.currency;
     calcTotal();
@@ -129,9 +202,9 @@ Pages.Invoice = (() => {
     const date   = document.getElementById('ip-date').value;
     const amount = parseNumber(document.getElementById('ip-amount').value);
     if (!date || !amount) { UI.toast('발행일과 청구금액은 필수입니다', true); return; }
-    const vat    = parseNumber(document.getElementById('ip-vat').value);
-    const lotId  = document.getElementById('ip-lot').value;
-    const lot    = Store.getLots().find(l => String(l.id) === lotId);
+    const vat   = parseNumber(document.getElementById('ip-vat').value);
+    const lotId = document.getElementById('ip-lot').value;
+    const lot   = Store.getLots().find(l => String(l.id) === lotId);
     const record = {
       id: _editId || Date.now(),
       no: document.getElementById('ip-no').value.trim() || ('INV-' + Date.now()),
@@ -183,6 +256,6 @@ Pages.Invoice = (() => {
     _xlsxExport(data, '매출현황_' + today() + '.xlsx', '매출현황');
   }
 
-  return { render, openPanel, closePanel, togglePaidFields, fillFromLot, calcTotal, save, quickPaid, delete: deleteInvoice, exportExcel };
+  return { render, filterCo, filterBiz, sort, openPanel, closePanel, togglePaidFields, fillFromLot, calcTotal, save, quickPaid, delete: deleteInvoice, exportExcel };
 
 })();
