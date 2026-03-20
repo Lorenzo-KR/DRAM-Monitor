@@ -264,6 +264,7 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
   <nav class="sb-nav">
     <div class="sb-sec">Overview</div>
     <button class="ni on" onclick="nav('dash')"><svg fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>대시보드</button>
+    <button class="ni" onclick="nav('opsdash')"><svg fill="none" viewBox="0 0 16 16"><path d="M2 12V6l6-4 6 4v6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><rect x="5" y="8" width="3" height="4" rx=".5" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="6" width="3" height="6" rx=".5" stroke="currentColor" stroke-width="1.3"/></svg>Ops Dashboard</button>
     <button class="ni" onclick="nav('progress')"><svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>LOT 진행 현황</button>
     <div class="sb-sec">입력</div>
     <button class="ni" onclick="nav('lotreg')"><svg fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>LOT 등록</button>
@@ -285,12 +286,13 @@ select.ec{cursor:pointer;-webkit-appearance:none;padding-right:20px;background-i
 
 <!-- ── 대시보드 ── -->
 <div class="pg on" id="pg-dash">
-  <div class="ph"><h1>대시보드</h1><p id="dash-dt"></p></div>
-  <div id="dash-al"></div>
-  <!-- 진행 중 배치 -->
-  <div id="d-lot-matrix"></div>
-  <!-- 입고 예정 -->
-  <div id="d-shipment"></div>
+  <div id="dash-root"></div>
+</div>
+
+<!-- ── Ops Dashboard ── -->
+<div class="pg" id="pg-opsdash">
+  <div class="ph"><h1>Ops Dashboard</h1><p id="opsdash-dt"></p></div>
+  <div id="opsdash-body"></div>
 </div>
 
 <!-- ── LOT 진행 현황 ── -->
@@ -903,9 +905,9 @@ function nav(p){
   document.querySelectorAll('.pg').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(e=>e.classList.remove('on'));
   document.getElementById('pg-'+p).classList.add('on');
-  const idx={dash:0,progress:1,lotreg:2,daily:3,invoice:4,revenue:5,country:6,customers:7};
+  const idx={dash:0,opsdash:1,progress:2,lotreg:3,daily:4,invoice:5,revenue:6,country:7,customers:8};
   document.querySelectorAll('.ni')[idx[p]].classList.add('on');
-  const map={dash:renderDash,progress:()=>{initChartYearTabs();renderProg();renderMonthlyChart();},
+  const map={dash:renderDash,opsdash:renderOpsDash,progress:()=>{initChartYearTabs();renderProg();renderMonthlyChart();},
     lotreg:()=>{renderLotRegPage();},
     daily:()=>{renderDpCards();},
     shipment:()=>{renderShipCards();},
@@ -916,141 +918,504 @@ function nav(p){
 function setF(el,key){flt[key]=el.dataset.v;document.querySelectorAll(`[data-k="${key}"]`).forEach(e=>e.classList.remove('on'));el.classList.add('on');renderProg();}
 function setCoPeriod(el,v){coPeriod=v;document.querySelectorAll('[data-k="co-period"]').forEach(e=>e.classList.remove('on'));el.classList.add('on');renderCountry();}
 
+// ── Ops Dashboard ──
+function renderOpsDash(){
+  const dtEl=document.getElementById('opsdash-dt');
+  if(dtEl)dtEl.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+  const BIZ_COLORS={DRAM:'#378ADD',SSD:'#888780'};
+  const BIZ_LABEL={DRAM:'DRAM Test',SSD:'SSD Test'};
+  const CO_COLOR={HK:'#854F0B',SG:'#0F6E56'};
+  const CO_BG={HK:'#FAEEDA',SG:'#E1F5EE'};
+  const CO_LABEL={HK:'HK',SG:'SG'};
+
+  // ── 집계 ──
+  const completedLots=lots.filter(l=>lotSt(l)==='done');
+  const activeLots=lots.filter(l=>lotSt(l)!=='done');
+
+  const totalRev=invs.reduce((s,r)=>s+n(r.total||r.amount),0);
+  const ssdRev=invs.filter(r=>r.biz==='SSD').reduce((s,r)=>s+n(r.total||r.amount),0);
+  const dramRev=invs.filter(r=>r.biz==='DRAM'||r.biz==='MID').reduce((s,r)=>s+n(r.total||r.amount),0);
+
+  const totalUnits=lots.reduce((s,l)=>s+n(l.qty),0);
+  const ssdUnits=lots.filter(l=>l.biz==='SSD').reduce((s,l)=>s+n(l.qty),0);
+  const dramUnits=lots.filter(l=>l.biz==='DRAM'||l.biz==='MID').reduce((s,l)=>s+n(l.qty),0);
+
+  const hkCount=lots.filter(l=>l.country==='HK').length;
+  const sgCount=lots.filter(l=>l.country==='SG').length;
+
+  const revPct=totalRev>0?Math.round(ssdRev/totalRev*100):0;
+
+  // ── KPI ──
+  const kpiHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem">
+    <div class="mc"><div class="mc-l">Total Job Orders</div><div class="mc-v">${lots.length}</div><div class="mc-s">HK ${hkCount} · SG ${sgCount}</div></div>
+    <div class="mc"><div class="mc-l">Total Units</div><div class="mc-v">${fmtN(totalUnits)}</div><div class="mc-s">SSD ${fmtN(ssdUnits)} · DRAM ${fmtN(dramUnits)}</div></div>
+    <div class="mc"><div class="mc-l">Total Revenue</div><div class="mc-v" style="color:#0F6E56">${totalRev>0?'$'+fmtN(totalRev):'—'}</div><div class="mc-s">Completed orders only</div></div>
+    <div class="mc"><div class="mc-l">Active Orders</div><div class="mc-v" style="color:#185FA5">${activeLots.length}</div><div class="mc-s">${completedLots.length} completed</div></div>
+  </div>`;
+
+  // ── Revenue by business ──
+  const ssdPct=revPct;
+  const dramPct=100-revPct;
+  const revHTML=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600">Revenue by business</div>
+        <div style="font-size:11px;color:var(--tx3)">Service fee (USD)</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#378ADD;display:inline-block"></span>SSD Test</div>
+        <div style="font-weight:600;color:#185FA5">${ssdRev>0?'$'+fmtN(ssdRev):'—'}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#888780;display:inline-block"></span>DRAM Test</div>
+        <div style="font-weight:600">${dramRev>0?'$'+fmtN(dramRev):'—'}</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
+        <div style="font-size:13px;font-weight:600">Total</div>
+        <div style="font-size:15px;font-weight:600;color:#0F6E56">${totalRev>0?'$'+fmtN(totalRev):'—'}</div>
+      </div>
+      ${totalRev>0?`<div style="height:7px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:8px">
+        <div style="height:100%;width:${ssdPct}%;background:#378ADD;border-radius:4px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px">
+        <span style="font-size:11px;color:#185FA5">SSD ${ssdPct}%</span>
+        <span style="font-size:11px;color:var(--tx3)">DRAM ${dramPct}%</span>
+      </div>`:''}
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600">Units by category</div>
+        <div style="font-size:11px;color:var(--tx3)">Quantity processed</div>
+      </div>
+      ${['SSD','DRAM','MID'].map(b=>{
+        const bl=lots.filter(l=>l.biz===b);
+        const done=bl.filter(l=>lotSt(l)==='done').reduce((s,l)=>s+n(l.qty),0);
+        const active=bl.filter(l=>lotSt(l)!=='done').reduce((s,l)=>s+lotCumul(l.id),0);
+        const total=done+active;
+        if(total===0)return'';
+        const maxU=totalUnits||1;
+        const pct=Math.round(total/maxU*100);
+        const color=b==='SSD'?'#378ADD':b==='DRAM'?'#888780':'#6A3D7C';
+        const label=BN[b]||b;
+        const tag=done>0&&active>0?'partial':done>0?'completed':'in progress';
+        const tagColor=done>0&&active===0?'#3B6D11':done>0?'#185FA5':'#A32D2D';
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2)">
+              <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>${label}
+              <span style="font-size:10px;color:${tagColor}">${tag}</span>
+            </div>
+            <div style="font-size:12px;font-weight:600">${fmtN(total)}</div>
+          </div>
+          <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="border-top:1px solid var(--bd);padding-top:8px;display:flex;justify-content:space-between;font-size:12px">
+        <span style="color:var(--tx3)">Total units (incl. in progress)</span>
+        <span style="font-weight:600">${fmtN(totalUnits)}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // ── Active job orders ──
+  const activeHTML=activeLots.length===0?'':`
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px">Active job orders</div>
+  <div style="display:grid;grid-template-columns:repeat(${Math.min(activeLots.length,3)},minmax(0,1fr));gap:12px;margin-bottom:12px">
+    ${activeLots.map(lot=>{
+      const cum=lotCumul(lot.id);
+      const qty=n(lot.qty);
+      const pct=qty>0?Math.min(100,Math.round(cum/qty*100)):0;
+      const pbColor=pct>=80?'#EF9F27':pct>=40?'#378ADD':'#378ADD';
+      const pctColor=pct>=80?'#BA7517':'#185FA5';
+      const statusText=pct>=80?'거의 완료':pct>0?'작업 중':'작업 시작';
+      const co=lot.country||'';
+      const biz=lot.biz||'';
+      return`<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+              <span style="font-family:var(--font-mono);font-size:11px">${lot.lotNo||lot.id}</span>
+              <span style="background:${CO_BG[co]||'var(--bg)'};color:${CO_COLOR[co]||'var(--tx2)'};font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px">${CO_LABEL[co]||co}</span>
+            </div>
+            ${btag(biz)}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:600;color:${pctColor}">${pct>0?pct+'%':'—'}</div>
+            <div style="font-size:11px;color:var(--tx3)">in progress</div>
+          </div>
+        </div>
+        <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:4px">
+          <div style="height:100%;width:${pct||1}%;background:${pbColor};border-radius:3px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:11px;color:${pctColor}">${statusText}</span>
+          <span style="font-size:11px;color:var(--tx3);font-family:var(--font-mono)">${fmtN(cum)} / ${fmtN(qty)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div style="background:var(--bg);border-radius:6px;padding:8px 10px">
+            <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound date</div>
+            <div style="font-size:14px;font-weight:600">${lot.inDate||'—'}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:6px;padding:8px 10px">
+            <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound qty</div>
+            <div style="font-size:14px;font-weight:600">${fmtN(qty)}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // ── Completed job orders ──
+  const compRows=completedLots.sort((a,b)=>String(b.inDate||'').localeCompare(String(a.inDate||'')));
+  const compHTML=compRows.length===0?'':`
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px">Completed job orders</div>
+  <div class="etw" style="margin-bottom:14px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap">Job Order</th>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd)">Region</th>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd)">Category</th>
+          <th style="padding:8px 10px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd)">Qty</th>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap">Inbound</th>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap">Outbound</th>
+          <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd)">TAT</th>
+          <th style="padding:8px 10px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd)">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${compRows.map((lot,i)=>{
+          const inv=invs.find(r=>String(r.lotId)===String(lot.id)||r.lotNo===lot.lotNo);
+          const rev=inv?n(inv.total||inv.amount):0;
+          const tat=(lot.inDate&&lot.actualDone)?diffD(lot.inDate,lot.actualDone)+' days':'—';
+          const co=lot.country||'';
+          const biz=lot.biz||'';
+          return`<tr style="${i%2===0?'':'background:var(--bg)'}">
+            <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px">${lot.lotNo||lot.id}</td>
+            <td style="padding:8px 10px"><span style="background:${CO_BG[co]||'var(--bg)'};color:${CO_COLOR[co]||'var(--tx2)'};font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px">${CO_LABEL[co]||co}</span></td>
+            <td style="padding:8px 10px">${btag(biz)}</td>
+            <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono)">${fmtN(n(lot.qty))}</td>
+            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${lot.inDate||'—'}</td>
+            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${lot.actualDone||'—'}</td>
+            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${tat}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:600;font-family:var(--font-mono);color:${rev>0?'#0F6E56':'var(--tx3)'}">${rev>0?'$'+fmtN(rev):'—'}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="border-top:1px solid var(--bd2)">
+          <td colspan="3" style="padding:10px 10px;font-size:12px;color:var(--tx2);font-weight:600">Total</td>
+          <td style="padding:10px 10px;text-align:right;font-family:var(--font-mono);font-weight:600">${fmtN(compRows.reduce((s,l)=>s+n(l.qty),0))}</td>
+          <td colspan="3"></td>
+          <td style="padding:10px 10px;text-align:right;font-family:var(--font-mono);font-weight:600;color:#0F6E56">${totalRev>0?'$'+fmtN(totalRev):'—'}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  const secLabel=t=>`<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px">${t}</div>`;
+
+  document.getElementById('opsdash-body').innerHTML=
+    secLabel('Overview')+kpiHTML+
+    secLabel('Revenue & Units')+revHTML+
+    activeHTML+compHTML;
+}
+
 // ── 대시보드 ──
 function renderDash(){
-  document.getElementById('dash-dt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const BIZ_COLORS={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
+  const BIZ_DOT={DRAM:'#378ADD',SSD:'#1D9E75',MID:'#7F77DD'};
+  const CO_DOT={HK:'#EF9F27',SG:'#1D9E75'};
 
-  const over=lots.filter(l=>lotSt(l)==='overdue');
-  const near=lots.filter(l=>lotSt(l)==='inprog'&&l.targetDate&&diffD(today(),l.targetDate)>=0&&diffD(today(),l.targetDate)<=3);
-  const als=[];
-  if(over.length>0)als.push('<div class="alert al-bad"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0;margin-right:6px"></span>지연 LOT '+over.length+'건 — '+over.map(l=>l.lotNo||l.id).join(', ')+'</div>');
-  if(near.length>0)als.push('<div class="alert al-warn"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0;margin-right:6px"></span>완료 기한 3일 이내 LOT '+near.length+'건</div>');
-  document.getElementById('dash-al').innerHTML=als.join('');
+  // ── KPI 계산 ──
+  const allLots=lots;
+  const activeLots=allLots.filter(l=>lotSt(l)!=='done');
+  const doneLots=allLots.filter(l=>lotSt(l)==='done');
+  const totalUnits=allLots.reduce((s,l)=>s+n(l.qty),0);
+  const totalProc=allLots.reduce((s,l)=>s+lotCumul(l.id),0);
+  const totalRev=doneLots.reduce((s,l)=>s+n(l.price)*n(l.qty),0);
+  const revSSD=doneLots.filter(l=>l.biz==='SSD').reduce((s,l)=>s+n(l.price)*n(l.qty),0);
+  const revDRAM=doneLots.filter(l=>l.biz==='DRAM').reduce((s,l)=>s+n(l.price)*n(l.qty),0);
+  const revMID=doneLots.filter(l=>l.biz==='MID').reduce((s,l)=>s+n(l.price)*n(l.qty),0);
 
-  const COUNTRY_BIZ={SG:['DRAM','SSD','MID'],HK:['DRAM']};
-  const lotRows=['SG','HK'].map(co=>{
-    const coLots=lots.filter(l=>l.country===co);
-    const coAct=coLots.filter(l=>lotSt(l)!=='done').length;
-    const coDone=coLots.filter(l=>lotSt(l)==='done').length;
-    const bizList=COUNTRY_BIZ[co];
+  // invs 기반 실 매출(인보이스 있으면 우선)
+  const invTotal=invs.reduce((s,r)=>s+n(r.total||r.amount),0);
+  const invSSD=invs.filter(r=>r.biz==='SSD').reduce((s,r)=>s+n(r.total||r.amount),0);
+  const invDRAM=invs.filter(r=>r.biz==='DRAM').reduce((s,r)=>s+n(r.total||r.amount),0);
+  const invMID=invs.filter(r=>r.biz==='MID').reduce((s,r)=>s+n(r.total||r.amount),0);
+  const useInv=invTotal>0;
+  const dispTotal=useInv?invTotal:totalRev;
+  const dispSSD=useInv?invSSD:revSSD;
+  const dispDRAM=useInv?invDRAM:revDRAM;
+  const dispMID=useInv?invMID:revMID;
 
-    const bizCards=bizList.map(b=>{
-      const bl=lots.filter(l=>l.biz===b&&l.country===co);
-      const actLots=bl.filter(l=>lotSt(l)!=='done');
-      const doneLots=bl.filter(l=>lotSt(l)==='done');
-      const ovLots=bl.filter(l=>lotSt(l)==='overdue');
-      const totQty=bl.reduce((s,l)=>s+n(l.qty),0);
-      const totProc=bl.reduce((s,l)=>s+lotCumul(l.id),0);
-      const totRem=Math.max(0,totQty-totProc);
-      const pct=totQty>0?Math.round(totProc/totQty*100):0;
-      const isDelayed=ovLots.length>0;
-      const pctColor=isDelayed?'#dc2626':pct>=80?BC[b]:pct>=50?BC[b]:'#92400e';
-      const pbColor=isDelayed?'#dc2626':BC[b];
-      const bizKey=b.toLowerCase()==='mid'?'mid':b.toLowerCase();
+  const unitsSSD=allLots.filter(l=>l.biz==='SSD').reduce((s,l)=>s+n(l.qty),0);
+  const unitsDRAM=allLots.filter(l=>l.biz==='DRAM').reduce((s,l)=>s+n(l.qty),0);
+  const unitsMID=allLots.filter(l=>l.biz==='MID').reduce((s,l)=>s+n(l.qty),0);
+  const procSSD=allLots.filter(l=>l.biz==='SSD').reduce((s,l)=>s+lotCumul(l.id),0);
+  const procDRAM=allLots.filter(l=>l.biz==='DRAM').reduce((s,l)=>s+lotCumul(l.id),0);
+  const procMID=allLots.filter(l=>l.biz==='MID').reduce((s,l)=>s+lotCumul(l.id),0);
 
-      // LOT 목록 (진행중만, 최대 4건)
-      const lotItems=actLots.slice(0,4).map(lot=>{
-        const st=lotSt(lot);
-        const rem=lotRemain(lot);
-        const dd=lot.targetDate?diffD(today(),lot.targetDate):null;
-        const ddText=dd===null?'-':dd<0?'D+'+Math.abs(dd):(dd===0?'D-Day':'D-'+dd);
-        const ddColor=dd===null?'var(--tx2)':dd<0?'#dc2626':dd<=3?'#B45309':'var(--tx3)';
-        const bdg=st==='overdue'
-          ?'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#fee2e2;color:#991b1b">지연</span>'
-          :'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:#dbeafe;color:#1e40af">진행중</span>';
-        return'<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--bd)">'
-          +'<div>'
-          +'<span style="font-size:12px;font-weight:600;font-family:var(--font-mono)">'+( lot.lotNo||lot.id)+'</span>'
-          +(lot.inDate?'<span style="font-size:10px;color:var(--tx3);margin-left:6px">입고 '+lot.inDate+'</span>':'')
-          +'</div>'
-          +'<div style="display:flex;align-items:center;gap:8px">'
-          +'<span style="font-size:12px;color:var(--tx2)">잔량 '+fmtN(rem)+'</span>'
-          +'<span style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+'</span>'
-          +bdg
-          +'</div></div>';
-      }).join('');
-      const moreMsg=actLots.length>4?'<div style="font-size:11px;color:var(--tx3);padding:6px 0;text-align:center">+'+( actLots.length-4)+'건 더</div>':'';
-      const emptyMsg=actLots.length===0?'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">'+(doneLots.length>0?'✓ 전체 완료':'LOT 없음')+'</div>':'';
-      const footColor=isDelayed?'#dc2626':'var(--tx3)';
-      const footText=(isDelayed?'지연 '+ovLots.length+'건 · ':'')+( actLots.length>0?'진행 '+actLots.length+'건 · ':'')+( doneLots.length>0?'완료 '+doneLots.length+'건':'');
+  const maxUnits=Math.max(unitsSSD,unitsDRAM,unitsMID,1);
 
-      const BIZ_BORDER={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
+  // ── 알림 ──
+  const over=activeLots.filter(l=>lotSt(l)==='overdue');
+  const near=activeLots.filter(l=>l.targetDate&&diffD(today(),l.targetDate)>=0&&diffD(today(),l.targetDate)<=3);
+  const alerts=[];
+  if(over.length>0) alerts.push(`<div class="alert al-bad">지연 LOT ${over.length}건 — ${over.map(l=>l.lotNo||l.id).join(', ')}</div>`);
+  if(near.length>0) alerts.push(`<div class="alert al-warn">완료 기한 3일 이내 LOT ${near.length}건</div>`);
 
-      return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;border-top:3px solid '+BIZ_BORDER[b]+'">'
-        // 사업명
-        +'<div style="font-size:17px;font-weight:600;color:'+BC[b]+';margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--bd)">'+BN[b]+'</div>'
-        // 진행률 대형
-        +'<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">'
-        +'<span style="font-size:36px;font-weight:600;letter-spacing:-.04em;line-height:1;color:'+pctColor+'">'+pct+'</span>'
-        +'<span style="font-size:13px;color:var(--tx2)">% 완료</span>'
-        +'</div>'
-        // 프로그레스 바
-        +'<div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:14px">'
-        +'<div style="height:100%;border-radius:3px;background:'+pbColor+';width:'+pct+'%"></div>'
-        +'</div>'
-        // 수치 3개
-        +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px">'
-        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono)">'+fmtN(totQty)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">입고</div></div>'
-        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono);color:'+BC[b]+'">'+fmtN(totProc)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">처리</div></div>'
-        +'<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:19px;font-weight:600;font-family:var(--font-mono);color:'+(totRem===0?'#166534':isDelayed?'#dc2626':'#B45309')+'">'+fmtN(totRem)+'</div><div style="font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.04em">잔량</div></div>'
-        +'</div>'
-        // LOT 목록
-        +(actLots.length>0?lotItems+moreMsg:emptyMsg)
-        // 푸터
-        +'<div style="font-size:11px;color:'+footColor+';margin-top:10px">'+footText+'</div>'
-        +'</div>';
-    });
+  // ── Active LOT 카드 ──
+  const activeCards=activeLots.map(lot=>{
+    const cum=lotCumul(lot.id);
+    const pct=n(lot.qty)>0?Math.min(100,Math.round(cum/n(lot.qty)*100)):0;
+    const st=lotSt(lot);
+    const pctColor=st==='overdue'?'#A32D2D':pct>=80?'#BA7517':'#185FA5';
+    const barColor=st==='overdue'?'#E24B4A':pct>=80?'#EF9F27':'#378ADD';
+    const statusLabel=st==='overdue'
+      ?'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#FCEBEB;color:#A32D2D">지연</span>'
+      :pct>=80
+      ?'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#FAEEDA;color:#854F0B">거의 완료</span>'
+      :'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#E6F1FB;color:#185FA5">진행중</span>';
+    const coBdg=lot.country==='HK'
+      ?'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#FAEEDA;color:#854F0B">HK</span>'
+      :'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#E1F5EE;color:#0F6E56">SG</span>';
+    const bizBdg=lot.biz==='DRAM'
+      ?'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#F1EFE8;color:#444441">DRAM Test</span>'
+      :lot.biz==='SSD'
+      ?'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#E6F1FB;color:#185FA5">SSD Test</span>'
+      :'<span style="font-size:10px;font-weight:500;padding:2px 7px;border-radius:4px;background:#EEEDFE;color:#534AB7">Mobile Ink Die</span>';
 
-    // 홍콩은 SSD/MID 빈 카드
-    const BIZ_BORDER={DRAM:'#1B4F8A',SSD:'#0F6E56',MID:'#6A3D7C'};
-    while(bizCards.length<3){
-      const emptyBiz=['SSD','MID'][bizCards.length-1]||'MID';
-      bizCards.push('<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;border-top:3px solid '+BIZ_BORDER[emptyBiz]+';opacity:.3">'
-        +'<div style="font-size:17px;font-weight:600;color:'+BC[emptyBiz]+';margin-bottom:12px;padding-bottom:10px;border-bottom:0.5px solid var(--bd)">'+BN[emptyBiz]+'</div>'
-        +'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:24px 0">해당 없음</div>'
-        +'</div>');
-    }
-
-    return'<div style="margin-bottom:8px">'
-      +'<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;margin-top:28px">'
-      +'<span style="font-size:22px;font-weight:600;letter-spacing:-.03em;color:'+CC[co]+'">'+CN[co]+'</span>'
-      +'<div style="width:1px;height:16px;background:var(--bd2);margin:0 2px"></div>'
-      +'<span style="font-size:13px;color:var(--tx2)">진행 '+coAct+'건 · 완료 '+coDone+'건</span>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">'+bizCards.join('')+'</div>'
-      +'</div>';
+    return`<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;font-weight:600;font-family:var(--font-mono)">${lot.lotNo||lot.id}</span>
+            ${coBdg}
+          </div>
+          <div style="display:flex;gap:4px">${bizBdg} ${statusLabel}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:22px;font-weight:600;color:${pctColor};line-height:1">${pct}%</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:2px">진행률</div>
+        </div>
+      </div>
+      <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:5px">
+        <div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:11px;color:var(--tx3);font-family:var(--font-mono)">${fmtN(cum)} / ${fmtN(n(lot.qty))}</span>
+        <span style="font-size:11px;color:var(--tx3)">잔량 ${fmtN(Math.max(0,n(lot.qty)-cum))}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:var(--bg);border-radius:6px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Inbound</div>
+          <div style="font-size:13px;font-weight:500">${lot.inDate||'—'}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:6px;padding:7px 10px">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Inbound qty</div>
+          <div style="font-size:13px;font-weight:500">${fmtN(n(lot.qty))}</div>
+        </div>
+      </div>
+      ${lot.customerName?`<div style="font-size:11px;color:var(--tx3);margin-top:8px">${lot.customerName}</div>`:''}
+    </div>`;
   }).join('');
 
-  document.getElementById('d-lot-matrix').innerHTML=lotRows;
+  // ── 완료 LOT 테이블 ──
+  const doneRows=doneLots
+    .sort((a,b)=>String(b.actualDone||b.inDate||'').localeCompare(String(a.actualDone||a.inDate||'')))
+    .map(lot=>{
+      const cum=lotCumul(lot.id);
+      const tat=(lot.inDate&&lot.actualDone)?diffD(lot.inDate,lot.actualDone)+' days':'—';
+      const inv=invs.find(r=>String(r.lotId)===String(lot.id));
+      const rev=inv?n(inv.total||inv.amount):(n(lot.price)*n(lot.qty));
+      const coBdg=lot.country==='HK'
+        ?'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#FAEEDA;color:#854F0B">HK</span>'
+        :'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#E1F5EE;color:#0F6E56">SG</span>';
+      const bizBdg=lot.biz==='DRAM'
+        ?'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#F1EFE8;color:#444441">DRAM</span>'
+        :lot.biz==='SSD'
+        ?'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#E6F1FB;color:#185FA5">SSD</span>'
+        :'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#EEEDFE;color:#534AB7">MID</span>';
+      return`<tr>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd);font-family:var(--font-mono);font-size:11px;color:var(--tx)">${lot.lotNo||lot.id}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd)">${coBdg}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd)">${bizBdg}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd);text-align:right;font-variant-numeric:tabular-nums;color:var(--tx)">${fmtN(n(lot.qty))}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx2)">${lot.inDate||'—'}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx2)">${lot.actualDone||'—'}</td>
+        <td style="padding:9px 8px 9px 0;border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">${tat}</td>
+        <td style="padding:9px 0 9px 0;border-bottom:0.5px solid var(--bd);text-align:right;font-variant-numeric:tabular-nums;color:var(--tx)">${rev>0?'$'+fmtN(rev):'—'}</td>
+      </tr>`;
+    }).join('');
 
-  // ── 입고 예정 Shipment 섹션 ──
+  // ── 입고 예정 ──
   const upcomingShips=[...ships]
     .filter(s=>s.expectedDate>=today())
     .sort((a,b)=>String(a.expectedDate||'').localeCompare(String(b.expectedDate||'')));
-  const shipHTML=upcomingShips.length===0?'':
-    '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-top:32px;margin-bottom:12px">입고 예정</div>'
-    +upcomingShips.map(s=>{
+  const shipSection=upcomingShips.length===0?'':`
+    <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px;margin-top:28px">입고 예정</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+    ${upcomingShips.map(s=>{
       const dd=s.expectedDate?diffD(today(),s.expectedDate):null;
-      const ddText=dd===null?'-':dd===0?'입고일!':'D-'+dd;
+      const ddText=dd===null?'—':dd===0?'D-Day':'D-'+dd;
       const ddColor=dd===null?'var(--tx3)':dd<=3?'#B45309':'var(--tx2)';
-      const stBg=s.status==='confirmed'?'#dbeafe':'#fef3c7';
-      const stColor=s.status==='confirmed'?'#1e40af':'#92400e';
-      return'<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">'
-        +'<div>'
-        +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">'
-        +'<span style="font-size:13px;font-weight:600;font-family:var(--font-mono)">'+(s.lotNo||'-')+'</span>'
-        +btag(s.biz)+' '+ctag(s.country)
-        +'<span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:'+stBg+';color:'+stColor+'">'+(s.status==='confirmed'?'확정':'미확정')+'</span>'
-        +'</div>'
-        +'<div style="font-size:12px;color:var(--tx2)">'+(s.customerName||'')+'</div>'
-        +'</div>'
-        +'<div style="text-align:right">'
-        +'<div style="font-size:18px;font-weight:600">'+fmtN(n(s.qty))+'<span style="font-size:12px;font-weight:400;color:var(--tx3)"> '+(s.unit||'개')+'</span></div>'
-        +'<div style="font-size:12px;font-weight:600;color:'+ddColor+'">'+ddText+' · '+(s.expectedDate||'')+'</div>'
-        +'</div>'
-        +'</div>';
-    }).join('');
-  document.getElementById('d-shipment').innerHTML=shipHTML;
+      const coBdg=s.country==='HK'
+        ?'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#FAEEDA;color:#854F0B">HK</span>'
+        :'<span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:#E1F5EE;color:#0F6E56">SG</span>';
+      const stBg=s.status==='confirmed'?'#E6F1FB':'#FAEEDA';
+      const stColor=s.status==='confirmed'?'#185FA5':'#854F0B';
+      return`<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+            <span style="font-size:12px;font-weight:600;font-family:var(--font-mono)">${s.lotNo||'—'}</span>
+            ${coBdg}
+            <span style="font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;background:${stBg};color:${stColor}">${s.status==='confirmed'?'확정':'미확정'}</span>
+          </div>
+          <div style="font-size:12px;color:var(--tx2)">${s.customerName||''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:600">${fmtN(n(s.qty))}<span style="font-size:11px;font-weight:400;color:var(--tx3)"> ${s.unit||'개'}</span></div>
+          <div style="font-size:12px;font-weight:500;color:${ddColor}">${ddText} · ${s.expectedDate||''}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>`;
+
+  // ── 매출 비율 바 ──
+  const revArr=[
+    {label:'SSD Test',val:dispSSD,dot:'#378ADD'},
+    {label:'DRAM Test',val:dispDRAM,dot:'#888780'},
+    {label:'Mobile Ink Die',val:dispMID,dot:'#7F77DD'},
+  ].filter(x=>x.val>0);
+  const maxRev=Math.max(...revArr.map(x=>x.val),1);
+  const revBars=revArr.map(x=>`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${x.dot};display:inline-block;flex-shrink:0"></span>${x.label}
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--tx)">$${fmtN(x.val)}</div>
+      </div>
+      <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+        <div style="height:100%;border-radius:3px;background:${x.dot};width:${Math.round(x.val/maxRev*100)}%"></div>
+      </div>
+    </div>`).join('');
+
+  const unitBars=[
+    {label:'SSD Test',proc:procSSD,total:unitsSSD,dot:'#378ADD'},
+    {label:'DRAM Test',proc:procDRAM,total:unitsDRAM,dot:'#888780'},
+    {label:'Mobile Ink Die',proc:procMID,total:unitsMID,dot:'#7F77DD'},
+  ].filter(x=>x.total>0).map(x=>{
+    const pct=x.total>0?Math.round(x.proc/x.total*100):0;
+    return`<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${x.dot};display:inline-block;flex-shrink:0"></span>${x.label}
+        </div>
+        <div style="font-size:12px;font-weight:500;color:var(--tx)">${fmtN(x.proc)} <span style="color:var(--tx3);font-weight:400">/ ${fmtN(x.total)}</span></div>
+      </div>
+      <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden">
+        <div style="height:100%;border-radius:3px;background:${x.dot};width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const dtStr=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+  document.getElementById('dash-root').innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:1.5rem">
+    <div>
+      <div style="font-size:18px;font-weight:600;letter-spacing:-.02em">Operations Dashboard</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:3px">${dtStr}</div>
+    </div>
+  </div>
+
+  ${alerts.join('')}
+
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px">Overview</div>
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem">
+    <div style="background:var(--bg);border-radius:var(--rs);padding:14px 16px">
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Total Job Orders</div>
+      <div style="font-size:22px;font-weight:600;line-height:1">${allLots.length}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:5px">진행 ${activeLots.length}건 · 완료 ${doneLots.length}건</div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--rs);padding:14px 16px">
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Total Units</div>
+      <div style="font-size:22px;font-weight:600;line-height:1">${fmtN(totalUnits)}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:5px">처리 ${fmtN(totalProc)} · 잔량 ${fmtN(Math.max(0,totalUnits-totalProc))}</div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--rs);padding:14px 16px">
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Total Revenue</div>
+      <div style="font-size:22px;font-weight:600;line-height:1;color:#0F6E56">${dispTotal>0?'$'+fmtN(dispTotal):'—'}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:5px">완료 기준</div>
+    </div>
+    <div style="background:var(--bg);border-radius:var(--rs);padding:14px 16px">
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Active Orders</div>
+      <div style="font-size:22px;font-weight:600;line-height:1;color:#185FA5">${activeLots.length}</div>
+      <div style="font-size:11px;color:var(--tx3);margin-top:5px">${over.length>0?'지연 '+over.length+'건 포함':'지연 없음'}</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600">Revenue by business</div>
+        <div style="font-size:11px;color:var(--tx3)">Service fee (USD)</div>
+      </div>
+      ${revBars||'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">데이터 없음</div>'}
+      ${revArr.length>0?`
+      <div style="height:0.5px;background:var(--bd);margin:10px 0"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--tx2)">Total</span>
+        <span style="font-weight:600;color:#0F6E56">$${fmtN(dispTotal)}</span>
+      </div>`:''}
+    </div>
+    <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:600">Units by category</div>
+        <div style="font-size:11px;color:var(--tx3)">처리 / 입고 수량</div>
+      </div>
+      ${unitBars||'<div style="font-size:13px;color:var(--tx3);text-align:center;padding:16px 0">데이터 없음</div>'}
+      <div style="height:0.5px;background:var(--bd);margin:10px 0"></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px">
+        <span style="color:var(--tx2)">Total</span>
+        <span style="font-weight:600">${fmtN(totalProc)} <span style="color:var(--tx3);font-weight:400">/ ${fmtN(totalUnits)}</span></span>
+      </div>
+    </div>
+  </div>
+
+  ${activeLots.length>0?`
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px;margin-top:6px">Active Job Orders</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:12px">
+    ${activeCards}
+  </div>`:''}
+
+  ${doneLots.length>0?`
+  <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin-bottom:10px;margin-top:6px">Completed Job Orders</div>
+  <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:var(--bg)">
+          <th style="padding:8px 8px 8px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd);white-space:nowrap">Job Order</th>
+          <th style="padding:8px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Region</th>
+          <th style="padding:8px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Category</th>
+          <th style="padding:8px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Qty</th>
+          <th style="padding:8px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Inbound</th>
+          <th style="padding:8px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Outbound</th>
+          <th style="padding:8px;text-align:left;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">TAT</th>
+          <th style="padding:8px 16px 8px 8px;text-align:right;font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--bd)">Revenue</th>
+        </tr>
+      </thead>
+      <tbody>${doneRows}</tbody>
+    </table>
+  </div>`:''}
+
+  ${shipSection}
+  `;
 }
 
 
