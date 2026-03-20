@@ -8,7 +8,7 @@ Pages.Invoice = (() => {
   let _editId   = null;
   let _filterCo  = '';
   let _filterBiz = '';
-  let _sortKey   = 'date';
+  let _sortKey   = 'inDate';   // 기본: 입고일 내림차순
   let _sortDir   = -1;
 
   // ── 목록 렌더 ───────────────────────────────────────────────
@@ -19,9 +19,19 @@ Pages.Invoice = (() => {
     if (_filterCo)  list = list.filter(r => r.country === _filterCo);
     if (_filterBiz) list = list.filter(r => r.biz === _filterBiz);
 
+    // 인보이스에 연결된 LOT의 입고일로 정렬
     list.sort((a, b) => {
-      let av = a[_sortKey] || '', bv = b[_sortKey] || '';
-      if (_sortKey === 'amount' || _sortKey === 'total') { av = parseNumber(a.amount); bv = parseNumber(b.amount); }
+      let av, bv;
+      if (_sortKey === 'inDate') {
+        const lotA = Store.getLotById(a.lotId);
+        const lotB = Store.getLotById(b.lotId);
+        av = lotA?.inDate || a.date || '';
+        bv = lotB?.inDate || b.date || '';
+      } else if (_sortKey === 'amount' || _sortKey === 'total') {
+        av = parseNumber(a.amount); bv = parseNumber(b.amount);
+      } else {
+        av = a[_sortKey] || ''; bv = b[_sortKey] || '';
+      }
       return typeof av === 'number' ? (av - bv) * _sortDir : String(av).localeCompare(String(bv)) * _sortDir;
     });
 
@@ -44,13 +54,15 @@ Pages.Invoice = (() => {
     const rows = list.length === 0
       ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tx3);font-size:13px">인보이스가 없습니다</td></tr>`
       : list.map((r, i) => {
-          const lot     = Store.getLotById(r.lotId);
-          const due     = r.due ? diffDays(today(), r.due) : null;
+          const lot      = Store.getLotById(r.lotId);
+          const due      = r.due ? diffDays(today(), r.due) : null;
           const dueColor = r.status === 'paid' ? '#085041' : due !== null && due < 0 ? '#A32D2D' : due !== null && due <= 7 ? '#BA7517' : 'var(--tx2)';
           const dueText  = r.status === 'paid' ? '수금완료' : due === null ? '—' : due < 0 ? 'D+' + Math.abs(due) : 'D-' + due;
+          const lotInDate = lot?.inDate || '—';
           return `
             <tr style="border-bottom:0.5px solid var(--bd)">
               <td style="padding:7px 10px;color:var(--tx3);font-size:11px;text-align:center">${i + 1}</td>
+              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${lotInDate}</td>
               <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${r.date || '—'}</td>
               <td style="padding:7px 10px;font-family:var(--font-mono);font-size:11px">${r.no || '—'}</td>
               <td style="padding:7px 10px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
@@ -80,7 +92,7 @@ Pages.Invoice = (() => {
 
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 청구액</div>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 매출액</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalAmt))}</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
@@ -97,12 +109,13 @@ Pages.Invoice = (() => {
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr>
             <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd);width:32px">#</th>
+            ${th('입고일', 'inDate')}
             ${th('발행일', 'date')}
             ${th('번호', 'no')}
             <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">지역/사업</th>
             ${th('고객사', 'customerName')}
             <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">LOT</th>
-            ${th('청구액', 'amount', 'right')}
+            ${th('매출액', 'amount', 'right')}
             ${th('결제기한', 'due')}
             ${th('상태', 'status')}
             <th style="padding:7px 10px;background:var(--bg);border-bottom:0.5px solid var(--bd);width:100px"></th>
@@ -111,7 +124,7 @@ Pages.Invoice = (() => {
           ${list.length > 0 ? `
           <tfoot>
             <tr style="background:var(--bg)">
-              <td colspan="6" style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
+              <td colspan="7" style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
               <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
             </tr>
