@@ -89,20 +89,6 @@
         LOT 진행 현황
       </button>
 
-      <div class="sb-sec">입력</div>
-      <button class="ni" onclick="Nav.go('lotreg')">
-        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        LOT 등록
-      </button>
-      <button class="ni" onclick="Nav.go('daily')">
-        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v3M11 1v3M2 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        일별 처리 입력
-      </button>
-      <button class="ni" onclick="Nav.go('shipment')">
-        <svg fill="none" viewBox="0 0 16 16"><path d="M1 10l3-7h8l3 7H1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M1 10v3a1 1 0 001 1h12a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5"/><path d="M6 7v3M10 7v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        입고 예정
-      </button>
-
       <div class="sb-sec">재무</div>
       <button class="ni" onclick="Nav.go('invoice')">
         <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -121,6 +107,10 @@
       <button class="ni" onclick="Nav.go('country')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 8h13M8 1.5C6.5 4 5.5 6 5.5 8s1 4 2.5 6.5M8 1.5C9.5 4 10.5 6 10.5 8s-1 4-2.5 6.5" stroke="currentColor" stroke-width="1.2"/></svg>
         국가별 현황
+      </button>
+      <button class="ni" onclick="Nav.go('verify')">
+        <svg fill="none" viewBox="0 0 16 16"><path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="11" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M11 11l1 1 1.5-1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        데이터 검증
       </button>
       <button class="ni" onclick="Nav.go('customers')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -154,11 +144,11 @@
       <div id="opsdash-body"></div>
     </div>
 
-    <!-- LOT 진행 현황 -->
+    <!-- LOT 진행 현황 (LOT 등록 + 일별 처리 + 입고예정 통합) -->
     <div class="pg" id="pg-progress">
       <div class="ph-row">
         <div class="ph"><h1>LOT 진행 현황</h1></div>
-        <button class="btn xl sm" onclick="Pages.Progress.exportExcel()" style="margin-top:4px">↓ 엑셀</button>
+        <button class="btn xl sm" onclick="Pages.Progress.exportExcel()">↓ 엑셀</button>
       </div>
       <!-- 월별 처리량 차트 -->
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:14px;padding:18px 20px;margin-bottom:16px">
@@ -181,21 +171,22 @@
         <div style="position:relative;height:220px"><canvas id="monthly-chart"></canvas></div>
         <div id="monthly-totals" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px"></div>
       </div>
-      <!-- LOT 목록 필터 -->
+      <!-- 필터 -->
       <div class="fb">
         <button class="pill pa on" data-k="biz" data-v="" onclick="Pages.Progress.setFilter(this,'biz')">전체</button>
-        <button class="pill pd" data-k="biz" data-v="DRAM" onclick="Pages.Progress.setFilter(this,'biz')">DRAM Test</button>
-        <button class="pill ps" data-k="biz" data-v="SSD" onclick="Pages.Progress.setFilter(this,'biz')">SSD Test</button>
-        <button class="pill pm" data-k="biz" data-v="MID" onclick="Pages.Progress.setFilter(this,'biz')">Mobile Ink Die</button>
+        <button class="pill pd" data-k="biz" data-v="DRAM" onclick="Pages.Progress.setFilter(this,'biz')">DRAM</button>
+        <button class="pill ps" data-k="biz" data-v="SSD" onclick="Pages.Progress.setFilter(this,'biz')">SSD</button>
+        <button class="pill pm" data-k="biz" data-v="MID" onclick="Pages.Progress.setFilter(this,'biz')">MID</button>
         <span class="sep"></span>
         <button class="pill pa on" data-k="co" data-v="" onclick="Pages.Progress.setFilter(this,'co')">전체</button>
         <button class="pill phk" data-k="co" data-v="HK" onclick="Pages.Progress.setFilter(this,'co')">홍콩</button>
         <button class="pill psg" data-k="co" data-v="SG" onclick="Pages.Progress.setFilter(this,'co')">싱가포르</button>
         <span class="sep"></span>
         <button class="pill pa on" data-k="st" data-v="" onclick="Pages.Progress.setFilter(this,'st')">전체</button>
-        <button class="pill" style="border-color:#2563eb;color:#2563eb" data-k="st" data-v="inprog" onclick="Pages.Progress.setFilter(this,'st')">진행중</button>
-        <button class="pill" style="border-color:#dc2626;color:#dc2626" data-k="st" data-v="overdue" onclick="Pages.Progress.setFilter(this,'st')">지연</button>
-        <button class="pill" style="border-color:#16a34a;color:#16a34a" data-k="st" data-v="done" onclick="Pages.Progress.setFilter(this,'st')">완료</button>
+        <button class="pill" style="border-color:#0C447C;color:#0C447C" data-k="st" data-v="upcoming" onclick="Pages.Progress.setFilter(this,'st')">입고예정</button>
+        <button class="pill" style="border-color:#185FA5;color:#185FA5" data-k="st" data-v="inprog" onclick="Pages.Progress.setFilter(this,'st')">진행중</button>
+        <button class="pill" style="border-color:#A32D2D;color:#A32D2D" data-k="st" data-v="overdue" onclick="Pages.Progress.setFilter(this,'st')">지연</button>
+        <button class="pill" style="border-color:#085041;color:#085041" data-k="st" data-v="done" onclick="Pages.Progress.setFilter(this,'st')">완료</button>
         <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="pr-cnt"></span>
       </div>
       <div id="pr-cards"></div>
@@ -551,6 +542,12 @@
       <div id="kpitarget-body"></div>
     </div>
 
+    <!-- 데이터 검증 -->
+    <div class="pg" id="pg-verify">
+      <div class="ph"><h1>데이터 검증</h1><p>리포트와 DB 데이터를 비교합니다</p></div>
+      <div id="verify-body"></div>
+    </div>
+
     <!-- 고객사 관리 -->
     <div class="pg" id="pg-customers">
       <div class="ph"><h1>고객사 관리</h1></div>
@@ -627,6 +624,7 @@
 <script src="js/pages/country.js"></script>
 <script src="js/pages/kpiTarget.js"></script>
 <script src="js/pages/customers.js"></script>
+<script src="js/pages/verify.js"></script>
 
 <!-- App entry point -->
 <script src="js/app.js"></script>
