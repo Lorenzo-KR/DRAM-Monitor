@@ -25,8 +25,8 @@ const Nav = (() => {
     shipment:   { index: 5,  render: () => Pages.Shipment.render() },
     invoice:    { index: 6,  render: () => Pages.Invoice.render() },
     revenue:    { index: 7,  render: () => Pages.Revenue.render() },
-    country:    { index: 8,  render: () => Pages.Country.render() },
-    kpitarget:  { index: 9,  render: () => Pages.KpiTarget.render() },
+    kpitarget:  { index: 8,  render: () => Pages.KpiTarget.render() },
+    country:    { index: 9,  render: () => Pages.Country.render() },
     customers:  { index: 10, render: () => Pages.Customers.render() },
   };
 

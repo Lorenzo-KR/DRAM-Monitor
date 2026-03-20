@@ -121,14 +121,14 @@ Pages.Dashboard = (() => {
     const maxRev = Math.max(...CONFIG.BIZ_LIST.map(b => kpi.revenue[b]), 1);
 
     const revBars = CONFIG.BIZ_LIST.filter(b => kpi.revenue[b] > 0).map(b => `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid var(--bd)">
-        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);min-width:90px">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);min-width:100px">
           <span style="width:7px;height:7px;border-radius:50%;background:${BIZ_COLORS_DOT[b]};flex-shrink:0;display:inline-block"></span>${CONFIG.BIZ_LABELS[b]}
         </div>
         <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
           <div style="height:100%;border-radius:3px;background:${BIZ_COLORS_DOT[b]};width:${Math.round(kpi.revenue[b] / maxRev * 100)}%"></div>
         </div>
-        <div style="font-size:11px;font-weight:500;min-width:60px;text-align:right">$${formatNumber(kpi.revenue[b])}</div>
+        <div style="font-size:12px;font-weight:600;min-width:72px;text-align:right">$${formatNumber(Math.round(kpi.revenue[b]))}</div>
       </div>`).join('');
 
     const year     = new Date().getFullYear();
@@ -163,7 +163,7 @@ Pages.Dashboard = (() => {
 
     const revTotal = kpi.revenue.total;
     const revFooter = revTotal > 0
-      ? `<span style="font-size:11px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:13px;font-weight:600;color:#085041">$${formatNumber(revTotal)}</span>`
+      ? `<span style="font-size:12px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$${formatNumber(Math.round(revTotal))}</span>`
       : '';
 
     return `
@@ -320,7 +320,7 @@ Pages.Dashboard = (() => {
       const dtStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
       el.innerHTML = `
-        <div style="max-width:1100px">
+        <div style="max-width:1400px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <div style="font-size:16px;font-weight:600;letter-spacing:-.02em">Operations Dashboard</div>
             <div style="font-size:12px;color:var(--tx3)">${dtStr}</div>
