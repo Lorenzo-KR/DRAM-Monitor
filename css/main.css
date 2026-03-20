@@ -70,6 +70,7 @@ body {
   background: var(--bg);
   color: var(--tx);
   min-height: 100vh;
+  font-size: 15px;  /* A4 11pt 기준 */
 }
 
 /* 3. Layout
@@ -253,8 +254,8 @@ body {
 
 /* Editable table wrapper */
 .etw             { background: var(--card); border: 1px solid var(--bd); border-radius: var(--r); overflow: auto; margin-bottom: 14px; }
-.etw table       { width: 100%; border-collapse: collapse; font-size: 13px; }
-.etw th          { padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); border-bottom: 1px solid var(--bd); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+.etw table       { width: 100%; border-collapse: collapse; font-size: 14px; }
+.etw th          { padding: 9px 12px; text-align: left; font-size: 12px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg); border-bottom: 1px solid var(--bd); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
 .etw td          { padding: 0; border-bottom: 1px solid var(--bd); vertical-align: middle; }
 .etw tr:last-child td { border-bottom: none; }
 .etw tr:hover td { background: #fafbff; }

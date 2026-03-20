@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:8px 10px;text-align:${align};font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:9px 12px;text-align:${align};font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -283,16 +283,16 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':''}">
-          <td style="padding:8px 10px;text-align:center">
+          <td style="padding:9px 12px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
           <td style="padding:8px 10px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
           <td style="padding:8px 10px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;font-weight:500">${lot.lotNo||lot.id}</td>
-          <td style="padding:8px 10px;font-size:12px;color:var(--tx2)">${lot.customerName||'—'}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:11px">${formatNumber(qty)}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:11px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:11px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo||lot.id}</td>
+          <td style="padding:9px 12px;font-size:14px;color:var(--tx2)">${lot.customerName||'—'}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${formatNumber(qty)}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
           <td style="padding:8px 10px;min-width:110px">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#0C447C">입고 ${diffDays(today(),lot.inDate)}일 후</span>`
@@ -301,8 +301,8 @@ Pages.Progress = (() => {
                   <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:26px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:8px 10px;font-size:11px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
-          <td style="padding:8px 10px;font-size:11px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
+          <td style="padding:9px 12px;font-size:13px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
+          <td style="padding:9px 12px;font-size:13px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
             ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
           <td style="padding:8px 10px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
