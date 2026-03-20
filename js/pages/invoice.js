@@ -85,11 +85,12 @@ Pages.Invoice = (() => {
       togglePaidFields(r.status);
     } else {
       ['ip-no','ip-date','ip-biz','ip-cust','ip-amount','ip-vat','ip-total','ip-due','ip-paid-date','ip-paid-amt','ip-note'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
-      document.getElementById('ip-date').value   = today();
-      document.getElementById('ip-status').value = 'unpaid';
-      document.getElementById('ip-cur').value    = 'USD';
-      document.getElementById('ip-lot').value    = '';
-      togglePaidFields('unpaid');
+      document.getElementById('ip-date').value      = today();
+      document.getElementById('ip-status').value    = 'paid';       // 기본값: 수금완료
+      document.getElementById('ip-paid-date').value = today();      // 수금일도 오늘로
+      document.getElementById('ip-cur').value       = 'USD';
+      document.getElementById('ip-lot').value       = '';
+      togglePaidFields('paid');
     }
     panel.style.display = 'block'; overlay.style.display = 'block'; document.body.style.overflow = 'hidden';
   }
@@ -107,11 +108,14 @@ Pages.Invoice = (() => {
 
   function fillFromLot(lotId) {
     const lot = Store.getLots().find(l => String(l.id) === lotId); if (!lot) return;
-    document.getElementById('ip-biz').value  = lot.biz      || 'DRAM';
-    document.getElementById('ip-co').value   = lot.country  || 'HK';
+    document.getElementById('ip-biz').value  = lot.biz          || 'DRAM';
+    document.getElementById('ip-co').value   = lot.country      || 'HK';
     document.getElementById('ip-cust').value = lot.customerName || '';
-    if (lot.price)    document.getElementById('ip-amount').value   = lot.price;
-    if (lot.currency) document.getElementById('ip-cur').value = lot.currency;
+    // 발행일 → LOT 완료일 (없으면 오늘)
+    document.getElementById('ip-date').value      = lot.actualDone || today();
+    document.getElementById('ip-paid-date').value = lot.actualDone || today();
+    if (lot.price)    document.getElementById('ip-amount').value = lot.price;
+    if (lot.currency) document.getElementById('ip-cur').value    = lot.currency;
     calcTotal();
   }
 

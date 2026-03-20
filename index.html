@@ -516,8 +516,12 @@
       <div class="mg mg4" id="rv-top"></div>
       <div id="rv-year-breakdown" style="display:none;margin-bottom:14px"></div>
       <div class="two">
-        <div class="cw"><div class="ct" id="rv-chart-title">청구액 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
-        <div class="cw"><div class="ct">사업별 청구 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
+        <div id="rv-chart-wrap">
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+            <div class="cw"><div class="ct" id="rv-chart-title">청구액 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
+            <div class="cw"><div class="ct">사업별 청구 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
+          </div>
+        </div>
       </div>
       <div class="etw">
         <table id="rv-table">

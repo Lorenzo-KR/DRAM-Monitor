@@ -166,13 +166,13 @@ Pages.Progress = (() => {
     render();
   }
 
-  // ── LOT 카드 목록 ────────────────────────────────────────────
+  // ── LOT 목록 테이블 ─────────────────────────────────────────
   function render() {
     const filter  = Store.getLotFilter();
     const dailies = Store.getDailies();
     let lots      = Store.getLots();
 
-    if (filter.biz)    lots = lots.filter(l => l.biz === filter.biz);
+    if (filter.biz)     lots = lots.filter(l => l.biz === filter.biz);
     if (filter.country) lots = lots.filter(l => l.country === filter.country);
     if (filter.status) {
       lots = lots.filter(l =>
@@ -189,56 +189,78 @@ Pages.Progress = (() => {
     if (!el) return;
     if (!lots.length) { el.innerHTML = '<div class="empty">LOT가 없습니다</div>'; return; }
 
-    el.innerHTML = lots.map(lot => {
-      if (!lot || !lot.id) return '';
-      const st     = getLotStatus(lot);
-      const cum    = getLotCumulative(lot.id, dailies);
-      const rem    = getLotRemaining(lot, dailies);
-      const pct    = getLotProgress(lot, dailies);
-      const pbC    = st === 'done' ? '#16a34a' : st === 'overdue' ? '#dc2626' : pct >= 70 ? CONFIG.BIZ_COLORS.SSD : CONFIG.BIZ_COLORS.DRAM;
-      const dd     = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const isOpen = _openLotId === lot.id;
-      const isDram = lot.biz === 'DRAM';
-      const hist   = dailies.filter(r => String(r.lotId) === String(lot.id)).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    const BAR_COLOR = { done: '#1D9E75', inprog: '#185FA5', overdue: '#E24B4A' };
+    const ST_LABEL  = { done: '완료', inprog: '진행중', overdue: '지연' };
+    const ST_BADGE  = {
+      done:    'background:#E1F5EE;color:#085041',
+      inprog:  'background:#E6F1FB;color:#0C447C',
+      overdue: 'background:#FCEBEB;color:#791F1F',
+    };
+    const BIZ_BADGE = {
+      DRAM: 'background:#E6F1FB;color:#0C447C',
+      SSD:  'background:#E1F5EE;color:#085041',
+      MID:  'background:#EEEDFE;color:#3C3489',
+    };
+    const CO_BADGE = {
+      HK: 'background:#FAEEDA;color:#633806',
+      SG: 'background:#E1F5EE;color:#085041',
+    };
 
-      const histHTML = isOpen ? _renderHistory(lot, hist, isDram) : '';
+    const TH = (label, align = 'left', extra = '') =>
+      `<th style="padding:9px 12px;text-align:${align};font-size:11px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+
+    const rows = lots.map(lot => {
+      const st  = getLotStatus(lot);
+      const cum = getLotCumulative(lot.id, dailies);
+      const rem = getLotRemaining(lot, dailies);
+      const pct = getLotProgress(lot, dailies);
+      const dd  = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
+      const pctColor = st === 'done' ? '#1D9E75' : st === 'overdue' ? '#A32D2D' : pct >= 70 ? '#185FA5' : '#BA7517';
 
       return `
-        <div class="lc ${(lot.biz || 'dram').toLowerCase()}" id="prog-${lot.id}">
-          <div onclick="Pages.Progress.toggleCard(${lot.id})" style="cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-              <div>
-                <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
-                  <span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">${lot.lotNo || lot.id}</span>
-                  ${renderBizTag(lot.biz)} ${renderCountryTag(lot.country)} ${renderStatusBadge(st)}
-                </div>
-                <div style="font-size:12px;color:var(--tx2)">${lot.customerName || ''} ${lot.product ? '· ' + lot.product : ''}</div>
+        <tr style="border-bottom:0.5px solid var(--bd);cursor:pointer" onclick="Pages.Progress.toggleCard(${lot.id})" title="클릭하여 이력 보기">
+          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;font-weight:500">${lot.lotNo || lot.id}</td>
+          <td style="padding:9px 12px"><span class="bdg" style="${CO_BADGE[lot.country] || ''}">${lot.country}</span></td>
+          <td style="padding:9px 12px"><span class="bdg" style="${BIZ_BADGE[lot.biz] || ''}">${lot.biz}</span></td>
+          <td style="padding:9px 12px;font-size:12px;color:var(--tx2)">${lot.customerName || '—'}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(parseNumber(lot.qty))}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${formatNumber(cum)}</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem > 0 ? '#BA7517' : 'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:9px 12px;min-width:130px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
+                <div style="height:100%;border-radius:3px;background:${BAR_COLOR[st]};width:${pct}%"></div>
               </div>
-              <div style="display:flex;align-items:flex-start;gap:10px">
-                <div style="text-align:right;font-size:12px">
-                  <div style="color:var(--tx2)">입고 ${lot.inDate || ''}</div>
-                  <div style="font-weight:500;color:${st === 'overdue' ? '#dc2626' : 'var(--tx)'};margin-top:2px">목표 ${lot.targetDate || ''}</div>
-                  ${lot.actualDone ? `<div style="color:#16a34a;margin-top:2px">완료 ${lot.actualDone}</div>` : ''}
-                </div>
-                <svg width="14" height="14" fill="none" viewBox="0 0 16 16" style="margin-top:3px;flex-shrink:0;transition:transform .2s;transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
+              <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin-bottom:7px">
-              <div><div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">총 입고</div><div style="font-size:13px;font-weight:500">${formatNumber(parseNumber(lot.qty))} ${lot.unit || '개'}</div></div>
-              <div><div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">누적 처리</div><div style="font-size:13px;font-weight:500">${formatNumber(cum)}</div></div>
-              <div><div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">잔량</div><div style="font-size:13px;font-weight:500;color:${rem > 0 ? '#92400e' : '#166534'}">${formatNumber(rem)}</div></div>
-              <div><div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">진행률</div><div style="font-size:13px;font-weight:500;color:${pbC}">${pct}%</div></div>
-              <div><div style="font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">${st === 'done' ? '상태' : '남은 일수'}</div><div style="font-size:13px;font-weight:500;color:${dd !== null && dd < 0 ? '#dc2626' : dd !== null && dd <= 3 ? '#92400e' : 'var(--tx)'}"> ${st === 'done' ? '✓' : dd !== null ? dd + '일' : '-'}</div></div>
-            </div>
-            <div class="lot-w"><div class="lot-b" style="width:${pct}%;background:${pbC}"></div></div>
-            <div style="font-size:11px;color:var(--tx3);margin-top:5px;display:flex;justify-content:space-between">
-              <span>처리 기록 ${hist.length}건</span>
-              <span style="color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx3)'}">▼ ${isOpen ? '닫기' : '이력 보기'}</span>
-            </div>
-          </div>
-          ${histHTML}
-        </div>`;
+          </td>
+          <td style="padding:9px 12px;font-size:11px;color:var(--tx3)">${lot.inDate || '—'}</td>
+          <td style="padding:9px 12px;font-size:11px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'};font-weight:${st === 'overdue' ? '500' : '400'}">${lot.targetDate || '—'}${dd !== null && st !== 'done' ? ` <span style="font-size:10px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}</td>
+          <td style="padding:9px 12px"><span class="bdg" style="${ST_BADGE[st]}">${ST_LABEL[st]}</span></td>
+        </tr>
+        ${_openLotId === lot.id ? `<tr><td colspan="11" style="padding:0;background:var(--bg)">${_renderHistoryRow(lot, dailies)}</td></tr>` : ''}`;
     }).join('');
+
+    el.innerHTML = `
+      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr>
+              ${TH('LOT 번호')}${TH('지역')}${TH('사업')}${TH('고객사')}
+              ${TH('입고량','right')}${TH('처리량','right')}${TH('잔량','right')}
+              ${TH('진행률','left','min-width:130px')}
+              ${TH('입고일')}${TH('목표완료')}${TH('상태')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function _renderHistoryRow(lot, dailies) {
+    const isDram = lot.biz === 'DRAM';
+    const hist   = dailies.filter(r => String(r.lotId) === String(lot.id)).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    return _renderHistory(lot, hist, isDram);
   }
 
   function _renderHistory(lot, hist, isDram) {
@@ -299,10 +321,6 @@ Pages.Progress = (() => {
   function toggleCard(lotId) {
     _openLotId = _openLotId === lotId ? null : lotId;
     render();
-    if (_openLotId) {
-      const el = document.getElementById('prog-' + lotId);
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-    }
   }
 
   function currentMonth() { return new Date().toISOString().slice(0, 7); }
