@@ -68,32 +68,107 @@ Pages.Revenue = (() => {
       renderMetricCard('싱가포르', '$' + formatNumber(Math.round(sgB)), fi.filter(r => r.country === 'SG').length + '건', CONFIG.COUNTRY_COLORS?.SG || '#0F6E56') +
       renderMetricCard('건수', fi.length + '건', '인보이스');
 
-    // 테이블
+    // ── 하단 LOT 기반 테이블 ───────────────────────────────────
     const tbody = document.getElementById('rv-tbody'); if (!tbody) return;
-    const sorted = [...fi].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
-    if (!sorted.length) { tbody.innerHTML = `<tr><td colspan="11"><div class="empty">데이터 없음</div></td></tr>`; }
-    else {
-      tbody.innerHTML = sorted.map(r => {
-        const due      = r.due ? diffDays(today(), r.due) : null;
-        const dueColor = r.status === 'paid' ? '#085041' : due !== null && due < 0 ? '#dc2626' : due !== null && due <= 7 ? '#92400e' : 'var(--tx2)';
-        const dueText  = r.status === 'paid' ? '수금완료' : due === null ? '-' : due < 0 ? 'D+' + Math.abs(due) : 'D-' + due;
-        const stBadge  = r.status === 'paid' ? '<span class="bdg b-ok">수금완료</span>' : r.status === 'partial' ? '<span class="bdg b-warn">부분수금</span>' : '<span class="bdg b-warn">미수금</span>';
-        return `<tr>
-          <td style="padding:8px 10px;font-size:12px">${r.date || '-'}</td>
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px">${r.no || '-'}</td>
-          <td style="padding:8px 10px;font-size:12px">${r.lotNo || '-'}</td>
-          <td style="padding:8px 10px">${renderBizTag(r.biz)}</td>
-          <td style="padding:8px 10px">${renderCountryTag(r.country)}</td>
-          <td style="padding:8px 10px;font-size:12px">${r.customerName || '-'}</td>
-          <td style="padding:8px 10px;text-align:right;font-weight:600;font-family:var(--font-mono)">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
-          <td style="padding:8px 10px;font-size:12px">${r.currency || 'USD'}</td>
-          <td style="padding:8px 10px;font-size:12px;color:${dueColor}">${r.due || '-'}${due !== null ? ' (' + dueText + ')' : ''}</td>
-          <td style="padding:8px 10px">${stBadge}</td>
-          <td style="padding:4px 8px">
-            ${r.status !== 'paid' ? `<button class="btn sm" style="font-size:11px" onclick="Pages.Invoice.quickPaid(${r.id})">수금</button>` : ''}
-          </td>
-        </tr>`;
+
+    // 전체 LOT를 입고일 내림차순으로
+    let lots = Store.getLots();
+    if (biz) lots = lots.filter(l => l.biz === biz);
+    if (co)  lots = lots.filter(l => l.country === co);
+    lots = [...lots].sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')));
+
+    const dailies  = Store.getDailies();
+    const invoices = Store.getInvoices();
+
+    const CO_STYLE  = { HK: 'background:#FAEEDA;color:#633806', SG: 'background:#E1F5EE;color:#085041' };
+    const BIZ_STYLE = { DRAM: 'background:#E6F1FB;color:#0C447C', SSD: 'background:#E1F5EE;color:#085041', MID: 'background:#EEEDFE;color:#3C3489' };
+
+    function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
+
+    if (!lots.length) {
+      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--tx3)">데이터 없음</td></tr>`;
+    } else {
+      let totalAmt = 0;
+      const rows = lots.map((lot, i) => {
+        const inv      = invoices.find(r => String(r.lotId) === String(lot.id));
+        const amt      = inv ? parseNumber(inv.amount) : 0;
+        const hasInv   = !!inv;
+        const st       = lot.inDate > today() ? 'upcoming' : getLotStatus(lot);
+        const pct      = st === 'upcoming' ? 0 : getLotProgress(lot, dailies);
+        const qty      = parseNumber(lot.qty);
+        const barColor = st === 'done' ? '#1D9E75' : st === 'overdue' ? '#E24B4A' : st === 'upcoming' ? '#378ADD' : pct >= 80 ? '#EF9F27' : '#185FA5';
+        const pctColor = st === 'done' ? '#085041' : st === 'overdue' ? '#A32D2D' : st === 'upcoming' ? '#185FA5' : pct >= 80 ? '#BA7517' : '#0C447C';
+
+        const stStyle = st === 'upcoming' ? 'background:#E6F1FB;color:#0C447C'
+          : st === 'done'    ? 'background:#E1F5EE;color:#085041'
+          : st === 'overdue' ? 'background:#FCEBEB;color:#791F1F'
+          : 'background:#E6F1FB;color:#0C447C';
+        const stLabel = st === 'upcoming' ? '입고예정' : st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행중';
+
+        // 수금 상태
+        const paidStyle = inv
+          ? inv.status === 'paid'    ? 'background:#E1F5EE;color:#085041'
+          : inv.status === 'partial' ? 'background:#FAEEDA;color:#633806'
+          :                            'background:#FCEBEB;color:#791F1F'
+          : 'background:#FAEEDA;color:#633806';
+        const paidLabel = inv
+          ? inv.status === 'paid' ? '수금완료' : inv.status === 'partial' ? '부분수금' : '미수금'
+          : '입력 대기';
+
+        totalAmt += amt;
+        const rowBg = !hasInv && st !== 'upcoming' ? 'background:#FFFBF3' : st === 'upcoming' ? 'background:#F5F9FF' : '';
+
+        return `
+          <tr style="${rowBg}">
+            <td style="padding:9px 12px;color:var(--tx3);font-size:12px;text-align:center">${i + 1}</td>
+            <td style="padding:9px 12px;font-size:13px;color:var(--tx3)">${lot.inDate || '—'}</td>
+            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo || lot.id}</td>
+            <td style="padding:9px 12px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td style="padding:9px 12px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td style="padding:9px 12px;font-size:13px;color:var(--tx2)">${lot.customerName || '—'}</td>
+            <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${formatNumber(qty)}</td>
+            <td style="padding:9px 12px;min-width:110px">
+              ${st === 'upcoming'
+                ? `<span style="font-size:13px;color:#185FA5;font-weight:500">D-${diffDays(today(), lot.inDate)}</span>`
+                : `<div style="display:flex;align-items:center;gap:7px">
+                    <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden;min-width:55px">
+                      <div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                    ${bdg(stLabel, stStyle)}
+                  </div>`}
+            </td>
+            <td style="padding:7px 12px;text-align:right">
+              ${hasInv
+                ? `<span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>`
+                : st === 'upcoming'
+                  ? `<span style="font-size:13px;color:var(--tx3)">—</span>`
+                  : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                      <input type="number" placeholder="금액 입력" id="rv-amt-${lot.id}"
+                        style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:13px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:#0C447C">
+                      <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
+                        style="padding:5px 12px;background:#185FA5;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
+                    </div>`}
+            </td>
+            <td style="padding:9px 12px">
+              ${bdg(paidLabel, paidStyle)}
+              ${inv && inv.status !== 'paid' ? `<button class="btn sm" style="font-size:11px;padding:2px 7px;margin-left:4px" onclick="Pages.Invoice.quickPaid(${inv.id})">수금</button>` : ''}
+            </td>
+            <td style="padding:4px 8px">
+              ${inv ? `<button class="btn sm" style="font-size:11px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
+            </td>
+          </tr>`;
       }).join('');
+
+      // 합계 행
+      const totalRow = `
+        <tr style="background:var(--bg)">
+          <td colspan="8" style="padding:9px 12px;font-size:13px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
+          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
+        </tr>`;
+
+      tbody.innerHTML = rows + totalRow;
     }
 
     _renderCharts(fi, tick);
@@ -273,8 +348,44 @@ Pages.Revenue = (() => {
     }
   }
 
+  // ── 인라인 인보이스 저장 ─────────────────────────────────────
+  async function saveInvoice(lotId) {
+    const lot    = Store.getLots().find(l => l.id === lotId || String(l.id) === String(lotId));
+    if (!lot) return;
+    const amtEl  = document.getElementById('rv-amt-' + lotId);
+    const amount = parseNumber(amtEl?.value);
+    if (!amount) { UI.toast('금액을 입력해 주세요', true); return; }
+
+    const existing = Store.getInvoices().find(r => String(r.lotId) === String(lotId));
+    const record = {
+      id:           existing ? existing.id : Date.now(),
+      no:           existing?.no || ('INV-' + Date.now()),
+      date:         lot.actualDone || today(),
+      lotId:        lot.id,
+      lotNo:        lot.lotNo || lot.id,
+      biz:          lot.biz,
+      country:      lot.country,
+      customerName: lot.customerName || '',
+      amount,
+      vat:          0,
+      total:        amount,
+      currency:     lot.currency || 'USD',
+      status:       'paid',
+      paidDate:     lot.actualDone || today(),
+      paidAmt:      amount,
+      due:          '',
+      note:         '',
+    };
+
+    Store.upsertInvoice(record);
+    if (existing) Api.update(CONFIG.SHEETS.INVOICES, existing.id, record);
+    else          Api.append(CONFIG.SHEETS.INVOICES, record);
+    UI.toast('매출액 저장됨');
+    render();
+  }
+
   function exportExcel() { Pages.Invoice.exportExcel(); }
 
-  return { render, setMode };
+  return { render, setMode, saveInvoice };
 
 })();
