@@ -186,6 +186,39 @@
         <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="pr-cnt"></span>
       </div>
       <div id="pr-cards"></div>
+
+      <!-- LOT 수정 패널 -->
+      <div id="lot-edit-panel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:400;padding:24px;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.08)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="font-size:15px;font-weight:600">LOT 수정</div>
+          <button onclick="Pages.Progress.closeEditPanel()" style="border:none;background:none;font-size:22px;color:var(--tx3);cursor:pointer;padding:0 4px;line-height:1">×</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="fld"><label>LOT 번호</label><input type="text" id="ep-lot"></div>
+          <div class="fld"><label>지역</label>
+            <select id="ep-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select>
+          </div>
+          <div class="fld"><label>사업</label>
+            <select id="ep-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+          </div>
+          <div class="fld"><label>고객사</label><input type="text" id="ep-cust"></div>
+          <div class="fld"><label>입고일</label><input type="date" id="ep-indate" onchange="Pages.Progress.calcEditTgt()"></div>
+          <div class="fld"><label>목표 완료일</label><input type="date" id="ep-tgt"></div>
+          <div class="fld"><label>수량</label><input type="number" id="ep-qty" min="0"></div>
+          <div class="fld"><label>단가</label><input type="number" id="ep-price" min="0"></div>
+          <div class="fld"><label>통화</label>
+            <select id="ep-cur"><option value="USD">USD</option><option value="HKD">HKD</option><option value="SGD">SGD</option><option value="KRW">KRW</option></select>
+          </div>
+          <div class="fld"><label>제품</label><input type="text" id="ep-prod"></div>
+          <div class="fld"><label>비고</label><input type="text" id="ep-note"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:20px">
+          <button class="btn pri" onclick="Pages.Progress.saveLotEdit()" style="flex:1;padding:11px">저장</button>
+          <button class="btn" onclick="Pages.Progress.closeEditPanel()" style="padding:11px 20px">취소</button>
+        </div>
+        <span id="ep-ok" style="display:none;font-size:12px;color:#085041;text-align:center;margin-top:8px;display:block;font-weight:500">✓ 저장됨</span>
+      </div>
+      <div id="lot-edit-overlay" onclick="Pages.Progress.closeEditPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:399"></div>
     </div>
 
     <!-- LOT 등록 -->
@@ -513,7 +546,7 @@
       <div class="etw">
         <table id="rv-table">
           <thead><tr>
-            <th>발행일</th><th>번호</th><th>LOT</th><th>사업</th><th>국가</th><th>고객사</th><th>청구액</th><th>통화</th><th>결제기한</th><th>수금상태</th><th></th>
+            <th>#</th><th>입고일</th><th>LOT 번호</th><th>사업</th><th>지역</th><th>고객사</th><th>수량</th><th>진행률</th><th style="text-align:right;color:#085041">매출액 (USD)</th><th>수금상태</th><th></th>
           </tr></thead>
           <tbody id="rv-tbody"></tbody>
         </table>

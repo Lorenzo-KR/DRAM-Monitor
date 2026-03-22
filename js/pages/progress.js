@@ -306,7 +306,10 @@ Pages.Progress = (() => {
             ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
           <td style="padding:8px 10px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td style="padding:4px 8px"><button class="btn del sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button></td>
+          <td style="padding:4px 8px;white-space:nowrap">
+            <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+            <button class="btn del sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+          </td>
         </tr>`;
 
       const expandRow = isOpen ? `
@@ -324,7 +327,7 @@ Pages.Progress = (() => {
             ${TH('','left','width:32px')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
             ${TH('진행률','left','min-width:110px')}
-            ${TH('입고일')}${TH('목표완료')}${TH('상태')}${TH('','left','width:60px')}
+            ${TH('입고일')}${TH('목표완료')}${TH('상태')}${TH('','left','width:90px')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
@@ -486,6 +489,67 @@ Pages.Progress = (() => {
 
   function currentMonth() { return new Date().toISOString().slice(0,7); }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel };
+  // ── LOT 수정 패널 ──────────────────────────────────────────
+  let _editLotId = null;
+
+  function openEditPanel(lotId) {
+    const lot = Store.getLotById(lotId); if (!lot) return;
+    _editLotId = lotId;
+
+    document.getElementById('ep-lot').value    = lot.lotNo    || '';
+    document.getElementById('ep-co').value     = lot.country  || 'HK';
+    document.getElementById('ep-biz').value    = lot.biz      || 'DRAM';
+    document.getElementById('ep-cust').value   = lot.customerName || '';
+    document.getElementById('ep-indate').value = lot.inDate   || '';
+    document.getElementById('ep-tgt').value    = lot.targetDate || '';
+    document.getElementById('ep-qty').value    = lot.qty      || '';
+    document.getElementById('ep-price').value  = lot.price    || '';
+    document.getElementById('ep-cur').value    = lot.currency || 'USD';
+    document.getElementById('ep-prod').value   = lot.product  || '';
+    document.getElementById('ep-note').value   = lot.note     || '';
+
+    const ok = document.getElementById('ep-ok'); if (ok) ok.style.display = 'none';
+    document.getElementById('lot-edit-panel').style.display   = 'block';
+    document.getElementById('lot-edit-overlay').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeEditPanel() {
+    document.getElementById('lot-edit-panel').style.display   = 'none';
+    document.getElementById('lot-edit-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+    _editLotId = null;
+  }
+
+  function calcEditTgt() {
+    const d = document.getElementById('ep-indate')?.value;
+    if (d) { const el = document.getElementById('ep-tgt'); if (el && !el.value) el.value = addDays(d, CONFIG.LOT_DEFAULT_TARGET_DAYS); }
+  }
+
+  async function saveLotEdit() {
+    const lot = Store.getLotById(_editLotId); if (!lot) return;
+    const updated = {
+      ...lot,
+      lotNo:        document.getElementById('ep-lot').value.trim()   || lot.lotNo,
+      country:      document.getElementById('ep-co').value,
+      biz:          document.getElementById('ep-biz').value,
+      customerName: document.getElementById('ep-cust').value.trim(),
+      inDate:       document.getElementById('ep-indate').value       || lot.inDate,
+      targetDate:   document.getElementById('ep-tgt').value          || lot.targetDate,
+      qty:          parseNumber(document.getElementById('ep-qty').value) || lot.qty,
+      price:        parseNumber(document.getElementById('ep-price').value),
+      currency:     document.getElementById('ep-cur').value,
+      product:      document.getElementById('ep-prod').value.trim(),
+      note:         document.getElementById('ep-note').value.trim(),
+    };
+    Store.upsertLot(updated);
+    Api.update(CONFIG.SHEETS.LOTS, _editLotId, updated);
+    const ok = document.getElementById('ep-ok');
+    if (ok) { ok.style.display = 'block'; setTimeout(() => { ok.style.display = 'none'; closeEditPanel(); }, 1000); }
+    UI.toast('LOT 수정됨');
+    render();
+  }
+
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit };
 
 })();
