@@ -86,10 +86,6 @@
       </button>
 
       <div class="sb-sec">재무</div>
-      <button class="ni" onclick="Nav.go('invoice')">
-        <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="1" width="12" height="14" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        인보이스 입력
-      </button>
       <button class="ni" onclick="Nav.go('revenue')">
         <svg fill="none" viewBox="0 0 16 16"><path d="M1 12l4-4 3 3 4-5 3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         매출 현황
@@ -523,23 +519,26 @@
         <button id="rv-mode-year" class="btn" style="border:none;border-radius:0;border-right:1px solid var(--bd2);font-size:12px;padding:6px 16px" onclick="Pages.Revenue.setMode('year')">연도별 누적</button>
         <button id="rv-mode-all" class="btn" style="border:none;border-radius:0;font-size:12px;padding:6px 16px" onclick="Pages.Revenue.setMode('all')">전체 누적</button>
       </div>
-      <div class="fb">
-        <select id="rv-mo" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)"></select>
-        <select id="rv-yr" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx);display:none"></select>
-        <select id="rv-biz" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)">
-          <option value="">전체 사업</option><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option>
-        </select>
-        <select id="rv-co" onchange="Pages.Revenue.render()" style="padding:7px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)">
-          <option value="">전체 국가</option><option value="HK">홍콩</option><option value="SG">싱가포르</option>
-        </select>
+      <div class="fb" style="flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        <select id="rv-mo" onchange="Pages.Revenue.render()" style="padding:6px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx)"></select>
+        <select id="rv-yr" onchange="Pages.Revenue.render()" style="padding:6px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--card);color:var(--tx);display:none"></select>
+        <span class="sep"></span>
+        <button class="pill pa on" id="rv-co-all" onclick="Pages.Revenue.setCo(this,'')">전체</button>
+        <button class="pill phk" id="rv-co-hk"  onclick="Pages.Revenue.setCo(this,'HK')">홍콩</button>
+        <button class="pill psg" id="rv-co-sg"  onclick="Pages.Revenue.setCo(this,'SG')">싱가포르</button>
+        <span class="sep"></span>
+        <button class="pill pa on" id="rv-biz-all"  onclick="Pages.Revenue.setBiz(this,'')">전체</button>
+        <button class="pill pd"   id="rv-biz-dram" onclick="Pages.Revenue.setBiz(this,'DRAM')">DRAM Test</button>
+        <button class="pill ps"   id="rv-biz-ssd"  onclick="Pages.Revenue.setBiz(this,'SSD')">SSD Test</button>
+        <button class="pill pm"   id="rv-biz-mid"  onclick="Pages.Revenue.setBiz(this,'MID')">Mobile Ink Die</button>
       </div>
       <div class="mg mg4" id="rv-top"></div>
       <div id="rv-year-breakdown" style="display:none;margin-bottom:14px"></div>
       <div class="two">
         <div id="rv-chart-wrap">
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-            <div class="cw"><div class="ct" id="rv-chart-title">청구액 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
-            <div class="cw"><div class="ct">사업별 청구 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
+            <div class="cw"><div class="ct" id="rv-chart-title">매출 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
+            <div class="cw"><div class="ct">사업별 매출 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
           </div>
         </div>
       </div>
