@@ -91,8 +91,14 @@ const Api = (() => {
     async getAll(sheet) {
       _setStatus('loading');
       try {
-        const res  = await fetch(`${CONFIG.API_URL}?action=getAll&sheet=${sheet}`);
+        const token = Auth.getToken();
+        const res  = await fetch(`${CONFIG.API_URL}?action=getAll&sheet=${sheet}&token=${token}`);
         const data = await res.json();
+        if (data?.error === 'UNAUTHORIZED') {
+          sessionStorage.removeItem(Auth._TOKEN_KEY);
+          location.reload();
+          return [];
+        }
         _setStatus('ok');
         return Array.isArray(data) ? data : [];
       } catch (err) {
@@ -104,37 +110,31 @@ const Api = (() => {
 
     /**
      * 새 행 추가
-     * @param {string} sheet
-     * @param {Object} data
      */
     append(sheet, data) {
-      return _enqueue({ action: 'append', sheet, data });
+      return _enqueue({ action: 'append', sheet, data, token: Auth.getToken() });
     },
 
     /**
      * 기존 행 수정
-     * @param {string} sheet
-     * @param {string|number} id
-     * @param {Object} data
      */
     update(sheet, id, data) {
-      return _enqueue({ action: 'update', sheet, id, data });
+      return _enqueue({ action: 'update', sheet, id, data, token: Auth.getToken() });
     },
 
     /**
      * 행 삭제
-     * @param {string} sheet
-     * @param {string|number} id
      */
     delete(sheet, id) {
-      return _enqueue({ action: 'delete', sheet, id });
+      return _enqueue({ action: 'delete', sheet, id, token: Auth.getToken() });
     },
 
     /**
      * 모든 시트 헤더 자동 설정 (앱 최초 로드 시 1회)
      */
     async setupSheets() {
-      await fetch(`${CONFIG.API_URL}?action=setupAll`).catch(() => {});
+      const token = Auth.getToken();
+      await fetch(`${CONFIG.API_URL}?action=setupAll&token=${token}`).catch(() => {});
     },
 
   };
