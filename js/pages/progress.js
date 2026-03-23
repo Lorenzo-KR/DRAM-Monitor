@@ -506,13 +506,37 @@ Pages.Progress = (() => {
   }
 
   // ── 삭제 ───────────────────────────────────────────────────
-  async function deleteLot(id) {
-    if (!confirm('삭제하시겠습니까?')) return;
+  // ── LOT 삭제 확인 모달 ─────────────────────────────────────
+  let _deleteLotId = null;
+
+  function openDeleteModal(id) {
+    const lot  = Store.getLotById(id); if (!lot) return;
+    _deleteLotId = id;
+    const nameEl = document.getElementById('lot-delete-name');
+    if (nameEl) nameEl.textContent = lot.lotNo || lot.id;
+    const modal = document.getElementById('lot-delete-modal');
+    if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  }
+
+  function cancelDelete() {
+    _deleteLotId = null;
+    const modal = document.getElementById('lot-delete-modal');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+  }
+
+  async function confirmDelete() {
+    if (!_deleteLotId) return;
+    const id = _deleteLotId;
+    cancelDelete();
     Store.deleteLot(id);
-    if (_openLotId===id) _openLotId=null;
+    if (_openLotId === id) _openLotId = null;
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.LOTS, id);
+  }
+
+  async function deleteLot(id) {
+    openDeleteModal(id);
   }
 
   async function deleteDaily(id, lotId) {
@@ -756,6 +780,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, switchTab, parsePaste, savePaste };
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete };
 
 })();
