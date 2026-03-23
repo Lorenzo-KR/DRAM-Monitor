@@ -20,7 +20,7 @@ const Auth = {
     return !!this.getToken();
   },
 
-  /** 로그인 시도 — POST로 전송하여 URL에 비밀번호 노출 방지 */
+  /** 로그인 시도 — GET 방식 (Apps Script CORS 호환) */
   async login() {
     const input = document.getElementById('login-pw');
     const errEl = document.getElementById('login-err');
@@ -31,11 +31,7 @@ const Auth = {
     if (errEl) errEl.style.display = 'none';
 
     try {
-      const res = await fetch(CONFIG.API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'auth', pw: input.value }),
-      });
+      const res  = await fetch(CONFIG.API_URL + '?action=auth&pw=' + encodeURIComponent(input.value));
       const data = await res.json();
 
       if (data.token) {
@@ -45,7 +41,9 @@ const Auth = {
         Nav.go('dash');
       } else {
         if (errEl) {
-          errEl.textContent = data.error === 'WRONG_PASSWORD' ? '비밀번호가 올바르지 않습니다.' : '로그인 실패. 다시 시도해 주세요.';
+          errEl.textContent = data.error === 'LOCKED'
+            ? '로그인 시도 초과. 15분 후 다시 시도해 주세요.'
+            : '비밀번호가 올바르지 않습니다.';
           errEl.style.display = 'block';
         }
         input.value = '';
