@@ -30,7 +30,7 @@ Pages.Progress = (() => {
   const BAR_COLOR = { upcoming: '#378ADD', inprog: '#185FA5', overdue: '#E24B4A', done: '#1D9E75' };
 
   function _badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
   }
 
   // ── 차트 ───────────────────────────────────────────────────
@@ -67,7 +67,7 @@ Pages.Progress = (() => {
     for (let y = CONFIG.CHART_START_YEAR; y <= Math.max(curYear, CONFIG.CHART_START_YEAR); y++) {
       const active = y === selYear;
       html += `<button onclick="Pages.Progress.setChartYear(this,${y})" data-chart-year="${y}"
-        style="padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid;transition:.15s;
+        style="padding:3px 12px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;border:1.5px solid;transition:.15s;
         ${active ? 'background:var(--navy);color:#fff;border-color:var(--navy)' : 'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
     }
     tabs.innerHTML = html;
@@ -139,10 +139,10 @@ Pages.Progress = (() => {
       totEl.style.gridTemplateColumns = `repeat(${items.length},1fr)`;
       totEl.innerHTML = items.map(it => `
         <div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-size:11px;font-weight:600;color:${it.color};margin-bottom:4px">${it.label}</div>
+          <div style="font-size:15px;font-weight:600;color:${it.color};margin-bottom:4px">${it.label}</div>
           <div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">${formatNumber(it.yearTotal)}</div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:2px">${chartYear}년 누적</div>
-          <div style="font-size:12px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${formatNumber(it.thisM)}</div>
+          <div style="font-size:14px;color:var(--tx3);margin-top:2px">${chartYear}년 누적</div>
+          <div style="font-size:14px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${formatNumber(it.thisM)}</div>
         </div>`).join('');
     }
   }
@@ -161,7 +161,7 @@ Pages.Progress = (() => {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     const tdS = 'padding:5px 8px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97;vertical-align:middle';
-    const inp = 'border:1px solid #C0DD97;border-radius:4px;background:#fff;font-size:12px';
+    const inp = 'border:1px solid #C0DD97;border-radius:4px;background:#fff;font-size:14px';
     return `
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:#3B6D11;font-size:16px;font-weight:500">+</td>
@@ -187,9 +187,9 @@ Pages.Progress = (() => {
         <td style="${tdS}">
           <input id="nl-qty" type="number" placeholder="수량" min="0" style="${inp};width:100%;padding:5px 7px;text-align:right">
         </td>
-        <td style="${tdS};color:var(--tx3);font-size:12px;text-align:right">—</td>
-        <td style="${tdS};color:var(--tx3);font-size:12px;text-align:right">—</td>
-        <td style="${tdS};color:var(--tx3);font-size:12px">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:14px">—</td>
         <td style="${tdS}">
           <input id="nl-indate" type="date" style="${inp};width:100%;padding:5px 6px" onchange="Pages.Progress.calcNewTgt()">
         </td>
@@ -198,8 +198,8 @@ Pages.Progress = (() => {
         </td>
         <td style="${tdS}"></td>
         <td style="${tdS}">
-          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer">+ 등록</button>
-          <span id="nl-ok" style="display:none;font-size:11px;color:#3B6D11;font-weight:500">✓</span>
+          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:500;cursor:pointer">+ 등록</button>
+          <span id="nl-ok" style="display:none;font-size:15px;color:#3B6D11;font-weight:500">✓</span>
         </td>
       </tr>`;
   }
@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:9px 12px;text-align:${align};font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:11px 14px;text-align:${align};font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -283,32 +283,32 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':''}">
-          <td style="padding:9px 12px;text-align:center">
+          <td style="padding:11px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:9px 12px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:9px 12px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:9px 12px;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
-          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${formatNumber(qty)}</td>
-          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="padding:9px 12px">
+          <td style="padding:11px 14px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td style="padding:11px 14px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:11px 14px;font-size:15px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:11px 14px">
             ${st==='upcoming'
-              ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
+              ? `<span style="font-size:15px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
                   <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
-                  <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                  <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:9px 12px;font-size:13px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
-          <td style="padding:9px 12px;font-size:13px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
-            ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:11px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
+          <td style="padding:11px 14px;font-size:15px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
+          <td style="padding:11px 14px;font-size:15px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
+            ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:15px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td style="padding:9px 12px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td style="padding:11px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td style="padding:6px 8px;white-space:nowrap">
-            <button class="btn sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
-            <button class="btn del sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+            <button class="btn sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+            <button class="btn del sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
@@ -322,7 +322,7 @@ Pages.Progress = (() => {
 
     el.innerHTML = `
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+        <table style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed">
           <colgroup>
             <col style="width:36px">
             <col style="width:56px">
@@ -361,22 +361,22 @@ Pages.Progress = (() => {
     const colGrid = isDram ? '90px 60px 60px 60px 70px 70px 70px 1fr 30px' : '90px 70px 70px 70px 1fr 30px';
 
     const histRows = hist.length === 0
-      ? `<div style="font-size:12px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
+      ? `<div style="font-size:14px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal)+parseNumber(r.noBoot)+parseNumber(r.abnormal))||parseNumber(r.proc) : parseNumber(r.proc);
-          return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:0.5px solid var(--bd);font-size:12px;align-items:center">
+          return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:0.5px solid var(--bd);font-size:14px;align-items:center">
             <span style="font-family:var(--font-mono)">${r.date}</span>
             ${isDram?`<span style="font-family:var(--font-mono);color:#085041;text-align:right">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:#633806;text-align:right">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:#791F1F;text-align:right">${formatNumber(parseNumber(r.abnormal))}</span>`:''}
             <span style="font-family:var(--font-mono);font-weight:500;text-align:right">${formatNumber(tot)}</span>
             <span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.cumul))}</span>
             <span style="font-family:var(--font-mono);color:${parseNumber(r.remain)>0?'#BA7517':'#085041'};text-align:right">${formatNumber(parseNumber(r.remain))}</span>
-            <span style="font-size:11px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
-            <button class="btn del sm" style="padding:2px 6px;font-size:10px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
+            <span style="font-size:15px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
+            <button class="btn del sm" style="padding:2px 6px;font-size:14px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
           </div>`;
         }).join('');
 
     const histHeader = `
-      <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1.5px solid var(--bd);font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">
+      <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1.5px solid var(--bd);font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">
         <span>날짜</span>${isDram?'<span style="text-align:right;color:#085041">Normal</span><span style="text-align:right;color:#633806">NoBoot</span><span style="text-align:right;color:#791F1F">Abnor.</span>':''}
         <span style="text-align:right">처리</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span>비고</span><span></span>
       </div>`;
@@ -385,11 +385,11 @@ Pages.Progress = (() => {
 
     return `
       <div style="padding:14px 16px;background:var(--bg)">
-        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
+        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
         ${histHeader}${histRows}
 
         <div style="margin-top:14px;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);padding:12px">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록</div>
+          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록</div>
           <div style="display:grid;grid-template-columns:${isDram?'110px 120px 100px auto':'110px 120px auto'};gap:10px;margin-bottom:${isDram?'10px':'0'}">
             <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}"></div>
             <div class="fld"><label>처리량</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcRem(${lot.id})"></div>
@@ -400,7 +400,7 @@ Pages.Progress = (() => {
           </div>
           ${isDram?`
           <div style="margin-bottom:10px">
-            <div style="font-size:10px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
+            <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
               <div class="fld"><label style="color:#085041">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
               <div class="fld"><label style="color:#633806">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
@@ -410,7 +410,7 @@ Pages.Progress = (() => {
           <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
           <div class="br">
             <button class="btn pri sm" onclick="Pages.Progress.saveDaily(${lot.id})">저장</button>
-            <span id="dp-ok-${lot.id}" style="font-size:12px;color:#085041;display:none;font-weight:500">✓ 저장됨</span>
+            <span id="dp-ok-${lot.id}" style="font-size:14px;color:#085041;display:none;font-weight:500">✓ 저장됨</span>
           </div>
         </div>
       </div>`;

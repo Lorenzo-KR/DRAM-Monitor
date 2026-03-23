@@ -24,18 +24,18 @@ Pages.Shipment = (() => {
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
               <span style="font-size:14px;font-weight:600;font-family:var(--font-mono)">${s.lotNo || '-'}</span>
               ${renderBizTag(s.biz)} ${renderCountryTag(s.country)}
-              <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:${stBg};color:${stColor}">${s.status === 'confirmed' ? '확정' : '미확정'}</span>
+              <span style="font-size:14px;font-weight:600;padding:2px 7px;border-radius:4px;background:${stBg};color:${stColor}">${s.status === 'confirmed' ? '확정' : '미확정'}</span>
             </div>
-            <div style="font-size:12px;color:var(--tx2)">${s.customerName || ''}${s.note ? ' · ' + s.note : ''}</div>
+            <div style="font-size:14px;color:var(--tx2)">${s.customerName || ''}${s.note ? ' · ' + s.note : ''}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:20px;font-weight:600">${formatNumber(parseNumber(s.qty))}<span style="font-size:13px;font-weight:400;color:var(--tx3)"> ${s.unit || '개'}</span></div>
-            <div style="font-size:12px;font-weight:600;color:${ddColor}">${ddText}</div>
-            <div style="font-size:11px;color:var(--tx3)">${s.expectedDate || ''}</div>
+            <div style="font-size:20px;font-weight:600">${formatNumber(parseNumber(s.qty))}<span style="font-size:15px;font-weight:400;color:var(--tx3)"> ${s.unit || '개'}</span></div>
+            <div style="font-size:14px;font-weight:600;color:${ddColor}">${ddText}</div>
+            <div style="font-size:15px;color:var(--tx3)">${s.expectedDate || ''}</div>
             <div style="display:flex;gap:5px;margin-top:6px;justify-content:flex-end">
-              ${s.status !== 'confirmed' ? `<button class="btn sm" style="font-size:11px" onclick="Pages.Shipment.confirm(${s.id})">확정</button>` : ''}
-              <button class="btn sm" style="font-size:11px" onclick="Pages.Shipment.openPanel(${s.id})">수정</button>
-              <button class="btn del sm" style="font-size:11px" onclick="Pages.Shipment.delete(${s.id})">삭제</button>
+              ${s.status !== 'confirmed' ? `<button class="btn sm" style="font-size:15px" onclick="Pages.Shipment.confirm(${s.id})">확정</button>` : ''}
+              <button class="btn sm" style="font-size:15px" onclick="Pages.Shipment.openPanel(${s.id})">수정</button>
+              <button class="btn del sm" style="font-size:15px" onclick="Pages.Shipment.delete(${s.id})">삭제</button>
             </div>
           </div>
         </div>`;

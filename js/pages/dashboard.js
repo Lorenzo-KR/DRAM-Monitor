@@ -16,11 +16,11 @@ Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
   const S = {
-    th:  'padding:9px 12px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
-    thr: 'padding:9px 12px;text-align:right;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
-    td:  'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle',
-    tdr: 'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:13px',
-    tdm: 'padding:9px 12px;border-bottom:0.5px solid var(--bd);color:var(--tx3);vertical-align:middle;font-size:13px',
+    th:  'padding:11px 14px;text-align:left;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
+    thr: 'padding:11px 14px;text-align:right;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
+    td:  'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle',
+    tdr: 'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:15px',
+    tdm: 'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx3);vertical-align:middle;font-size:15px',
   };
 
   // ── 배지 헬퍼 ───────────────────────────────────────────────
@@ -41,7 +41,7 @@ Pages.Dashboard = (() => {
   const ST_LABEL = { done: '완료', inprog: '진행중', overdue: '지연' };
 
   function badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
   }
 
   // ── 1. KPI 계산 ─────────────────────────────────────────────
@@ -64,9 +64,15 @@ Pages.Dashboard = (() => {
       return doneLots.filter(l => l.biz === biz).reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0);
     }
 
+    function revByCo(co) {
+      if (useInv) return invoices.filter(r => r.country === co).reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
+      return doneLots.filter(l => l.country === co).reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0);
+    }
+
     const revenue = {
       total: useInv ? invTotal : doneLots.reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0),
       SSD: revByBiz('SSD'), DRAM: revByBiz('DRAM'), MID: revByBiz('MID'),
+      HK: revByCo('HK'), SG: revByCo('SG'),
     };
 
     const overdueLots = activeLots.filter(l => getLotStatus(l) === 'overdue');
@@ -83,8 +89,8 @@ Pages.Dashboard = (() => {
   // ── 2. 알림 ─────────────────────────────────────────────────
   function _renderAlerts(overdueLots, nearDueLots) {
     return [
-      overdueLots.length > 0 ? `<div style="background:#FCEBEB;color:#791F1F;border-left:3px solid #E24B4A;padding:7px 12px;border-radius:var(--rs);font-size:12px;margin-bottom:8px">지연 LOT ${overdueLots.length}건 — ${overdueLots.map(l => l.lotNo || l.id).join(', ')}</div>` : '',
-      nearDueLots.length > 0 ? `<div style="background:#FAEEDA;color:#633806;border-left:3px solid #EF9F27;padding:7px 12px;border-radius:var(--rs);font-size:12px;margin-bottom:8px">완료 기한 3일 이내 LOT ${nearDueLots.length}건</div>` : '',
+      overdueLots.length > 0 ? `<div style="background:#FCEBEB;color:#791F1F;border-left:3px solid #E24B4A;padding:7px 12px;border-radius:var(--rs);font-size:14px;margin-bottom:8px">지연 LOT ${overdueLots.length}건 — ${overdueLots.map(l => l.lotNo || l.id).join(', ')}</div>` : '',
+      nearDueLots.length > 0 ? `<div style="background:#FAEEDA;color:#633806;border-left:3px solid #EF9F27;padding:7px 12px;border-radius:var(--rs);font-size:14px;margin-bottom:8px">완료 기한 3일 이내 LOT ${nearDueLots.length}건</div>` : '',
     ].join('');
   }
 
@@ -99,9 +105,9 @@ Pages.Dashboard = (() => {
 
     function kpiCard(label, value, sub, color = '') {
       return `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-        <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:4px">${label}</div>
+        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:4px">${label}</div>
         <div style="font-size:20px;font-weight:600;line-height:1;${color ? 'color:' + color : ''}">${value}</div>
-        <div style="font-size:11px;color:var(--tx3);margin-top:3px">${sub}</div>
+        <div style="font-size:15px;color:var(--tx3);margin-top:3px">${sub}</div>
       </div>`;
     }
 
@@ -121,14 +127,14 @@ Pages.Dashboard = (() => {
     const maxRev = Math.max(...CONFIG.BIZ_LIST.map(b => kpi.revenue[b]), 1);
 
     const revBars = CONFIG.BIZ_LIST.filter(b => kpi.revenue[b] > 0).map(b => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:0.5px solid var(--bd)">
-        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);min-width:100px">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:100px">
           <span style="width:7px;height:7px;border-radius:50%;background:${BIZ_COLORS_DOT[b]};flex-shrink:0;display:inline-block"></span>${CONFIG.BIZ_LABELS[b]}
         </div>
         <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
           <div style="height:100%;border-radius:3px;background:${BIZ_COLORS_DOT[b]};width:${Math.round(kpi.revenue[b] / maxRev * 100)}%"></div>
         </div>
-        <div style="font-size:12px;font-weight:600;min-width:72px;text-align:right">$${formatNumber(Math.round(kpi.revenue[b]))}</div>
+        <div style="font-size:14px;font-weight:600;min-width:72px;text-align:right">$${formatNumber(Math.round(kpi.revenue[b]))}</div>
       </div>`).join('');
 
     const year     = new Date().getFullYear();
@@ -138,14 +144,14 @@ Pages.Dashboard = (() => {
       const pct = Math.min(100, Math.round(act / tgt * 100));
       const color = CONFIG.BIZ_COLORS[b];
       return `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid var(--bd)">
-          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);min-width:90px">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:0.5px solid var(--bd)">
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:90px">
             <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>${CONFIG.BIZ_LABELS[b]}
           </div>
           <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
             <div style="height:100%;border-radius:3px;background:${color};width:${pct}%"></div>
           </div>
-          <div style="font-size:11px;font-weight:500;min-width:28px;text-align:right;color:${pct >= 70 ? color : '#BA7517'}">${pct}%</div>
+          <div style="font-size:15px;font-weight:500;min-width:28px;text-align:right;color:${pct >= 70 ? color : '#BA7517'}">${pct}%</div>
         </div>`;
     }).filter(Boolean).join('');
 
@@ -154,7 +160,7 @@ Pages.Dashboard = (() => {
         <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">
             <span style="font-size:14px;font-weight:600;color:var(--tx)">${title}</span>
-            <span style="font-size:12px;color:var(--tx3)">${sub}</span>
+            <span style="font-size:14px;color:var(--tx3)">${sub}</span>
           </div>
           ${content}
           ${footer ? `<div style="display:flex;justify-content:space-between;padding:8px 14px;background:var(--bg)">${footer}</div>` : ''}
@@ -163,15 +169,32 @@ Pages.Dashboard = (() => {
 
     const revTotal = kpi.revenue.total;
     const revFooter = revTotal > 0
-      ? `<span style="font-size:12px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$${formatNumber(Math.round(revTotal))}</span>`
+      ? `<span style="font-size:14px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$${formatNumber(Math.round(revTotal))}</span>`
       : '';
 
+    // Revenue by Region (HK / SG)
+    const CO_COLORS = { HK: '#B45309', SG: '#0F6E56' };
+    const CO_LABELS = { HK: '홍콩 (HK)', SG: '싱가포르 (SG)' };
+    const maxRegRev = Math.max(kpi.revenue.HK || 0, kpi.revenue.SG || 0, 1);
+    const regBars = ['HK', 'SG'].filter(co => kpi.revenue[co] > 0).map(co => `
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd)">
+        <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:110px">
+          <span style="width:7px;height:7px;border-radius:50%;background:${CO_COLORS[co]};flex-shrink:0;display:inline-block"></span>${CO_LABELS[co]}
+        </div>
+        <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
+          <div style="height:100%;border-radius:3px;background:${CO_COLORS[co]};width:${Math.round(kpi.revenue[co] / maxRegRev * 100)}%"></div>
+        </div>
+        <div style="font-size:14px;font-weight:600;min-width:72px;text-align:right">$${formatNumber(Math.round(kpi.revenue[co]))}</div>
+      </div>`).join('');
+
     return `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-        ${barCard('Revenue by business', 'USD', revBars || '<div style="padding:12px 10px;font-size:12px;color:var(--tx3)">데이터 없음</div>', revFooter)}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        ${barCard('Revenue by business', 'USD', revBars || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>', revFooter)}
+        ${barCard('Revenue by region', 'USD', regBars || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>',
+          revTotal > 0 ? `<span style="font-size:14px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$${formatNumber(Math.round(revTotal))}</span>` : '')}
         ${kpiBars
           ? barCard('KPI 목표 달성', String(year) + '년', kpiBars)
-          : barCard('KPI 목표 달성', '', '<div style="padding:12px 10px;font-size:12px;color:var(--tx3)">목표 미설정 — <a href="#" onclick="Nav.go(\'kpitarget\');return false;" style="color:var(--navy)">설정하기</a></div>')}
+          : barCard('KPI 목표 달성', '', '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">목표 미설정 — <a href="#" onclick="Nav.go(\'kpitarget\');return false;" style="color:var(--navy)">설정하기</a></div>')}
       </div>`;
   }
 
@@ -199,26 +222,26 @@ Pages.Dashboard = (() => {
 
       return `
         <tr style="${isUpcoming ? 'background:#F5F9FF' : ''}">
-          <td style="${S.td};font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo || lot.id}</td>
+          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-          <td style="${S.tdm};font-size:13px">${lot.customerName || '—'}</td>
-          <td style="${S.tdr};font-size:13px">${formatNumber(qty)}</td>
-          <td style="${S.tdr};font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${isUpcoming ? '—' : formatNumber(cum)}</td>
-          <td style="${S.tdr};font-size:13px;color:${rem > 0 ? '#BA7517' : 'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="${S.tdm};font-size:15px">${lot.customerName || '—'}</td>
+          <td style="${S.tdr};font-size:15px">${formatNumber(qty)}</td>
+          <td style="${S.tdr};font-size:15px;color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${isUpcoming ? '—' : formatNumber(cum)}</td>
+          <td style="${S.tdr};font-size:15px;color:${rem > 0 ? '#BA7517' : 'var(--tx3)'}">${formatNumber(rem)}</td>
           <td style="${S.td};min-width:120px">
             ${isUpcoming
-              ? `<span style="font-size:13px;color:#0C447C;font-weight:500">D-${ddIn}</span>`
+              ? `<span style="font-size:15px;color:#0C447C;font-weight:500">D-${ddIn}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
                   <div style="flex:1;height:5px;background:var(--bd);border-radius:2px;overflow:hidden">
                     <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
                   </div>
-                  <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                  <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="${S.tdm};font-size:13px;color:${isUpcoming ? '#0C447C' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};font-size:13px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
-            ${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:11px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
+          <td style="${S.tdm};font-size:15px;color:${isUpcoming ? '#0C447C' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
+          <td style="${S.tdm};font-size:15px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
+            ${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:15px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
           </td>
           <td style="${S.td}">${badge(stLabel, stStyle)}</td>
         </tr>`;
@@ -249,15 +272,15 @@ Pages.Dashboard = (() => {
       const tat = (lot.inDate && lot.actualDone) ? diffDays(lot.inDate, lot.actualDone) + 'd' : '—';
       return `
         <tr>
-          <td style="${S.td};font-family:var(--font-mono);font-size:11px;font-weight:500">${lot.lotNo || lot.id}</td>
+          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
           <td style="${S.tdm}">${lot.customerName || '—'}</td>
           <td style="${S.tdr}">${formatNumber(parseNumber(lot.qty))}</td>
-          <td style="${S.tdm};font-size:13px">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};font-size:13px">${lot.actualDone || '—'}</td>
-          <td style="${S.tdm};font-size:13px">${tat}</td>
-          <td style="${S.tdr};font-size:13px;color:${rev > 0 ? '#085041' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—'}</td>
+          <td style="${S.tdm};font-size:15px">${lot.inDate || '—'}</td>
+          <td style="${S.tdm};font-size:15px">${lot.actualDone || '—'}</td>
+          <td style="${S.tdm};font-size:15px">${tat}</td>
+          <td style="${S.tdr};font-size:15px;color:${rev > 0 ? '#085041' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—'}</td>
         </tr>`;
     }).join('');
 
@@ -278,10 +301,10 @@ Pages.Dashboard = (() => {
           <tbody>
             ${rows}
             <tr style="background:var(--bg)">
-              <td colspan="4" style="padding:8px 12px;font-size:13px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
-              <td style="${S.tdr};font-size:13px;border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
+              <td colspan="4" style="padding:10px 14px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
+              <td style="${S.tdr};font-size:15px;border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
-              <td style="${S.tdr};font-size:13px;border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
+              <td style="${S.tdr};font-size:15px;border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
             </tr>
           </tbody>
         </table>
@@ -297,7 +320,7 @@ Pages.Dashboard = (() => {
       const ddColor = dd === null ? 'var(--tx3)' : dd <= 3 ? '#BA7517' : 'var(--tx2)';
       return `
         <tr>
-          <td style="${S.td};font-family:var(--font-mono);font-size:11px;font-weight:500">${s.lotNo || '—'}</td>
+          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${s.lotNo || '—'}</td>
           <td style="${S.td}">${badge(s.country, CO_STYLE[s.country] || '')}</td>
           <td style="${S.td}">${badge(s.biz, BIZ_STYLE[s.biz] || '')}</td>
           <td style="${S.tdm}">${s.customerName || '—'}</td>
@@ -335,7 +358,7 @@ Pages.Dashboard = (() => {
         <div style="max-width:1400px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <div style="font-size:16px;font-weight:600;letter-spacing:-.02em">Operations Dashboard</div>
-            <div style="font-size:12px;color:var(--tx3)">${dtStr}</div>
+            <div style="font-size:14px;color:var(--tx3)">${dtStr}</div>
           </div>
 
           ${_renderAlerts(kpi.overdueLots, kpi.nearDueLots)}

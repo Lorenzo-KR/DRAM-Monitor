@@ -13,7 +13,7 @@ Pages.OpsDashboard = (() => {
     const bg  = CO_BG[country]    || 'var(--bg)';
     const col = CO_COLOR[country] || 'var(--tx2)';
     const lbl = CO_LABEL[country] || country;
-    return `<span style="background:${bg};color:${col};font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px">${lbl}</span>`;
+    return `<span style="background:${bg};color:${col};font-size:15px;font-weight:600;padding:2px 7px;border-radius:4px">${lbl}</span>`;
   }
 
   function _renderKpi(lots, activeLots, doneLots, totalUnits, ssdUnits, dramUnits, totalRev) {
@@ -46,12 +46,12 @@ Pages.OpsDashboard = (() => {
       return `
         <div style="margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2)">
+            <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2)">
               <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>
               ${CONFIG.BIZ_LABELS[b] || b}
-              <span style="font-size:10px;color:${tagCol}">${tag}</span>
+              <span style="font-size:14px;color:${tagCol}">${tag}</span>
             </div>
-            <div style="font-size:12px;font-weight:600">${formatNumber(total)}</div>
+            <div style="font-size:14px;font-weight:600">${formatNumber(total)}</div>
           </div>
           <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:${color};border-radius:3px"></div>
@@ -64,19 +64,19 @@ Pages.OpsDashboard = (() => {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:600">Revenue by business</div>
-            <div style="font-size:11px;color:var(--tx3)">Service fee (USD)</div>
+            <div style="font-size:15px;font-weight:600">Revenue by business</div>
+            <div style="font-size:15px;color:var(--tx3)">Service fee (USD)</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#378ADD;display:inline-block"></span>SSD Test</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:14px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#378ADD;display:inline-block"></span>SSD Test</div>
             <div style="font-weight:600;color:#185FA5">${ssdRev > 0 ? '$' + formatNumber(ssdRev) : '—'}</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
-            <div style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#888780;display:inline-block"></span>DRAM Test</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:14px;color:var(--tx2)"><span style="width:8px;height:8px;border-radius:50%;background:#888780;display:inline-block"></span>DRAM Test</div>
             <div style="font-weight:600">${dramRev > 0 ? '$' + formatNumber(dramRev) : '—'}</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0">
-            <div style="font-size:13px;font-weight:600">Total</div>
+            <div style="font-size:15px;font-weight:600">Total</div>
             <div style="font-size:15px;font-weight:600;color:#0F6E56">${totalRev > 0 ? '$' + formatNumber(totalRev) : '—'}</div>
           </div>
           ${totalRev > 0 ? `
@@ -84,17 +84,17 @@ Pages.OpsDashboard = (() => {
               <div style="height:100%;width:${ssdPct}%;background:#378ADD;border-radius:4px"></div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:5px">
-              <span style="font-size:11px;color:#185FA5">SSD ${ssdPct}%</span>
-              <span style="font-size:11px;color:var(--tx3)">DRAM ${dramPct}%</span>
+              <span style="font-size:15px;color:#185FA5">SSD ${ssdPct}%</span>
+              <span style="font-size:15px;color:var(--tx3)">DRAM ${dramPct}%</span>
             </div>` : ''}
         </div>
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:600">Units by category</div>
-            <div style="font-size:11px;color:var(--tx3)">Quantity processed</div>
+            <div style="font-size:15px;font-weight:600">Units by category</div>
+            <div style="font-size:15px;color:var(--tx3)">Quantity processed</div>
           </div>
           ${unitBars}
-          <div style="border-top:1px solid var(--bd);padding-top:8px;display:flex;justify-content:space-between;font-size:12px">
+          <div style="border-top:1px solid var(--bd);padding-top:8px;display:flex;justify-content:space-between;font-size:14px">
             <span style="color:var(--tx3)">Total units (incl. in progress)</span>
             <span style="font-weight:600">${formatNumber(totalUnits)}</span>
           </div>
@@ -115,30 +115,30 @@ Pages.OpsDashboard = (() => {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
           <div>
             <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
-              <span style="font-family:var(--font-mono);font-size:11px">${lot.lotNo || lot.id}</span>
+              <span style="font-family:var(--font-mono);font-size:15px">${lot.lotNo || lot.id}</span>
               ${_coBadge(lot.country)}
             </div>
             ${renderBizTag(lot.biz)}
           </div>
           <div style="text-align:right">
             <div style="font-size:22px;font-weight:600;color:${pctColor}">${pct > 0 ? pct + '%' : '—'}</div>
-            <div style="font-size:11px;color:var(--tx3)">in progress</div>
+            <div style="font-size:15px;color:var(--tx3)">in progress</div>
           </div>
         </div>
         <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:4px">
           <div style="height:100%;width:${pct || 1}%;background:${pbColor};border-radius:3px"></div>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:12px">
-          <span style="font-size:11px;color:${pctColor}">${statusTxt}</span>
-          <span style="font-size:11px;color:var(--tx3);font-family:var(--font-mono)">${formatNumber(cum)} / ${formatNumber(qty)}</span>
+          <span style="font-size:15px;color:${pctColor}">${statusTxt}</span>
+          <span style="font-size:15px;color:var(--tx3);font-family:var(--font-mono)">${formatNumber(cum)} / ${formatNumber(qty)}</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div style="background:var(--bg);border-radius:6px;padding:8px 10px">
-            <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound date</div>
+          <div style="background:var(--bg);border-radius:6px;padding:10px 13px">
+            <div style="font-size:14px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound date</div>
             <div style="font-size:14px;font-weight:600">${lot.inDate || '—'}</div>
           </div>
-          <div style="background:var(--bg);border-radius:6px;padding:8px 10px">
-            <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound qty</div>
+          <div style="background:var(--bg);border-radius:6px;padding:10px 13px">
+            <div style="font-size:14px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Inbound qty</div>
             <div style="font-size:14px;font-weight:600">${formatNumber(qty)}</div>
           </div>
         </div>
@@ -155,24 +155,24 @@ Pages.OpsDashboard = (() => {
         const tat = (lot.inDate && lot.actualDone) ? diffDays(lot.inDate, lot.actualDone) + ' days' : '—';
         return `
           <tr style="${i % 2 === 0 ? '' : 'background:var(--bg)'}">
-            <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px">${lot.lotNo || lot.id}</td>
-            <td style="padding:8px 10px">${_coBadge(lot.country)}</td>
-            <td style="padding:8px 10px">${renderBizTag(lot.biz)}</td>
-            <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono)">${formatNumber(parseNumber(lot.qty))}</td>
-            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${lot.inDate || '—'}</td>
-            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${lot.actualDone || '—'}</td>
-            <td style="padding:8px 10px;font-size:11px;color:var(--tx2)">${tat}</td>
-            <td style="padding:8px 10px;text-align:right;font-weight:600;font-family:var(--font-mono);color:${rev > 0 ? '#0F6E56' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(rev) : '—'}</td>
+            <td style="padding:10px 13px;font-family:var(--font-mono);font-size:15px">${lot.lotNo || lot.id}</td>
+            <td style="padding:10px 13px">${_coBadge(lot.country)}</td>
+            <td style="padding:10px 13px">${renderBizTag(lot.biz)}</td>
+            <td style="padding:10px 13px;text-align:right;font-family:var(--font-mono)">${formatNumber(parseNumber(lot.qty))}</td>
+            <td style="padding:10px 13px;font-size:15px;color:var(--tx2)">${lot.inDate || '—'}</td>
+            <td style="padding:10px 13px;font-size:15px;color:var(--tx2)">${lot.actualDone || '—'}</td>
+            <td style="padding:10px 13px;font-size:15px;color:var(--tx2)">${tat}</td>
+            <td style="padding:10px 13px;text-align:right;font-weight:600;font-family:var(--font-mono);color:${rev > 0 ? '#0F6E56' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(rev) : '—'}</td>
           </tr>`;
       }).join('');
 
     const TH = (label, align = 'left') =>
-      `<th style="padding:8px 10px;text-align:${align};font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap">${label}</th>`;
+      `<th style="padding:10px 13px;text-align:${align};font-size:15px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap">${label}</th>`;
 
     return `
       <div class="sec-label">Completed job orders</div>
       <div class="etw" style="margin-bottom:14px">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
             ${TH('Job Order')}${TH('Region')}${TH('Category')}${TH('Qty','right')}
             ${TH('Inbound')}${TH('Outbound')}${TH('TAT')}${TH('Revenue','right')}
@@ -180,7 +180,7 @@ Pages.OpsDashboard = (() => {
           <tbody>
             ${rows}
             <tr style="border-top:1px solid var(--bd2)">
-              <td colspan="3" style="padding:10px;font-size:12px;color:var(--tx2);font-weight:600">Total</td>
+              <td colspan="3" style="padding:10px;font-size:14px;color:var(--tx2);font-weight:600">Total</td>
               <td style="padding:10px;text-align:right;font-family:var(--font-mono);font-weight:600">${formatNumber(doneLots.reduce((s, l) => s + parseNumber(l.qty), 0))}</td>
               <td colspan="3"></td>
               <td style="padding:10px;text-align:right;font-family:var(--font-mono);font-weight:600;color:#0F6E56">${totalRev > 0 ? '$' + formatNumber(totalRev) : '—'}</td>

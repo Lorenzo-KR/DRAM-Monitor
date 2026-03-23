@@ -14,12 +14,12 @@ Pages.Customers = (() => {
     }
     tb.innerHTML = custs.map(c => `
       <tr>
-        <td style="padding:8px 12px;font-weight:500">${c.name}</td>
-        <td style="padding:8px 12px">${renderCountryTag(c.country)}</td>
-        <td style="padding:8px 12px">${renderBizTag(c.biz === 'ALL' ? 'DRAM' : c.biz)}</td>
-        <td style="padding:8px 12px;font-size:12px;color:var(--tx2)">${c.contact || '-'}</td>
-        <td style="padding:8px 12px">${c.currency || 'USD'}</td>
-        <td style="padding:8px 12px;font-size:12px;color:var(--tx2)">${c.note || ''}</td>
+        <td style="padding:10px 14px;font-weight:500">${c.name}</td>
+        <td style="padding:10px 14px">${renderCountryTag(c.country)}</td>
+        <td style="padding:10px 14px">${renderBizTag(c.biz === 'ALL' ? 'DRAM' : c.biz)}</td>
+        <td style="padding:10px 14px;font-size:14px;color:var(--tx2)">${c.contact || '-'}</td>
+        <td style="padding:10px 14px">${c.currency || 'USD'}</td>
+        <td style="padding:10px 14px;font-size:14px;color:var(--tx2)">${c.note || ''}</td>
         <td style="padding:4px 8px"><button class="btn del sm" onclick="Pages.Customers.delete(${c.id})">✕</button></td>
       </tr>`).join('');
   }

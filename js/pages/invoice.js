@@ -44,15 +44,15 @@ Pages.Invoice = (() => {
     const ST_STYLE  = { paid: 'background:#E1F5EE;color:#085041', partial: 'background:#FAEEDA;color:#633806', unpaid: 'background:#FCEBEB;color:#791F1F' };
     const ST_LABEL  = { paid: '수금완료', partial: '부분수금', unpaid: '미수금' };
 
-    function badge(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
+    function badge(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
     function th(label, key, align = 'left') {
       const active = _sortKey === key;
       const arrow  = active ? (_sortDir > 0 ? ' ↑' : ' ↓') : '';
-      return `<th onclick="Pages.Invoice.sort('${key}')" style="padding:7px 10px;text-align:${align};font-size:10px;font-weight:500;color:${active ? 'var(--tx)' : 'var(--tx3)'};text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;cursor:pointer">${label}${arrow}</th>`;
+      return `<th onclick="Pages.Invoice.sort('${key}')" style="padding:9px 13px;text-align:${align};font-size:14px;font-weight:500;color:${active ? 'var(--tx)' : 'var(--tx3)'};text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;cursor:pointer">${label}${arrow}</th>`;
     }
 
     const rows = list.length === 0
-      ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tx3);font-size:13px">인보이스가 없습니다</td></tr>`
+      ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tx3);font-size:15px">인보이스가 없습니다</td></tr>`
       : list.map((r, i) => {
           const lot      = Store.getLotById(r.lotId);
           const due      = r.due ? diffDays(today(), r.due) : null;
@@ -61,20 +61,20 @@ Pages.Invoice = (() => {
           const lotInDate = lot?.inDate || '—';
           return `
             <tr style="border-bottom:0.5px solid var(--bd)">
-              <td style="padding:7px 10px;color:var(--tx3);font-size:11px;text-align:center">${i + 1}</td>
-              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${lotInDate}</td>
-              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${r.date || '—'}</td>
-              <td style="padding:7px 10px;font-family:var(--font-mono);font-size:11px">${r.no || '—'}</td>
-              <td style="padding:7px 10px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
-              <td style="padding:7px 10px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customerName || '—'}</td>
-              <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
-              <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
-              <td style="padding:7px 10px;font-size:11px;color:${dueColor}">${r.due || '—'}${due !== null && r.status !== 'paid' ? ` (${dueText})` : ''}</td>
-              <td style="padding:7px 10px">${badge(ST_LABEL[r.status] || '미수금', ST_STYLE[r.status] || ST_STYLE.unpaid)}</td>
+              <td style="padding:9px 13px;color:var(--tx3);font-size:15px;text-align:center">${i + 1}</td>
+              <td style="padding:9px 13px;font-size:15px;color:var(--tx3)">${lotInDate}</td>
+              <td style="padding:9px 13px;font-size:15px;color:var(--tx3)">${r.date || '—'}</td>
+              <td style="padding:9px 13px;font-family:var(--font-mono);font-size:15px">${r.no || '—'}</td>
+              <td style="padding:9px 13px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
+              <td style="padding:9px 13px;font-size:14px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customerName || '—'}</td>
+              <td style="padding:9px 13px;font-size:15px;color:var(--tx3)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
+              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
+              <td style="padding:9px 13px;font-size:15px;color:${dueColor}">${r.due || '—'}${due !== null && r.status !== 'paid' ? ` (${dueText})` : ''}</td>
+              <td style="padding:9px 13px">${badge(ST_LABEL[r.status] || '미수금', ST_STYLE[r.status] || ST_STYLE.unpaid)}</td>
               <td style="padding:4px 8px;white-space:nowrap">
-                ${r.status !== 'paid' ? `<button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.quickPaid(${r.id})">수금</button>` : ''}
-                <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${r.id})">수정</button>
-                <button class="btn del sm" style="font-size:10px;padding:2px 7px" onclick="Pages.Invoice.delete(${r.id})">삭제</button>
+                ${r.status !== 'paid' ? `<button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.quickPaid(${r.id})">수금</button>` : ''}
+                <button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${r.id})">수정</button>
+                <button class="btn del sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.delete(${r.id})">삭제</button>
               </td>
             </tr>`;
         }).join('');
@@ -82,50 +82,50 @@ Pages.Invoice = (() => {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <div style="display:flex;gap:4px">
-          ${['', 'HK', 'SG'].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:11px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
+          ${['', 'HK', 'SG'].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:15px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
         </div>
         <div style="display:flex;gap:4px">
-          ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:11px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
+          ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:15px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
         </div>
-        <span style="font-size:11px;color:var(--tx3);margin-left:auto">${list.length}건</span>
+        <span style="font-size:15px;color:var(--tx3);margin-left:auto">${list.length}건</span>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 매출액</div>
+          <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 매출액</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalAmt))}</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">수금 완료</div>
+          <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">수금 완료</div>
           <div style="font-size:18px;font-weight:600;color:#085041">$${formatNumber(Math.round(paidAmt))}</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">미수금</div>
+          <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">미수금</div>
           <div style="font-size:18px;font-weight:600;color:${unpaidAmt > 0 ? '#A32D2D' : 'var(--tx3)'}">$${formatNumber(Math.round(unpaidAmt))}</div>
         </div>
       </div>
 
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>
-            <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd);width:32px">#</th>
+            <th style="padding:9px 13px;text-align:center;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd);width:32px">#</th>
             ${th('입고일', 'inDate')}
             ${th('발행일', 'date')}
             ${th('번호', 'no')}
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">지역/사업</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">지역/사업</th>
             ${th('고객사', 'customerName')}
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">LOT</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)">LOT</th>
             ${th('매출액', 'amount', 'right')}
             ${th('결제기한', 'due')}
             ${th('상태', 'status')}
-            <th style="padding:7px 10px;background:var(--bg);border-bottom:0.5px solid var(--bd);width:100px"></th>
+            <th style="padding:9px 13px;background:var(--bg);border-bottom:0.5px solid var(--bd);width:100px"></th>
           </tr></thead>
           <tbody>${rows}</tbody>
           ${list.length > 0 ? `
           <tfoot>
             <tr style="background:var(--bg)">
-              <td colspan="7" style="padding:7px 10px;font-size:11px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
-              <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+              <td colspan="7" style="padding:9px 13px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
+              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
             </tr>
           </tfoot>` : ''}

@@ -55,22 +55,22 @@ Pages.KpiTarget = (() => {
                <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                  <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
                </div>
-               <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
+               <span style="font-size:14px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
              </div>`
-          : '<span style="font-size:12px;color:var(--tx3)">목표 미설정</span>';
+          : '<span style="font-size:14px;color:var(--tx3)">목표 미설정</span>';
 
         // 입력된 경우 → 값 표시 + 수정 버튼 / 미입력 → 바로 입력 셀 + 저장
         const tgtCell = tgt > 0
           ? `<span style="font-family:var(--font-mono);font-size:14px;font-weight:600">$${formatNumber(Math.round(tgt))}</span>`
           : `<div style="display:flex;align-items:center;gap:6px">
                <input type="number" id="kpi-input-${b}" placeholder="목표 입력" min="0" step="1000"
-                 style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:13px;background:#EAF3FE;color:#0C447C;text-align:right">
+                 style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:15px;background:#EAF3FE;color:#0C447C;text-align:right">
                <button class="btn pri sm" onclick="Pages.KpiTarget.save(${year},'${b}',document.getElementById('kpi-input-${b}').value)">저장</button>
              </div>`;
 
         const actionCell = tgt > 0
           ? `<button onclick="Pages.KpiTarget.startEdit(${year},'${b}',${tgt})"
-               style="padding:4px 12px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:12px;cursor:pointer">수정</button>`
+               style="padding:4px 12px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:14px;cursor:pointer">수정</button>`
           : '';
 
         return `
@@ -97,12 +97,12 @@ Pages.KpiTarget = (() => {
       const yearTabs = [year - 1, year, year + 1].map(y => {
         const active = y === year;
         return `<button onclick="Pages.KpiTarget.selectYear(${y})"
-          style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.15s;
+          style="padding:4px 14px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.15s;
           ${active ? 'background:var(--navy);color:#fff;border-color:var(--navy)' : 'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
       }).join('');
 
-      const TH = label => `<th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${label}</th>`;
-      const THR = label => `<th style="padding:9px 14px;text-align:right;font-size:11px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${label}</th>`;
+      const TH = label => `<th style="padding:9px 14px;text-align:left;font-size:15px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${label}</th>`;
+      const THR = label => `<th style="padding:9px 14px;text-align:right;font-size:15px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${label}</th>`;
 
       el.innerHTML = `
         <div style="max-width:860px">
@@ -111,15 +111,15 @@ Pages.KpiTarget = (() => {
           ${totalTgt > 0 ? `
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">연간 목표</div>
+              <div style="font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">연간 목표</div>
               <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
             </div>
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">누적 달성</div>
+              <div style="font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">누적 달성</div>
               <div style="font-size:20px;font-weight:600;color:#085041">$${formatNumber(Math.round(totalAct))}</div>
             </div>
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">전체 달성률</div>
+              <div style="font-size:15px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">전체 달성률</div>
               <div style="font-size:20px;font-weight:600;color:${totalClr}">${totalPct}%</div>
             </div>
           </div>` : ''}
@@ -134,18 +134,18 @@ Pages.KpiTarget = (() => {
               ${totalTgt > 0 ? `
               <tfoot>
                 <tr style="background:var(--bg)">
-                  <td style="padding:10px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-                  <td style="padding:10px 14px;font-family:var(--font-mono);font-size:13px;font-weight:600;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalTgt))}</td>
-                  <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAct))}</td>
+                  <td style="padding:10px 14px;font-size:14px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
+                  <td style="padding:10px 14px;font-family:var(--font-mono);font-size:15px;font-weight:600;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalTgt))}</td>
+                  <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAct))}</td>
                   <td style="padding:10px 14px;border-top:0.5px solid var(--bd)">
                     <div style="display:flex;align-items:center;gap:8px">
                       <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                         <div style="height:100%;border-radius:3px;background:${totalClr};width:${totalPct}%"></div>
                       </div>
-                      <span style="font-size:12px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
+                      <span style="font-size:14px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
                     </div>
                   </td>
-                  <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:${totalRem > 0 ? '#BA7517' : 'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
+                  <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;font-weight:600;color:${totalRem > 0 ? '#BA7517' : 'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
                   <td style="border-top:0.5px solid var(--bd)"></td>
                 </tr>
               </tfoot>` : ''}
@@ -163,10 +163,10 @@ Pages.KpiTarget = (() => {
       cell.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px">
           <input type="number" id="kpi-input-${biz}" value="${currentTgt}" min="0" step="1000"
-            style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:13px;background:#EAF3FE;color:#0C447C;text-align:right">
+            style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:15px;background:#EAF3FE;color:#0C447C;text-align:right">
           <button class="btn pri sm" onclick="Pages.KpiTarget.save(${year},'${biz}',document.getElementById('kpi-input-${biz}').value)">저장</button>
           <button onclick="Pages.KpiTarget.render()"
-            style="padding:4px 10px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:12px;cursor:pointer">취소</button>
+            style="padding:4px 10px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:14px;cursor:pointer">취소</button>
         </div>`;
       actCell.innerHTML = '';
       document.getElementById('kpi-input-' + biz)?.focus();
