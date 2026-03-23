@@ -6,6 +6,8 @@
 Pages.Revenue = (() => {
 
   let _mode   = 'month';
+  let _biz    = '';
+  let _co     = '';
   let _charts = {};
 
   function setMode(m) {
@@ -20,9 +22,30 @@ Pages.Revenue = (() => {
     render();
   }
 
+  function setBiz(el, val) {
+    _biz = val;
+    ['rv-biz-all','rv-biz-dram','rv-biz-ssd','rv-biz-mid'].forEach(id => {
+      const b = document.getElementById(id); if (!b) return;
+      b.classList.remove('on');
+    });
+    el.classList.add('on');
+    render();
+  }
+
+  function setCo(el, val) {
+    _co = val;
+    ['rv-co-all','rv-co-hk','rv-co-sg'].forEach(id => {
+      const b = document.getElementById(id); if (!b) return;
+      b.classList.remove('on');
+    });
+    el.classList.add('on');
+    render();
+  }
+
   function _buildMonthSelect() {
     const sel = document.getElementById('rv-mo'); if (!sel) return;
     const ms  = new Set([currentMonth()]);
+    Store.getLots().forEach(l => { if (l.inDate) ms.add(String(l.inDate).slice(0, 7)); });
     Store.getInvoices().forEach(r => { if (r.date) ms.add(String(r.date).slice(0, 7)); });
     sel.innerHTML = [...ms].sort().reverse().map(m => `<option value="${m}"${m === currentMonth() ? ' selected' : ''}>${m}</option>`).join('');
   }
@@ -39,8 +62,8 @@ Pages.Revenue = (() => {
   // ── 메인 렌더 ──────────────────────────────────────────────
   function render() {
     _buildMonthSelect(); _buildYearSelect();
-    const biz = document.getElementById('rv-biz')?.value || '';
-    const co  = document.getElementById('rv-co')?.value  || '';
+    const biz  = _biz;
+    const co   = _co;
     const tick = '#9aa0ad';
 
     let fi, periodLabel;
@@ -179,7 +202,7 @@ Pages.Revenue = (() => {
     Object.keys(_charts).forEach(k => { if (_charts[k]) { _charts[k].destroy(); _charts[k] = null; } });
 
     const chartWrap = document.getElementById('rv-chart-wrap'); if (!chartWrap) return;
-    const biz = document.getElementById('rv-biz')?.value || '';
+    const biz = _biz;
     const grid = 'rgba(0,0,0,0.05)';
 
     // 연도별 모드 → 병렬 그래프
@@ -288,8 +311,28 @@ Pages.Revenue = (() => {
       });
 
     } else {
-      // 월별/전체 모드 → 기존 단일 차트 + 도넛
+      // 월별/전체 모드 → 사업별 합계 카드 + 단일 차트 + 도넛
+      const bizList    = _biz ? [_biz] : CONFIG.BIZ_LIST;
+      const bizTotals  = {};
+      bizList.forEach(b => { bizTotals[b] = fi.filter(r => r.biz === b).reduce((s, r) => s + parseNumber(r.amount), 0); });
+      const grandTotal = Object.values(bizTotals).reduce((s, v) => s + v, 0);
+
+      const summaryCards = [
+        `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
+          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+          <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
+        </div>`,
+        ...bizList.map(b => `
+        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
+          <div style="font-size:11px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
+          <div style="font-size:18px;font-weight:600;color:${CONFIG.BIZ_COLORS[b]}">$${formatNumber(Math.round(bizTotals[b]))}</div>
+        </div>`),
+      ].join('');
+
       chartWrap.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(${bizList.length + 1},1fr);gap:8px;margin-bottom:14px">
+          ${summaryCards}
+        </div>
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
           <div class="cw"><div class="ct">매출 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
           <div class="cw"><div class="ct">사업별 비중</div><div style="position:relative;height:190px"><canvas id="cv-biz"></canvas></div></div>
@@ -386,6 +429,6 @@ Pages.Revenue = (() => {
 
   function exportExcel() { Pages.Invoice.exportExcel(); }
 
-  return { render, setMode, saveInvoice };
+  return { render, setMode, setBiz, setCo, saveInvoice };
 
 })();

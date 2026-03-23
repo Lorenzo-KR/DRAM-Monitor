@@ -152,12 +152,12 @@ Pages.Dashboard = (() => {
     function barCard(title, sub, content, footer = '') {
       return `
         <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden">
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-bottom:0.5px solid var(--bd)">
-            <span style="font-size:11px;font-weight:500;color:var(--tx)">${title}</span>
-            <span style="font-size:11px;color:var(--tx3)">${sub}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">
+            <span style="font-size:14px;font-weight:600;color:var(--tx)">${title}</span>
+            <span style="font-size:12px;color:var(--tx3)">${sub}</span>
           </div>
           ${content}
-          ${footer ? `<div style="display:flex;justify-content:space-between;padding:7px 10px;background:var(--bg)">${footer}</div>` : ''}
+          ${footer ? `<div style="display:flex;justify-content:space-between;padding:8px 14px;background:var(--bg)">${footer}</div>` : ''}
         </div>`;
     }
 
@@ -225,7 +225,7 @@ Pages.Dashboard = (() => {
     }).join('');
 
     return `
-      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Active & Upcoming Job Orders</div>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
@@ -267,7 +267,7 @@ Pages.Dashboard = (() => {
     }, 0);
 
     return `
-      <div style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">Completed job orders</div>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Completed job orders</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
@@ -309,7 +309,7 @@ Pages.Dashboard = (() => {
     }).join('');
 
     return `
-      <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:6px">입고 예정</div>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">입고 예정</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>

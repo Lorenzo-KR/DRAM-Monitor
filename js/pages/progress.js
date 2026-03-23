@@ -160,46 +160,46 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 6px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97;vertical-align:middle';
-    // 헤더 순서: ▼ | 지역 | 사업 | LOT번호 | 고객사 | 수량 | 처리 | 잔량 | 진행률 | 입고일 | 목표완료 | 상태 | (삭제)
+    const tdS = 'padding:5px 8px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97;vertical-align:middle';
+    const inp = 'border:1px solid #C0DD97;border-radius:4px;background:#fff;font-size:12px';
     return `
       <tr id="new-lot-row">
-        <td style="${tdS};text-align:center;color:#3B6D11;font-size:18px;font-weight:500">+</td>
+        <td style="${tdS};text-align:center;color:#3B6D11;font-size:16px;font-weight:500">+</td>
         <td style="${tdS}">
-          <select id="nl-co" style="width:56px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
+          <select id="nl-co" style="${inp};width:100%;padding:4px 3px">
             <option value="HK">HK</option><option value="SG">SG</option>
           </select>
         </td>
         <td style="${tdS}">
-          <select id="nl-biz" style="width:60px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff">
+          <select id="nl-biz" style="${inp};width:100%;padding:4px 3px">
             <option>DRAM</option><option>SSD</option><option>MID</option>
           </select>
         </td>
         <td style="${tdS}">
-          <input id="nl-lot" placeholder="LOT 번호" style="width:130px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px;font-family:var(--font-mono)">
+          <input id="nl-lot" placeholder="LOT 번호" style="${inp};width:100%;padding:5px 7px;font-family:var(--font-mono)">
         </td>
         <td style="${tdS}">
-          <select id="nl-cust" style="width:110px;padding:4px 5px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;background:#fff" onchange="if(this.value==='__manual__'){document.getElementById('nl-cust-manual').style.display='block'}else{document.getElementById('nl-cust-manual').style.display='none'}">
+          <select id="nl-cust" style="${inp};width:100%;padding:4px 3px" onchange="if(this.value==='__manual__'){document.getElementById('nl-cust-manual').style.display='block'}else{document.getElementById('nl-cust-manual').style.display='none'}">
             <option value="">-- 고객사 --</option>${custOpts}<option value="__manual__">직접 입력...</option>
           </select>
-          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;width:110px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:11px;margin-top:2px">
+          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;${inp};width:100%;padding:4px 6px;margin-top:2px">
         </td>
         <td style="${tdS}">
-          <input id="nl-qty" type="number" placeholder="수량" min="0" style="width:75px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px;text-align:right">
+          <input id="nl-qty" type="number" placeholder="수량" min="0" style="${inp};width:100%;padding:5px 7px;text-align:right">
         </td>
-        <td style="${tdS};color:var(--tx3);font-size:11px;text-align:right">—</td>
-        <td style="${tdS};color:var(--tx3);font-size:11px;text-align:right">—</td>
-        <td style="${tdS};color:var(--tx3);font-size:11px">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:12px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:12px;text-align:right">—</td>
+        <td style="${tdS};color:var(--tx3);font-size:12px">—</td>
         <td style="${tdS}">
-          <input id="nl-indate" type="date" style="width:125px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px" onchange="Pages.Progress.calcNewTgt()">
+          <input id="nl-indate" type="date" style="${inp};width:100%;padding:5px 6px" onchange="Pages.Progress.calcNewTgt()">
         </td>
         <td style="${tdS}">
-          <input id="nl-tgt" type="date" style="width:125px;padding:4px 7px;border:1px solid #C0DD97;border-radius:4px;font-size:12px">
+          <input id="nl-tgt" type="date" style="${inp};width:100%;padding:5px 6px">
         </td>
         <td style="${tdS}"></td>
         <td style="${tdS}">
-          <button onclick="Pages.Progress.saveLot()" style="padding:5px 12px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">+ 등록</button>
-          <span id="nl-ok" style="display:none;font-size:11px;color:#3B6D11;font-weight:500;margin-left:4px">✓</span>
+          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer">+ 등록</button>
+          <span id="nl-ok" style="display:none;font-size:11px;color:#3B6D11;font-weight:500">✓</span>
         </td>
       </tr>`;
   }
@@ -286,29 +286,29 @@ Pages.Progress = (() => {
           <td style="padding:9px 12px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:8px 10px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:8px 10px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo||lot.id}</td>
-          <td style="padding:9px 12px;font-size:14px;color:var(--tx2)">${lot.customerName||'—'}</td>
+          <td style="padding:9px 12px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td style="padding:9px 12px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:9px 12px;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
           <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${formatNumber(qty)}</td>
           <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
           <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="padding:8px 10px;min-width:110px">
+          <td style="padding:9px 12px">
             ${st==='upcoming'
-              ? `<span style="font-size:11px;color:#0C447C">입고 ${diffDays(today(),lot.inDate)}일 후</span>`
+              ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
-                  <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div></div>
-                  <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:26px;text-align:right">${pct}%</span>
+                  <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
+                  <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
           <td style="padding:9px 12px;font-size:13px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
           <td style="padding:9px 12px;font-size:13px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
-            ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
+            ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:11px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td style="padding:8px 10px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td style="padding:4px 8px;white-space:nowrap">
-            <button class="btn sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
-            <button class="btn del sm" style="font-size:10px;padding:2px 7px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+          <td style="padding:9px 12px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td style="padding:6px 8px;white-space:nowrap">
+            <button class="btn sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+            <button class="btn del sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
@@ -322,12 +322,27 @@ Pages.Progress = (() => {
 
     el.innerHTML = `
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+          <colgroup>
+            <col style="width:36px">
+            <col style="width:56px">
+            <col style="width:66px">
+            <col style="width:150px">
+            <col style="width:120px">
+            <col style="width:80px">
+            <col style="width:80px">
+            <col style="width:80px">
+            <col style="width:130px">
+            <col style="width:100px">
+            <col style="width:120px">
+            <col style="width:80px">
+            <col style="width:100px">
+          </colgroup>
           <thead><tr>
-            ${TH('','left','width:32px')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
+            ${TH('','left')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
-            ${TH('진행률','left','min-width:110px')}
-            ${TH('입고일')}${TH('목표완료')}${TH('상태')}${TH('','left','width:90px')}
+            ${TH('진행률','left')}
+            ${TH('입고일')}${TH('목표완료')}${TH('상태')}${TH('','left')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}

@@ -19,12 +19,11 @@ const Nav = (() => {
   const PAGES = {
     dash:       { index: 0, render: () => Pages.Dashboard.render() },
     progress:   { index: 1, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
-    invoice:    { index: 2, render: () => Pages.Invoice.render() },
-    revenue:    { index: 3, render: () => Pages.Revenue.render() },
-    kpitarget:  { index: 4, render: () => Pages.KpiTarget.render() },
-    country:    { index: 5, render: () => Pages.Country.render() },
-    verify:     { index: 6, render: () => Pages.Verify.render() },
-    customers:  { index: 7, render: () => Pages.Customers.render() },
+    revenue:    { index: 2, render: () => Pages.Revenue.render() },
+    kpitarget:  { index: 3, render: () => Pages.KpiTarget.render() },
+    country:    { index: 4, render: () => Pages.Country.render() },
+    verify:     { index: 5, render: () => Pages.Verify.render() },
+    customers:  { index: 6, render: () => Pages.Customers.render() },
   };
 
   let _current = null;
