@@ -106,7 +106,7 @@ Pages.Revenue = (() => {
     const CO_STYLE  = { HK: 'background:#FAEEDA;color:#633806', SG: 'background:#E1F5EE;color:#085041' };
     const BIZ_STYLE = { DRAM: 'background:#E6F1FB;color:#0C447C', SSD: 'background:#E1F5EE;color:#085041', MID: 'background:#EEEDFE;color:#3C3489' };
 
-    function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
+    function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:15px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
 
     if (!lots.length) {
       tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--tx3)">데이터 없음</td></tr>`;
@@ -143,42 +143,42 @@ Pages.Revenue = (() => {
 
         return `
           <tr style="${rowBg}">
-            <td style="padding:9px 12px;color:var(--tx3);font-size:12px;text-align:center">${i + 1}</td>
-            <td style="padding:9px 12px;font-size:13px;color:var(--tx3)">${lot.inDate || '—'}</td>
-            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:13px;font-weight:500">${lot.lotNo || lot.id}</td>
-            <td style="padding:9px 12px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-            <td style="padding:9px 12px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="padding:9px 12px;font-size:13px;color:var(--tx2)">${lot.customerName || '—'}</td>
-            <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${formatNumber(qty)}</td>
-            <td style="padding:9px 12px;min-width:110px">
+            <td style="padding:11px 14px;color:var(--tx3);font-size:14px;text-align:center">${i + 1}</td>
+            <td style="padding:11px 14px;font-size:15px;color:var(--tx3)">${lot.inDate || '—'}</td>
+            <td style="padding:11px 14px;font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
+            <td style="padding:11px 14px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td style="padding:11px 14px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td style="padding:11px 14px;font-size:15px;color:var(--tx2)">${lot.customerName || '—'}</td>
+            <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
+            <td style="padding:11px 14px;min-width:110px">
               ${st === 'upcoming'
-                ? `<span style="font-size:13px;color:#185FA5;font-weight:500">D-${diffDays(today(), lot.inDate)}</span>`
+                ? `<span style="font-size:15px;color:#185FA5;font-weight:500">D-${diffDays(today(), lot.inDate)}</span>`
                 : `<div style="display:flex;align-items:center;gap:7px">
                     <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden;min-width:55px">
                       <div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div>
                     </div>
-                    <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                    <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
             <td style="padding:7px 12px;text-align:right">
               ${hasInv
-                ? `<span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>`
+                ? `<span style="font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>`
                 : st === 'upcoming'
-                  ? `<span style="font-size:13px;color:var(--tx3)">—</span>`
+                  ? `<span style="font-size:15px;color:var(--tx3)">—</span>`
                   : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
                       <input type="number" placeholder="금액 입력" id="rv-amt-${lot.id}"
-                        style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:13px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:#0C447C">
+                        style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:15px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:#0C447C">
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
-                        style="padding:5px 12px;background:#185FA5;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
+                        style="padding:5px 12px;background:#185FA5;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
                     </div>`}
             </td>
-            <td style="padding:9px 12px">
+            <td style="padding:11px 14px">
               ${bdg(paidLabel, paidStyle)}
-              ${inv && inv.status !== 'paid' ? `<button class="btn sm" style="font-size:11px;padding:2px 7px;margin-left:4px" onclick="Pages.Invoice.quickPaid(${inv.id})">수금</button>` : ''}
+              ${inv && inv.status !== 'paid' ? `<button class="btn sm" style="font-size:15px;padding:2px 7px;margin-left:4px" onclick="Pages.Invoice.quickPaid(${inv.id})">수금</button>` : ''}
             </td>
             <td style="padding:4px 8px">
-              ${inv ? `<button class="btn sm" style="font-size:11px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
+              ${inv ? `<button class="btn sm" style="font-size:15px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
             </td>
           </tr>`;
       }).join('');
@@ -186,8 +186,8 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr style="background:var(--bg)">
-          <td colspan="8" style="padding:9px 12px;font-size:13px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
-          <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="8" style="padding:11px 14px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
           <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
         </tr>`;
 
@@ -230,12 +230,12 @@ Pages.Revenue = (() => {
 
       const summaryCards = [
         `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+          <div style="font-size:14px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
-          <div style="font-size:10px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
+          <div style="font-size:14px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
           <div style="font-size:18px;font-weight:600;color:${CONFIG.BIZ_COLORS[b]}">$${formatNumber(Math.round(bizTotals[b]))}</div>
         </div>`),
       ].join('');
@@ -245,7 +245,7 @@ Pages.Revenue = (() => {
           ${summaryCards}
         </div>
         <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:14px">
-          <div style="font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:10px">월별 사업별 매출 (병렬)</div>
+          <div style="font-size:15px;font-weight:500;color:var(--tx2);margin-bottom:10px">월별 사업별 매출 (병렬)</div>
           <div style="position:relative;height:260px"><canvas id="cv-year-main"></canvas></div>
         </div>`;
 
@@ -319,12 +319,12 @@ Pages.Revenue = (() => {
 
       const summaryCards = [
         `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+          <div style="font-size:15px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `
         <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
-          <div style="font-size:11px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
+          <div style="font-size:15px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
           <div style="font-size:18px;font-weight:600;color:${CONFIG.BIZ_COLORS[b]}">$${formatNumber(Math.round(bizTotals[b]))}</div>
         </div>`),
       ].join('');

@@ -125,65 +125,65 @@ Pages.Verify = (() => {
       const stStyle  = r.result==='ok' ? 'background:#E1F5EE;color:#085041' : r.result==='mismatch' ? 'background:#FCEBEB;color:#791F1F' : 'background:#FAEEDA;color:#633806';
       const stLabel  = r.result==='ok' ? '✓ 일치' : r.result==='mismatch' ? '✗ 불일치' : '⚠ DB 없음';
       const rowBg    = r.result==='mismatch' ? 'background:#FFF5F5' : r.result==='missing' ? 'background:#FFFBF5' : '';
-      const diffCell = r.diff===null ? '—' : r.diff===0 ? '—' : `<span style="background:#FCEBEB;color:#791F1F;font-family:var(--font-mono);font-size:11px;padding:1px 6px;border-radius:3px">${r.diff>0?'+':''}${formatNumber(Math.round(r.diff))}</span>`;
+      const diffCell = r.diff===null ? '—' : r.diff===0 ? '—' : `<span style="background:#FCEBEB;color:#791F1F;font-family:var(--font-mono);font-size:15px;padding:1px 6px;border-radius:3px">${r.diff>0?'+':''}${formatNumber(Math.round(r.diff))}</span>`;
       return `
         <tr style="border-bottom:0.5px solid var(--bd);${rowBg}">
-          <td style="padding:7px 10px;font-size:11px;color:var(--tx3);text-align:center">${i+1}</td>
-          <td style="padding:7px 10px;font-size:11px;color:var(--tx3)">${r.date}</td>
-          <td style="padding:7px 10px;font-family:var(--font-mono);font-size:11px">${r.lotNo}</td>
-          <td style="padding:7px 10px">${r.country ? `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:1px 6px;border-radius:3px;${CO_STYLE[r.country]||''}">${r.country}</span>` : '—'}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:11px">${r.proc>0?formatNumber(Math.round(r.proc)):'—'}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--tx2)">${r.dbProc!==null?formatNumber(Math.round(r.dbProc)):'—'}</td>
-          <td style="padding:7px 10px;text-align:right">${diffCell}</td>
-          <td style="padding:7px 10px"><span style="display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 7px;border-radius:3px;${stStyle}">${stLabel}</span></td>
+          <td style="padding:9px 13px;font-size:15px;color:var(--tx3);text-align:center">${i+1}</td>
+          <td style="padding:9px 13px;font-size:15px;color:var(--tx3)">${r.date}</td>
+          <td style="padding:9px 13px;font-family:var(--font-mono);font-size:15px">${r.lotNo}</td>
+          <td style="padding:9px 13px">${r.country ? `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;${CO_STYLE[r.country]||''}">${r.country}</span>` : '—'}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:15px">${r.proc>0?formatNumber(Math.round(r.proc)):'—'}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:15px;color:var(--tx2)">${r.dbProc!==null?formatNumber(Math.round(r.dbProc)):'—'}</td>
+          <td style="padding:9px 13px;text-align:right">${diffCell}</td>
+          <td style="padding:9px 13px"><span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:2px 7px;border-radius:3px;${stStyle}">${stLabel}</span></td>
         </tr>`;
     }).join('');
 
     // DB 없는 항목 일괄 입력 버튼
     const missingItems = _results.filter(r=>r.result==='missing');
     const bulkBtn = _type==='daily' && missingItems.length > 0
-      ? `<button onclick="Pages.Verify.bulkInsert()" style="padding:6px 14px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:500;cursor:pointer">DB 없는 ${missingItems.length}건 일괄 입력</button>`
+      ? `<button onclick="Pages.Verify.bulkInsert()" style="padding:6px 14px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:500;cursor:pointer">DB 없는 ${missingItems.length}건 일괄 입력</button>`
       : '';
 
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:12px">
         <div style="background:var(--bg);padding:10px 14px;text-align:center">
-          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">총 비교</div>
+          <div style="font-size:14px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">총 비교</div>
           <div style="font-size:20px;font-weight:500">${_results.length}건</div>
         </div>
         <div style="background:#E1F5EE;padding:10px 14px;text-align:center">
-          <div style="font-size:10px;color:#085041;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">일치</div>
+          <div style="font-size:14px;color:#085041;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">일치</div>
           <div style="font-size:20px;font-weight:500;color:#085041">${okCnt}건</div>
         </div>
         <div style="background:#FCEBEB;padding:10px 14px;text-align:center">
-          <div style="font-size:10px;color:#791F1F;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">불일치</div>
+          <div style="font-size:14px;color:#791F1F;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">불일치</div>
           <div style="font-size:20px;font-weight:500;color:#791F1F">${mismatchCnt}건</div>
         </div>
         <div style="background:#FAEEDA;padding:10px 14px;text-align:center">
-          <div style="font-size:10px;color:#633806;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">DB 없음</div>
+          <div style="font-size:14px;color:#633806;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">DB 없음</div>
           <div style="font-size:20px;font-weight:500;color:#633806">${missingCnt}건</div>
         </div>
       </div>
 
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:10px">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr style="background:var(--bg)">
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);width:32px;text-align:center">#</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">날짜</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">LOT/번호</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">지역</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">리포트 ${typeLabel}</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">DB ${typeLabel}</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">차이</th>
-            <th style="padding:7px 10px;font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">결과</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);width:32px;text-align:center">#</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">날짜</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">LOT/번호</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">지역</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">리포트 ${typeLabel}</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">DB ${typeLabel}</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd);text-align:right">차이</th>
+            <th style="padding:9px 13px;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;border-bottom:0.5px solid var(--bd)">결과</th>
           </tr></thead>
           <tbody>${rows||'<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--tx3)">결과 없음</td></tr>'}</tbody>
         </table>
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="Pages.Verify.filterMismatch()" style="padding:6px 14px;border:0.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:none;color:var(--tx2);cursor:pointer">불일치만 보기</button>
-        <button onclick="Pages.Verify.exportResults()" style="padding:6px 14px;border:0.5px solid var(--bd);border-radius:var(--rs);font-size:12px;background:none;color:var(--tx2);cursor:pointer">↓ 엑셀 내보내기</button>
+        <button onclick="Pages.Verify.filterMismatch()" style="padding:6px 14px;border:0.5px solid var(--bd);border-radius:var(--rs);font-size:14px;background:none;color:var(--tx2);cursor:pointer">불일치만 보기</button>
+        <button onclick="Pages.Verify.exportResults()" style="padding:6px 14px;border:0.5px solid var(--bd);border-radius:var(--rs);font-size:14px;background:none;color:var(--tx2);cursor:pointer">↓ 엑셀 내보내기</button>
         ${bulkBtn}
       </div>`;
   }
@@ -231,23 +231,23 @@ Pages.Verify = (() => {
     el.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:14px">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
+          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:14px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">1</span>
             검증 유형 선택
           </div>
           <div style="display:flex;gap:6px;margin-bottom:14px">
             <button id="vfy-type-daily" onclick="Pages.Verify.setType('daily')"
-              style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--navy);background:var(--navy);color:#fff;transition:.15s">일별 처리</button>
+              style="padding:4px 12px;border-radius:20px;font-size:15px;font-weight:500;cursor:pointer;border:1px solid var(--navy);background:var(--navy);color:#fff;transition:.15s">일별 처리</button>
             <button id="vfy-type-lot" onclick="Pages.Verify.setType('lot')"
-              style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--bd2);background:none;color:var(--tx2);transition:.15s">LOT 목록</button>
+              style="padding:4px 12px;border-radius:20px;font-size:15px;font-weight:500;cursor:pointer;border:1px solid var(--bd2);background:none;color:var(--tx2);transition:.15s">LOT 목록</button>
             <button id="vfy-type-invoice" onclick="Pages.Verify.setType('invoice')"
-              style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--bd2);background:none;color:var(--tx2);transition:.15s">인보이스</button>
+              style="padding:4px 12px;border-radius:20px;font-size:15px;font-weight:500;cursor:pointer;border:1px solid var(--bd2);background:none;color:var(--tx2);transition:.15s">인보이스</button>
           </div>
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:6px">
-            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
+          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:14px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">2</span>
             리포트 붙여넣기
           </div>
-          <textarea id="vfy-paste" style="width:100%;height:120px;padding:8px 10px;border:0.5px solid var(--bd2);border-radius:var(--rs);font-size:11px;font-family:var(--font-mono);background:var(--bg);color:var(--tx);resize:vertical;line-height:1.5"
+          <textarea id="vfy-paste" style="width:100%;height:120px;padding:10px 13px;border:0.5px solid var(--bd2);border-radius:var(--rs);font-size:15px;font-family:var(--font-mono);background:var(--bg);color:var(--tx);resize:vertical;line-height:1.5"
             placeholder="엑셀/표에서 헤더 포함 복사 후 붙여넣기
 
 예시 (일별 처리):
@@ -257,23 +257,23 @@ Date	Batch	Qty	Normal	No Boot	Abnormal
         </div>
 
         <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:14px">
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
+          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:14px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">3</span>
             이미지 업로드 (홍콩 캡처)
           </div>
-          <div style="width:100%;height:90px;border:1px dashed var(--bd2);border-radius:var(--rs);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:var(--bg);color:var(--tx3);font-size:12px;cursor:pointer;margin-bottom:14px" onclick="document.getElementById('vfy-img-input').click()">
+          <div style="width:100%;height:90px;border:1px dashed var(--bd2);border-radius:var(--rs);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:var(--bg);color:var(--tx3);font-size:14px;cursor:pointer;margin-bottom:14px" onclick="document.getElementById('vfy-img-input').click()">
             <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M12 16V8m0 0l-3 3m3-3l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/></svg>
             <span>클릭하여 이미지 업로드</span>
-            <span style="font-size:10px">PNG, JPG · Claude AI가 자동으로 읽습니다</span>
+            <span style="font-size:14px">PNG, JPG · Claude AI가 자동으로 읽습니다</span>
           </div>
           <input id="vfy-img-input" type="file" accept="image/*" style="display:none" onchange="Pages.Verify.handleImage(this)">
-          <div id="vfy-img-status" style="font-size:12px;color:var(--tx3);margin-bottom:14px"></div>
+          <div id="vfy-img-status" style="font-size:14px;color:var(--tx3);margin-bottom:14px"></div>
 
-          <div style="font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
-            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
+          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--card);font-size:14px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">4</span>
             검증 실행
           </div>
-          <button onclick="Pages.Verify.runVerify()" style="width:100%;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer">검증 실행</button>
+          <button onclick="Pages.Verify.runVerify()" style="width:100%;padding:9px;background:#185FA5;color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:500;cursor:pointer">검증 실행</button>
         </div>
       </div>
 

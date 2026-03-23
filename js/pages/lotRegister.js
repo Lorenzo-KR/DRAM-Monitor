@@ -76,17 +76,17 @@ Pages.LotRegister = (() => {
           ${makeEditableCell(l.customerName, '', `Pages.LotRegister.saveCell(this,'customerName',${l.id})`)}
           ${makeEditableCell(l.inDate, '', `Pages.LotRegister.saveDateCell(this,${l.id})`, 'type="date"')}
           <td><input class="ec" value="${escapeAttr(l.targetDate)}" type="date" readonly style="color:var(--tx2)"></td>
-          <td style="padding:8px 10px;color:#166534;font-size:12px">${l.actualDone || '-'}</td>
+          <td style="padding:10px 13px;color:#166534;font-size:14px">${l.actualDone || '-'}</td>
           ${makeEditableCell(l.qty, 'num', `Pages.LotRegister.saveCell(this,'qty',${l.id})`, 'type="number" min="0"')}
           ${makeEditableSelect(l.unit || '개', [['개','개'],['Wafer','Wafer'],['Tray','Tray'],['EA','EA']], '', `Pages.LotRegister.saveCell(this,'unit',${l.id})`)}
           ${makeEditableCell(l.price, 'num', `Pages.LotRegister.saveCell(this,'price',${l.id})`, 'type="number" min="0"')}
           ${makeEditableSelect(l.currency || 'USD', [['USD','USD'],['HKD','HKD'],['SGD','SGD'],['KRW','KRW']], '', `Pages.LotRegister.saveCell(this,'currency',${l.id})`)}
           ${makeEditableCell(l.product, '', `Pages.LotRegister.saveCell(this,'product',${l.id})`)}
-          <td class="tc" style="padding:8px 10px">
-            <div style="font-size:12px;font-weight:500;color:${pct >= 100 ? '#16a34a' : 'var(--tx)'}">${pct}%</div>
+          <td class="tc" style="padding:10px 13px">
+            <div style="font-size:14px;font-weight:500;color:${pct >= 100 ? '#16a34a' : 'var(--tx)'}">${pct}%</div>
             <div class="pb-w"><div class="pb" style="width:${pct}%;background:${CONFIG.BIZ_COLORS[l.biz] || '#888'}"></div></div>
           </td>
-          <td class="tc" style="padding:8px 10px">${renderStatusBadge(st)}</td>
+          <td class="tc" style="padding:10px 13px">${renderStatusBadge(st)}</td>
           <td style="padding:4px 8px"><div class="row-actions"><button class="ra-btn del" onclick="Pages.LotRegister.deleteLot(${l.id})">삭제</button></div></td>
         </tr>`;
     }).join('');

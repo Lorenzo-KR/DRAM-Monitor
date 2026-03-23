@@ -60,18 +60,18 @@ Pages.DailyInput = (() => {
           <div onclick="Pages.DailyInput.toggleCard(${lot.id})" style="padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:${isOpen ? 'var(--bg)' : 'var(--card)'};transition:.15s">
             <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
               <span style="font-size:14px;font-weight:600;font-family:var(--font-mono);flex-shrink:0">${lot.lotNo || lot.id}</span>
-              <div style="display:flex;gap:10px;font-size:12px;color:var(--tx2)">
+              <div style="display:flex;gap:10px;font-size:14px;color:var(--tx2)">
                 <span>입고 <b style="color:var(--tx)">${formatNumber(parseNumber(lot.qty))}</b></span>
                 <span>처리 <b style="color:${CONFIG.BIZ_COLORS[_biz]}">${formatNumber(cum)}</b></span>
                 <span>잔량 <b style="color:${rem > 0 ? '#92400e' : '#166534'}">${formatNumber(rem)}</b></span>
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
                 <div style="width:70px;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${pbC};width:${pct}%"></div></div>
-                <span style="font-size:12px;font-weight:600;color:${pbC}">${pct}%</span>
+                <span style="font-size:14px;font-weight:600;color:${pbC}">${pct}%</span>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px">
-              <span style="font-size:12px;font-weight:500;color:${ddColor}">${ddText}</span>
+              <span style="font-size:14px;font-weight:500;color:${ddColor}">${ddText}</span>
               ${renderStatusBadge(st)}
               <svg width="14" height="14" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
@@ -87,31 +87,31 @@ Pages.DailyInput = (() => {
     const hist   = dailies.filter(r => String(r.lotId) === String(lot.id)).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
     const histRows = hist.length === 0
-      ? '<div style="font-size:12px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
+      ? '<div style="font-size:14px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal) + parseNumber(r.noBoot) + parseNumber(r.abnormal)) || parseNumber(r.proc) : parseNumber(r.proc);
           return `
-            <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:12px;align-items:center">
+            <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
               <span style="font-family:var(--font-mono)">${r.date}</span>
               ${isDram ? `<span style="font-family:var(--font-mono);color:#166534">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:#92400e">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:#991b1b">${formatNumber(parseNumber(r.abnormal))}</span>` : ''}
               <span style="font-family:var(--font-mono);font-weight:600">${formatNumber(tot)}</span>
               <span style="font-family:var(--font-mono);color:var(--tx2)">${formatNumber(parseNumber(r.cumul))}</span>
               <span style="font-family:var(--font-mono);color:${parseNumber(r.remain) > 0 ? '#92400e' : '#166534'}">${formatNumber(parseNumber(r.remain))}</span>
-              <span>${r.done === '1' ? '<span class="bdg b-done" style="font-size:10px">완료</span>' : ''}</span>
-              <span style="color:var(--tx3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note || ''}</span>
-              <button class="btn del sm" style="padding:2px 6px;font-size:11px" onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})">✕</button>
+              <span>${r.done === '1' ? '<span class="bdg b-done" style="font-size:14px">완료</span>' : ''}</span>
+              <span style="color:var(--tx3);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note || ''}</span>
+              <button class="btn del sm" style="padding:2px 6px;font-size:15px" onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})">✕</button>
             </div>`;
         }).join('');
 
     return `
       <div style="padding:16px;background:var(--bg);border-top:1px solid var(--bd)">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력</div>
-        <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:5px 0;border-bottom:2px solid var(--bd2);font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase">
+        <div style="font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력</div>
+        <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:5px 0;border-bottom:2px solid var(--bd2);font-size:14px;font-weight:600;color:var(--tx3);text-transform:uppercase">
           <span>날짜</span>${isDram ? '<span style="color:#166534">Normal</span><span style="color:#92400e">NoBoot</span><span style="color:#991b1b">Abnor.</span>' : ''}<span>처리</span><span>누적</span><span>잔량</span><span>완료</span><span>비고</span><span></span>
         </div>
         ${histRows}
         <div style="margin-top:16px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:14px">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록 입력</div>
+          <div style="font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록 입력</div>
           <div style="display:grid;grid-template-columns:${isDram ? '110px 110px 110px auto' : '110px 130px auto'};gap:10px;margin-bottom:${isDram ? '10px' : '0'}">
             <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}"></div>
             <div class="fld"><label>처리량 합계</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcRemaining(${lot.id})"></div>
@@ -122,7 +122,7 @@ Pages.DailyInput = (() => {
           </div>
           ${isDram ? `
             <div style="margin-bottom:10px">
-              <div style="font-size:10px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 입력 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
+              <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 입력 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
                 <div class="fld"><label style="color:#166534">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
                 <div class="fld"><label style="color:#92400e">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
@@ -132,7 +132,7 @@ Pages.DailyInput = (() => {
           <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
           <div class="br">
             <button class="btn pri sm" onclick="Pages.DailyInput.saveRecord(${lot.id})">저장</button>
-            <span id="dp-ok-${lot.id}" style="font-size:12px;color:#166534;display:none;font-weight:500">✓ 저장됨</span>
+            <span id="dp-ok-${lot.id}" style="font-size:14px;color:#166534;display:none;font-weight:500">✓ 저장됨</span>
           </div>
         </div>
       </div>`;
@@ -283,30 +283,30 @@ Pages.DailyInput = (() => {
       const isDram    = r.lot && r.lot.biz === 'DRAM';
       const matched   = r.matched;
       const statusHtml = matched
-        ? `<span style="font-size:11px;font-weight:500;color:#166534;white-space:nowrap">✓ ${CONFIG.BIZ_LABELS[r.lot.biz] || ''}</span>`
-        : `<span style="font-size:11px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
+        ? `<span style="font-size:15px;font-weight:500;color:#166534;white-space:nowrap">✓ ${CONFIG.BIZ_LABELS[r.lot.biz] || ''}</span>`
+        : `<span style="font-size:15px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
       const selBorder = matched ? 'var(--bd2)' : '#fca5a5';
       const selBg     = matched ? 'var(--bg)'  : '#fff7f7';
       const options   = lots.map(l => `<option value="${l.id}"${r.lot && String(r.lot.id) === String(l.id) ? ' selected' : ''}>${l.lotNo || l.id}</option>`).join('');
 
       return `
         <tr style="${i % 2 === 0 ? '' : 'background:var(--bg)'}">
-          <td style="padding:7px 10px;white-space:nowrap;font-family:var(--font-mono);font-size:12px">${r.date}</td>
-          <td style="padding:7px 10px">${r.country ? renderCountryTag(r.country) : `<span style="font-size:11px;color:var(--tx3)">${r.region || '-'}</span>`}</td>
+          <td style="padding:9px 13px;white-space:nowrap;font-family:var(--font-mono);font-size:14px">${r.date}</td>
+          <td style="padding:9px 13px">${r.country ? renderCountryTag(r.country) : `<span style="font-size:15px;color:var(--tx3)">${r.region || '-'}</span>`}</td>
           <td style="padding:4px 6px">
             <div style="display:flex;gap:4px;align-items:center">
-              <select onchange="Pages.DailyInput.setParsedLot(${i},this.value,false)" style="padding:4px 8px;border:1px solid ${selBorder};border-radius:5px;font-size:12px;background:${selBg};color:var(--tx);flex:1;min-width:110px">
+              <select onchange="Pages.DailyInput.setParsedLot(${i},this.value,false)" style="padding:4px 8px;border:1px solid ${selBorder};border-radius:5px;font-size:14px;background:${selBg};color:var(--tx);flex:1;min-width:110px">
                 <option value="">-- 선택 --</option>${options}
               </select>
-              <button onclick="Pages.DailyInput.setParsedLot(${i},this.previousElementSibling.value,true)" style="padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:10px;font-weight:600;background:#EEF4FF;color:#1e40af;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이 LOT를 전체 행에 적용">전체↓</button>
+              <button onclick="Pages.DailyInput.setParsedLot(${i},this.previousElementSibling.value,true)" style="padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:14px;font-weight:600;background:#EEF4FF;color:#1e40af;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이 LOT를 전체 행에 적용">전체↓</button>
             </div>
           </td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);font-weight:600">${formatNumber(r.proc)}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#166534">${isDram || r.normal > 0 ? formatNumber(r.normal) : '—'}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#92400e">${isDram || r.noBoot > 0 ? formatNumber(r.noBoot) : '—'}</td>
-          <td style="padding:7px 10px;text-align:right;font-family:var(--font-mono);color:#991b1b">${isDram || r.abnormal > 0 ? formatNumber(r.abnormal) : '—'}</td>
-          <td style="padding:7px 10px;font-size:12px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
-          <td style="padding:7px 10px">${statusHtml}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-weight:600">${formatNumber(r.proc)}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#166534">${isDram || r.normal > 0 ? formatNumber(r.normal) : '—'}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#92400e">${isDram || r.noBoot > 0 ? formatNumber(r.noBoot) : '—'}</td>
+          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#991b1b">${isDram || r.abnormal > 0 ? formatNumber(r.abnormal) : '—'}</td>
+          <td style="padding:9px 13px;font-size:14px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
+          <td style="padding:9px 13px">${statusHtml}</td>
         </tr>`;
     }).join('');
   }
