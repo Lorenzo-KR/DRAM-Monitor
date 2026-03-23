@@ -5,7 +5,7 @@
 
 Pages.Revenue = (() => {
 
-  let _mode   = 'month';
+  let _mode   = 'year';
   let _biz    = '';
   let _co     = '';
   let _charts = {};
@@ -21,7 +21,6 @@ Pages.Revenue = (() => {
     document.getElementById('rv-yr').style.display = m === 'year'  ? '' : 'none';
     render();
   }
-
   function setBiz(el, val) {
     _biz = val;
     ['rv-biz-all','rv-biz-dram','rv-biz-ssd','rv-biz-mid'].forEach(id => {
