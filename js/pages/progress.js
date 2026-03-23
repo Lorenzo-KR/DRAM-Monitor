@@ -302,8 +302,12 @@ Pages.Progress = (() => {
                 </div>`}
           </td>
           <td style="padding:11px 14px;font-size:15px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
-          <td style="padding:11px 14px;font-size:15px;color:${st==='overdue'?'#A32D2D':'var(--tx3)'}">
-            ${lot.targetDate||'—'}${dd!==null&&st!=='done'&&st!=='upcoming'?`<span style="font-size:15px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
+          <td style="padding:11px 14px;font-size:15px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D':'color:var(--tx3)'}">
+            ${st==='done'
+              ? (lot.actualDone || lot.targetDate || '—')
+              : st==='upcoming'
+                ? (lot.targetDate || '—')
+                : `${lot.targetDate||'—'}${dd!==null?`<span style="font-size:13px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}`}
           </td>
           <td style="padding:11px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td style="padding:6px 8px;white-space:nowrap">
@@ -342,7 +346,7 @@ Pages.Progress = (() => {
             ${TH('','left')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
             ${TH('진행률','left')}
-            ${TH('입고일')}${TH('목표완료')}${TH('상태')}${TH('','left')}
+            ${TH('입고일')}${TH('완료일')}${TH('상태')}${TH('','left')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
