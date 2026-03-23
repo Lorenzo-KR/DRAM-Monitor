@@ -107,6 +107,7 @@ Pages.KpiTarget = (() => {
     const color = CONFIG.BIZ_COLORS[biz] || '#1B4F8A';
 
     // 요약 카드
+    const periodLabel = `1~${curMonIdx + 1}월`;
     const cards = `
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
@@ -115,18 +116,18 @@ Pages.KpiTarget = (() => {
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">월 $${formatNumber(monthlyTgt)} (${_startMon}~12월)</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적</div>
+          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적 (${periodLabel})</div>
           <div style="font-size:20px;font-weight:600;color:#085041">$${formatNumber(Math.round(curCumA))}</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px">${curMonIdx + 1}월까지</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">목표 $${formatNumber(Math.round(curCumT))}</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">달성률</div>
+          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (${periodLabel})</div>
           <div style="font-size:20px;font-weight:600;color:${overallPct>=100?'#085041':overallPct>=70?'#0C447C':'#A32D2D'}">${overallPct}%</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px">누적목표 $${formatNumber(Math.round(curCumT))}</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">목표 대비</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이</div>
-          <div style="font-size:20px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':''} $${formatNumber(Math.round(Math.abs(diff)))}</div>
+          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (${periodLabel})</div>
+          <div style="font-size:20px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}$${formatNumber(Math.round(Math.abs(diff)))}</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">${diff>=0?'목표 초과':'목표 미달'}</div>
         </div>
       </div>`;
