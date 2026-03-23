@@ -201,7 +201,8 @@ Pages.Revenue = (() => {
     Object.keys(_charts).forEach(k => { if (_charts[k]) { _charts[k].destroy(); _charts[k] = null; } });
 
     const chartWrap = document.getElementById('rv-chart-wrap'); if (!chartWrap) return;
-    const biz = _biz;
+    const biz  = _biz;
+    const co   = _co;   // ← 지역 필터 추가
     const grid = 'rgba(0,0,0,0.05)';
 
     // 연도별 모드 → 병렬 그래프
