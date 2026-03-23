@@ -115,7 +115,7 @@ Pages.Dashboard = (() => {
     // 원화 환율 — localStorage에서 불러오기 (기본값 1,350)
     const fxRate  = parseFloat(localStorage.getItem('usd_krw') || '1350');
     const revKrw  = kpi.revenue.total > 0 ? kpi.revenue.total * fxRate : 0;
-    const krwSub  = revKrw > 0 ? '≈ ₩' + formatNumberShort(Math.round(revKrw)) : '';
+    const krwSub  = revKrw > 0 ? '≈ ₩' + formatNumber(Math.round(revKrw)) : '';
 
     return `
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px">
