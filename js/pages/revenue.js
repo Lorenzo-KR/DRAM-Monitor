@@ -213,16 +213,20 @@ Pages.Revenue = (() => {
 
       const bizList = biz ? [biz] : CONFIG.BIZ_LIST;
 
-      // 사업별 데이터
+      // 사업별 데이터 — 지역 필터 적용
       const bizData = {};
       bizList.forEach(b => {
         bizData[b] = months.map(m =>
-          Store.getInvoices().filter(r => r.biz === b && String(r.date || '').startsWith(m)).reduce((s, r) => s + parseNumber(r.amount), 0)
+          Store.getInvoices().filter(r =>
+            r.biz === b &&
+            (!co || r.country === co) &&
+            String(r.date || '').startsWith(m)
+          ).reduce((s, r) => s + parseNumber(r.amount), 0)
         );
       });
       const totalData = months.map((_, i) => bizList.reduce((s, b) => s + bizData[b][i], 0));
 
-      // 요약 카드
+      // 요약 카드 — 지역 필터 적용
       const bizTotals = {};
       bizList.forEach(b => { bizTotals[b] = bizData[b].reduce((s, v) => s + v, 0); });
       const grandTotal = Object.values(bizTotals).reduce((s, v) => s + v, 0);
