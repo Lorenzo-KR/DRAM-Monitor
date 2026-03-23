@@ -183,6 +183,31 @@
       </div>
       <div id="pr-cards"></div>
 
+      <!-- 삭제 확인 모달 -->
+      <div id="lot-delete-modal" style="display:none;position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center">
+        <div onclick="Pages.Progress.cancelDelete()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
+        <div style="position:relative;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:28px 28px 22px;width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.12)">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:40px;height:40px;border-radius:50%;background:#FCEBEB;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#A32D2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <div style="font-size:16px;font-weight:600;color:var(--tx)">LOT 삭제</div>
+              <div style="font-size:13px;color:var(--tx3);margin-top:2px">이 작업은 되돌릴 수 없습니다</div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:var(--rs);padding:12px 14px;margin-bottom:18px">
+            <div style="font-size:13px;color:var(--tx3);margin-bottom:3px">삭제할 LOT</div>
+            <div id="lot-delete-name" style="font-size:15px;font-weight:600;font-family:var(--font-mono);color:var(--tx)"></div>
+          </div>
+          <p style="font-size:14px;color:var(--tx2);margin-bottom:20px;line-height:1.6">해당 LOT와 모든 처리 이력 데이터가 <span style="color:#A32D2D;font-weight:600">영구 삭제</span>됩니다. 정말 삭제하시겠습니까?</p>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="Pages.Progress.cancelDelete()" class="btn" style="padding:9px 20px;font-size:14px">취소</button>
+            <button onclick="Pages.Progress.confirmDelete()" style="padding:9px 20px;font-size:14px;font-weight:500;background:#A32D2D;color:#fff;border:none;border-radius:var(--rs);cursor:pointer">삭제</button>
+          </div>
+        </div>
+      </div>
+
       <!-- LOT 수정 패널 -->
       <div id="lot-edit-panel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:400;padding:24px;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.08)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
