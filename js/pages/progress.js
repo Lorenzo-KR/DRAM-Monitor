@@ -388,29 +388,61 @@ Pages.Progress = (() => {
         <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
         ${histHeader}${histRows}
 
-        <div style="margin-top:14px;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);padding:12px">
-          <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록</div>
-          <div style="display:grid;grid-template-columns:${isDram?'110px 120px 100px auto':'110px 120px auto'};gap:10px;margin-bottom:${isDram?'10px':'0'}">
-            <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}"></div>
-            <div class="fld"><label>처리량</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcRem(${lot.id})"></div>
-            <div class="fld"><label>잔량 (자동)</label><input type="number" id="dp-rem-${lot.id}" readonly style="color:var(--tx2)" value="${remNow}"></div>
-            <div class="fld"><label>완료 여부</label>
-              <select id="dp-done-${lot.id}"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
+        <div style="margin-top:14px;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);overflow:hidden">
+          <!-- 탭 헤더 -->
+          <div style="display:flex;border-bottom:0.5px solid var(--bd);background:var(--bg)">
+            <button id="dp-tab-manual-${lot.id}" onclick="Pages.Progress.switchTab(${lot.id},'manual')"
+              style="padding:9px 18px;font-size:13px;font-weight:500;border:none;background:var(--card);color:var(--tx);cursor:pointer;border-bottom:2px solid var(--navy)">
+              직접 입력
+            </button>
+            <button id="dp-tab-paste-${lot.id}" onclick="Pages.Progress.switchTab(${lot.id},'paste')"
+              style="padding:9px 18px;font-size:13px;font-weight:500;border:none;background:none;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent">
+              붙여넣기
+            </button>
+          </div>
+
+          <!-- 직접 입력 탭 -->
+          <div id="dp-panel-manual-${lot.id}" style="padding:14px">
+            <div style="display:grid;grid-template-columns:${isDram?'150px 130px 120px auto':'150px 130px auto'};gap:10px;margin-bottom:${isDram?'10px':'0'}">
+              <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}" style="min-width:140px"></div>
+              <div class="fld"><label>처리량</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcRem(${lot.id})"></div>
+              <div class="fld"><label>잔량 (자동)</label><input type="number" id="dp-rem-${lot.id}" readonly style="color:var(--tx2)" value="${remNow}"></div>
+              <div class="fld"><label>완료 여부</label>
+                <select id="dp-done-${lot.id}"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
+              </div>
+            </div>
+            ${isDram?`
+            <div style="margin-bottom:10px">
+              <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                <div class="fld"><label style="color:#085041">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
+                <div class="fld"><label style="color:#633806">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
+                <div class="fld"><label style="color:#791F1F">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fca5a5;background:#fef2f2"></div>
+              </div>
+            </div>`:''}
+            <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
+            <div class="br">
+              <button class="btn pri sm" onclick="Pages.Progress.saveDaily(${lot.id})">저장</button>
+              <span id="dp-ok-${lot.id}" style="font-size:14px;color:#085041;display:none;font-weight:500">✓ 저장됨</span>
             </div>
           </div>
-          ${isDram?`
-          <div style="margin-bottom:10px">
-            <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-              <div class="fld"><label style="color:#085041">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
-              <div class="fld"><label style="color:#633806">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
-              <div class="fld"><label style="color:#791F1F">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fca5a5;background:#fef2f2"></div>
+
+          <!-- 붙여넣기 탭 -->
+          <div id="dp-panel-paste-${lot.id}" style="padding:14px;display:none">
+            <div style="font-size:13px;color:var(--tx3);margin-bottom:8px">
+              엑셀/표에서 헤더 포함해서 복사 후 붙여넣기 하세요.<br>
+              <span style="color:var(--tx2);font-weight:500">날짜, 처리량, Normal, No Boot, Abnormal</span> 컬럼을 자동으로 인식합니다.
             </div>
-          </div>`:''}
-          <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
-          <div class="br">
-            <button class="btn pri sm" onclick="Pages.Progress.saveDaily(${lot.id})">저장</button>
-            <span id="dp-ok-${lot.id}" style="font-size:14px;color:#085041;display:none;font-weight:500">✓ 저장됨</span>
+            <textarea id="dp-paste-${lot.id}" placeholder="Date&#9;Qty&#9;Normal&#9;No Boot&#9;Abnormal
+2026-03-18&#9;280&#9;210&#9;40&#9;30
+2026-03-17&#9;320&#9;280&#9;25&#9;15"
+              style="width:100%;height:130px;padding:9px 12px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;font-family:var(--font-mono);background:var(--bg);color:var(--tx);resize:vertical;line-height:1.6"></textarea>
+            <div id="dp-paste-preview-${lot.id}" style="margin-top:10px;display:none"></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn sm" onclick="Pages.Progress.parsePaste(${lot.id})">데이터 확인</button>
+              <button class="btn pri sm" id="dp-paste-save-${lot.id}" onclick="Pages.Progress.savePaste(${lot.id})" style="display:none">전체 저장</button>
+              <span id="dp-paste-ok-${lot.id}" style="font-size:13px;color:#085041;display:none;font-weight:500;align-self:center">✓ 저장됨</span>
+            </div>
           </div>
         </div>
       </div>`;
@@ -565,6 +597,161 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit };
+  // ── 탭 전환 ────────────────────────────────────────────────
+  function switchTab(lotId, tab) {
+    ['manual','paste'].forEach(t => {
+      const btn   = document.getElementById(`dp-tab-${t}-${lotId}`);
+      const panel = document.getElementById(`dp-panel-${t}-${lotId}`);
+      if (!btn || !panel) return;
+      const active = t === tab;
+      btn.style.background    = active ? 'var(--card)' : 'none';
+      btn.style.color         = active ? 'var(--tx)'   : 'var(--tx3)';
+      btn.style.borderBottom  = active ? '2px solid var(--navy)' : '2px solid transparent';
+      panel.style.display     = active ? 'block' : 'none';
+    });
+  }
+
+  // ── 붙여넣기 파싱 ──────────────────────────────────────────
+  function parsePaste(lotId) {
+    const raw = document.getElementById('dp-paste-' + lotId)?.value.trim();
+    if (!raw) { UI.toast('데이터를 붙여넣어 주세요', true); return; }
+
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length < 2) { UI.toast('헤더와 데이터 행이 필요합니다', true); return; }
+
+    // 헤더 매핑 — 다양한 표현 허용
+    const header = lines[0].split('\t').map(h => h.trim().toLowerCase());
+    const COL = {
+      date:     header.findIndex(h => /date|날짜|일자|day/.test(h)),
+      proc:     header.findIndex(h => /qty|합계|total|처리량|proc|quantity|수량/.test(h)),
+      normal:   header.findIndex(h => /normal|정상/.test(h)),
+      noBoot:   header.findIndex(h => /no.?boot|noboot/.test(h)),
+      abnormal: header.findIndex(h => /abnormal|불량|이상/.test(h)),
+    };
+
+    if (COL.date === -1) { UI.toast('날짜 컬럼을 찾을 수 없습니다 (Date, 날짜, 일자)', true); return; }
+
+    const parsed = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split('\t').map(c => c.trim());
+      const dateVal = cols[COL.date] || '';
+      if (!dateVal) continue;
+
+      // 날짜 정규화
+      let date = dateVal.replace(/\//g, '-');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) { /* ok */ }
+      else {
+        const d = new Date(dateVal);
+        if (!isNaN(d)) date = d.toISOString().split('T')[0];
+        else continue;
+      }
+
+      const normal   = COL.normal   >= 0 ? parseNumber(cols[COL.normal])   : 0;
+      const noBoot   = COL.noBoot   >= 0 ? parseNumber(cols[COL.noBoot])   : 0;
+      const abnormal = COL.abnormal >= 0 ? parseNumber(cols[COL.abnormal]) : 0;
+      const proc     = COL.proc >= 0
+        ? parseNumber(cols[COL.proc])
+        : (normal + noBoot + abnormal) || 0;
+
+      if (!proc && !normal && !noBoot && !abnormal) continue;
+      parsed.push({ date, proc, normal, noBoot, abnormal });
+    }
+
+    if (!parsed.length) { UI.toast('파싱된 데이터가 없습니다', true); return; }
+
+    // 미리보기 렌더
+    const previewEl = document.getElementById('dp-paste-preview-' + lotId);
+    const saveBtn   = document.getElementById('dp-paste-save-' + lotId);
+    if (!previewEl) return;
+
+    const lot     = Store.getLotById(lotId);
+    const isDram  = lot?.biz === 'DRAM';
+    const dailies = Store.getDailies();
+    const existing = new Set(dailies.filter(r => String(r.lotId) === String(lotId)).map(r => r.date));
+
+    const rows = parsed.map(r => {
+      const dup = existing.has(r.date);
+      return `<tr style="${dup ? 'background:#FAEEDA' : ''}">
+        <td style="padding:6px 10px;font-family:var(--font-mono);font-size:13px">${r.date}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:500">${formatNumber(r.proc)}</td>
+        ${isDram ? `
+        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:#085041">${formatNumber(r.normal)}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:#633806">${formatNumber(r.noBoot)}</td>
+        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:#791F1F">${formatNumber(r.abnormal)}</td>
+        ` : ''}
+        <td style="padding:6px 10px;font-size:12px">${dup ? '<span style="background:#FAEEDA;color:#633806;padding:1px 6px;border-radius:3px;font-size:12px">중복 (덮어씀)</span>' : ''}</td>
+      </tr>`;
+    }).join('');
+
+    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)';
+    previewEl.innerHTML = `
+      <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">${parsed.length}건 인식됨 ${existing.size > 0 && parsed.some(r => existing.has(r.date)) ? '· <span style="color:#BA7517">노란색: 날짜 중복 (덮어쓰기)</span>' : ''}</div>
+      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="${thStyle}">날짜</th>
+            <th style="${thStyle};text-align:right">처리량</th>
+            ${isDram ? `<th style="${thStyle};text-align:right;color:#085041">Normal</th><th style="${thStyle};text-align:right;color:#633806">No Boot</th><th style="${thStyle};text-align:right;color:#791F1F">Abnormal</th>` : ''}
+            <th style="${thStyle}"></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    previewEl.style.display = 'block';
+    previewEl.dataset.parsed = JSON.stringify(parsed);
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+  }
+
+  // ── 붙여넣기 일괄 저장 ─────────────────────────────────────
+  async function savePaste(lotId) {
+    const previewEl = document.getElementById('dp-paste-preview-' + lotId);
+    if (!previewEl?.dataset.parsed) return;
+
+    const parsed  = JSON.parse(previewEl.dataset.parsed);
+    const lot     = Store.getLotById(lotId); if (!lot) return;
+    const dailies = Store.getDailies();
+
+    let cum = getLotCumulative(lot.id, dailies);
+    let cnt = 0;
+
+    // 날짜 오름차순으로 처리
+    const sorted = [...parsed].sort((a, b) => a.date.localeCompare(b.date));
+
+    for (const r of sorted) {
+      // 중복이면 기존 삭제
+      const dup = dailies.find(d => String(d.lotId) === String(lotId) && d.date === r.date);
+      if (dup) {
+        Store.deleteDaily(dup.id);
+        Api.delete(CONFIG.SHEETS.DAILY, dup.id);
+        cum -= parseNumber(dup.proc);
+      }
+
+      cum += r.proc;
+      const remNew = Math.max(0, parseNumber(lot.qty) - cum);
+      const record = {
+        id: Date.now() + Math.random(),
+        date: r.date, lotId: lot.id, lotNo: lot.lotNo || lot.id,
+        biz: lot.biz, country: lot.country, customerName: lot.customerName || '',
+        proc: r.proc, normal: r.normal, noBoot: r.noBoot, abnormal: r.abnormal,
+        cumul: cum, remain: remNew, note: '', done: remNew === 0 ? '1' : '0',
+      };
+      Store.upsertDaily(record);
+      await Api.append(CONFIG.SHEETS.DAILY, record);
+      cnt++;
+    }
+
+    const okEl = document.getElementById('dp-paste-ok-' + lotId);
+    if (okEl) { okEl.style.display = 'inline'; setTimeout(() => okEl.style.display = 'none', 2000); }
+    const saveBtn = document.getElementById('dp-paste-save-' + lotId);
+    if (saveBtn) saveBtn.style.display = 'none';
+    previewEl.style.display = 'none';
+    previewEl.dataset.parsed = '';
+    const pasteEl = document.getElementById('dp-paste-' + lotId);
+    if (pasteEl) pasteEl.value = '';
+    UI.toast(cnt + '건 저장됨');
+    render();
+  }
+
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, switchTab, parsePaste, savePaste };
 
 })();
