@@ -127,15 +127,21 @@ Pages.Revenue = (() => {
           : 'background:#E6F1FB;color:#0C447C';
         const stLabel = st === 'upcoming' ? '입고예정' : st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행중';
 
-        // 수금 상태
+        // 입력 상태 (수금완료 → 입력완료)
         const paidStyle = inv
           ? inv.status === 'paid'    ? 'background:#E1F5EE;color:#085041'
           : inv.status === 'partial' ? 'background:#FAEEDA;color:#633806'
           :                            'background:#FCEBEB;color:#791F1F'
           : 'background:#FAEEDA;color:#633806';
         const paidLabel = inv
-          ? inv.status === 'paid' ? '수금완료' : inv.status === 'partial' ? '부분수금' : '미수금'
+          ? inv.status === 'paid' ? '입력완료' : inv.status === 'partial' ? '부분입력' : '미입력'
           : '입력 대기';
+
+        // 작업 완료일
+        const doneDate = st === 'done'
+          ? (lot.actualDone || lot.targetDate || '—')
+          : st === 'upcoming' ? '—' : '진행중';
+        const doneDateColor = st === 'done' ? '#085041' : 'var(--tx3)';
 
         totalAmt += amt;
         const rowBg = !hasInv && st !== 'upcoming' ? 'background:#FFFBF3' : st === 'upcoming' ? 'background:#F5F9FF' : '';
@@ -144,12 +150,13 @@ Pages.Revenue = (() => {
           <tr style="${rowBg}">
             <td style="padding:11px 14px;color:var(--tx3);font-size:14px;text-align:center">${i + 1}</td>
             <td style="padding:11px 14px;font-size:15px;color:var(--tx3)">${lot.inDate || '—'}</td>
+            <td style="padding:11px 14px;font-size:15px;color:${doneDateColor};font-weight:${st==='done'?'500':'400'}">${doneDate}</td>
             <td style="padding:11px 14px;font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
             <td style="padding:11px 14px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
             <td style="padding:11px 14px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
             <td style="padding:11px 14px;font-size:15px;color:var(--tx2)">${lot.customerName || '—'}</td>
             <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
-            <td style="padding:11px 14px;min-width:110px">
+            <td style="padding:11px 14px;text-align:center;min-width:140px">
               ${st === 'upcoming'
                 ? `<span style="font-size:15px;color:#185FA5;font-weight:500">D-${diffDays(today(), lot.inDate)}</span>`
                 : `<div style="display:flex;align-items:center;gap:7px">
@@ -160,12 +167,12 @@ Pages.Revenue = (() => {
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
-            <td style="padding:7px 12px;text-align:right">
+            <td style="padding:11px 18px;text-align:left">
               ${hasInv
                 ? `<span style="font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>`
                 : st === 'upcoming'
                   ? `<span style="font-size:15px;color:var(--tx3)">—</span>`
-                  : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                  : `<div style="display:flex;align-items:center;gap:6px">
                       <input type="number" placeholder="금액 입력" id="rv-amt-${lot.id}"
                         style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:15px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:#0C447C">
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
@@ -174,10 +181,9 @@ Pages.Revenue = (() => {
             </td>
             <td style="padding:11px 14px">
               ${bdg(paidLabel, paidStyle)}
-              ${inv && inv.status !== 'paid' ? `<button class="btn sm" style="font-size:15px;padding:2px 7px;margin-left:4px" onclick="Pages.Invoice.quickPaid(${inv.id})">수금</button>` : ''}
             </td>
             <td style="padding:4px 8px">
-              ${inv ? `<button class="btn sm" style="font-size:15px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
+              ${inv ? `<button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
             </td>
           </tr>`;
       }).join('');
@@ -185,8 +191,8 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr style="background:var(--bg)">
-          <td colspan="8" style="padding:11px 14px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="9" style="padding:11px 14px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
+          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
           <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
         </tr>`;
 
