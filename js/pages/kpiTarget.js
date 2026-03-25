@@ -6,8 +6,8 @@
 Pages.KpiTarget = (() => {
 
   let _year     = new Date().getFullYear();
-  let _biz      = 'all';   // 트래킹 뷰 사업 필터
-  let _startMon = parseInt(localStorage.getItem('kpi_start_mon') || '4'); // 균등 배분 시작월 (기본 4월)
+  let _bizSet   = new Set(['all']); // 복수 선택 가능, 'all'이면 전체
+  let _startMon = parseInt(localStorage.getItem('kpi_start_mon') || '4');
 
   // ── 데이터 헬퍼 ────────────────────────────────────────────
   function _getActual(year, biz) {
@@ -47,13 +47,27 @@ Pages.KpiTarget = (() => {
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
 
   function switchBiz(biz) {
-    _biz = biz;
+    if (biz === 'all') {
+      // 전체 → 단독 선택
+      _bizSet = new Set(['all']);
+    } else {
+      // 개별 선택 시 'all' 제거
+      _bizSet.delete('all');
+      if (_bizSet.has(biz)) {
+        _bizSet.delete(biz);
+        if (_bizSet.size === 0) _bizSet = new Set(['all']); // 모두 해제 시 전체로
+      } else {
+        _bizSet.add(biz);
+      }
+    }
+    // 버튼 활성화 상태 업데이트
     ['all','DRAM','SSD','MID'].forEach(b => {
       const btn = document.getElementById('kpi-biz-' + b); if (!btn) return;
       const color = b === 'all' ? '#1B4F8A' : CONFIG.BIZ_COLORS[b];
-      btn.style.background  = _biz === b ? color : 'none';
-      btn.style.color       = _biz === b ? '#fff' : 'var(--tx2)';
-      btn.style.borderColor = _biz === b ? color  : 'var(--bd2)';
+      const on = _bizSet.has(b);
+      btn.style.background  = on ? color : 'none';
+      btn.style.color       = on ? '#fff' : 'var(--tx2)';
+      btn.style.borderColor = on ? color  : 'var(--bd2)';
     });
     _renderTracking();
   }
@@ -67,27 +81,27 @@ Pages.KpiTarget = (() => {
   // ── 월별 트래킹 렌더 ───────────────────────────────────────
   function _renderTracking() {
     const el = document.getElementById('kpi-tracking-wrap'); if (!el) return;
-    const year     = _year;
-    const biz      = _biz;   // 'all' or biz key
-    const totalTgt = biz === 'all' ? _getTotalTarget(year) : _getTarget(year, biz);
+    const year    = _year;
+    const isAll   = _bizSet.has('all');
+    const bizList = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
+
+    const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b), 0);
     if (totalTgt === 0) {
       el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tx3);font-size:14px">목표를 먼저 설정해주세요</div>`;
       return;
     }
 
-    const numMonths = 13 - _startMon; // 배분 개월 수
+    const numMonths  = 13 - _startMon;
     const monthlyTgt = Math.round(totalTgt / numMonths);
-    const now = new Date();
-    const curMonIdx = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
+    const now        = new Date();
+    const curMonIdx  = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
 
-    // 1~12월 월별 목표/실적
-    const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const MONTHS      = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
     const monthTargets = MONTHS.map((_, i) => i >= _startMon - 1 ? monthlyTgt : 0);
 
     const monthActuals = MONTHS.map((_, i) => {
       if (i > curMonIdx) return null;
-      if (biz === 'all') return CONFIG.BIZ_LIST.reduce((s, b) => s + _getActualMonth(year, b, i+1), 0);
-      return _getActualMonth(year, biz, i+1);
+      return bizList.reduce((s, b) => s + _getActualMonth(year, b, i+1), 0);
     });
 
     // 누적
@@ -100,18 +114,20 @@ Pages.KpiTarget = (() => {
       else cumActuals.push(null);
     });
 
-    const curCumA = cumActuals[curMonIdx] ?? 0;
-    const curCumT = cumTargets[curMonIdx] ?? 0;
+    const curCumA    = cumActuals[curMonIdx] ?? 0;
+    const curCumT    = cumTargets[curMonIdx] ?? 0;
     const overallPct = curCumT > 0 ? Math.round(curCumA / curCumT * 100) : 0;
-    const diff = curCumA - curCumT;
-    const color = CONFIG.BIZ_COLORS[biz] || '#1B4F8A';
+    const diff       = curCumA - curCumT;
+
+    // 선택된 사업 레이블
+    const bizLabel = isAll ? '전체' : bizList.map(b => CONFIG.BIZ_LABELS[b]).join(' + ');
 
     // 요약 카드
     const periodLabel = `1~${curMonIdx + 1}월`;
     const cards = `
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표</div>
+          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
           <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">월 $${formatNumber(monthlyTgt)} (${_startMon}~12월)</div>
         </div>
@@ -302,7 +318,7 @@ Pages.KpiTarget = (() => {
         {key:'all', label:'전체', color:'#1B4F8A'},
         ...CONFIG.BIZ_LIST.map(b => ({key:b, label:CONFIG.BIZ_LABELS[b], color:CONFIG.BIZ_COLORS[b]}))
       ].map(({key, label, color}) => {
-        const on = _biz === key;
+        const on = _bizSet.has(key);
         return `<button id="kpi-biz-${key}" onclick="Pages.KpiTarget.switchBiz('${key}')"
           style="padding:5px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid ${color};
           background:${on?color:'none'};color:${on?'#fff':color};transition:.15s">${label}</button>`;
