@@ -103,25 +103,34 @@ Pages.Dashboard = (() => {
     const kpiPct   = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
     const kpiColor = kpiPct >= 100 ? '#085041' : kpiPct >= 70 ? '#0C447C' : '#BA7517';
 
-    function kpiCard(label, value, sub, color = '', subExtra = '') {
+    function kpiCard(label, value, sub, color = '', subExtra = '', fxInput = '') {
       return `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
         <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:4px">${label}</div>
         <div style="font-size:20px;font-weight:600;line-height:1;${color ? 'color:' + color : ''}">${value}</div>
         <div style="font-size:15px;color:var(--tx3);margin-top:3px">${sub}</div>
         ${subExtra ? `<div style="font-size:13px;color:var(--tx3);margin-top:2px">${subExtra}</div>` : ''}
+        ${fxInput ? `<div style="display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;border-top:0.5px solid var(--bd)">
+          <span style="font-size:11px;color:var(--tx3)">환율</span>
+          ${fxInput}
+          <span style="font-size:11px;color:var(--tx3)">₩/USD</span>
+        </div>` : ''}
       </div>`;
     }
 
-    // 원화 환율 — localStorage에서 불러오기 (기본값 1,350)
-    const fxRate  = parseFloat(localStorage.getItem('usd_krw') || '1350');
+    // 원화 환율 — 서버 저장값 우선, 없으면 localStorage 폴백 (기본값 1,350)
+    const fxRate  = parseFloat(Store.getSetting('usd_krw') || localStorage.getItem('usd_krw') || '1350');
     const revKrw  = kpi.revenue.total > 0 ? kpi.revenue.total * fxRate : 0;
     const krwSub  = revKrw > 0 ? '≈ ₩' + formatNumber(Math.round(revKrw)) : '';
+    const fxInputHtml = `<input type="number" id="fx-rate-input"
+      value="${fxRate}" min="1" step="1"
+      style="width:76px;padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;font-family:var(--font-mono);background:var(--card);color:var(--tx);text-align:right"
+      onchange="Store.saveSetting('usd_krw', this.value); Pages.Dashboard.render();">`;
 
     return `
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px">
         ${kpiCard('Job Orders', kpi.lots.length, `진행 ${kpi.activeLots.length} · 완료 ${kpi.doneLots.length}`)}
         ${kpiCard('Total Units', formatNumber(kpi.totalUnits), `처리 ${formatNumber(kpi.totalProc)} · 잔량 ${formatNumber(Math.max(0, kpi.totalUnits - kpi.totalProc))}`)}
-        ${kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', '#085041', krwSub)}
+        ${kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', '#085041', krwSub, fxInputHtml)}
         ${kpiCard('Active Orders', kpi.activeLots.length, kpi.overdueLots.length > 0 ? `지연 ${kpi.overdueLots.length}건 포함` : '지연 없음', '#0C447C')}
         ${totalTgt > 0 ? kpiCard('KPI 달성률', kpiPct + '%', `목표 $${formatNumberShort(totalTgt)}`, kpiColor) : kpiCard('KPI 달성률', '—', '목표 미설정')}
       </div>`;
@@ -373,17 +382,6 @@ Pages.Dashboard = (() => {
           ${_renderActiveTable(kpi.activeLots, kpi.dailies)}
           ${_renderCompletedTable(kpi.doneLots, kpi.dailies, kpi.invoices)}
           ${_renderShipments(kpi.upcomingShipments)}
-
-          <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:10px 14px;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);width:fit-content">
-            <span style="font-size:13px;color:var(--tx3)">USD/KRW 환율</span>
-            <input type="number" id="fx-rate-input"
-              value="${parseFloat(localStorage.getItem('usd_krw') || '1350')}"
-              min="1" step="1"
-              style="width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;font-family:var(--font-mono);background:var(--bg);color:var(--tx);text-align:right"
-              onchange="localStorage.setItem('usd_krw', this.value); Pages.Dashboard.render();"
-              oninput="localStorage.setItem('usd_krw', this.value);">
-            <span style="font-size:13px;color:var(--tx3)">₩</span>
-          </div>
         </div>`;
     },
   };

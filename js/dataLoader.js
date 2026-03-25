@@ -95,13 +95,14 @@ const DataLoader = (() => {
       await Api.setupSheets();
 
       const S = CONFIG.SHEETS;
-      const [customers, lots, dailies, invoices, shipments, targets] = await Promise.all([
+      const [customers, lots, dailies, invoices, shipments, targets, settings] = await Promise.all([
         Api.getAll(S.CUSTOMERS),
         Api.getAll(S.LOTS),
         Api.getAll(S.DAILY),
         Api.getAll(S.INVOICES),
         Api.getAll(S.SHIPMENTS),
         Api.getAll(S.TARGETS).catch(() => []),
+        Api.getAll('settings').catch(() => []),
       ]);
 
       Store.setCustomers(customers.map(normalizeCustomer));
@@ -110,6 +111,7 @@ const DataLoader = (() => {
       Store.setInvoices(invoices.map(normalizeInvoice));
       Store.setShipments(shipments.map(normalizeShipment));
       Store.setTargets(targets.map(normalizeTarget));
+      Store.loadSettings(settings);
     },
 
     /**

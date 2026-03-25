@@ -14,6 +14,7 @@ const Store = (() => {
   let _customers = [];
   let _lots      = [];
   let _dailies   = [];
+  let _settings  = {};
   let _invoices  = [];
   let _shipments = [];
   let _targets   = [];
@@ -90,6 +91,19 @@ const Store = (() => {
 
     getCountryPeriod: () => _countryPeriod,
     setCountryPeriod: (p) => { _countryPeriod = p; },
+
+    // ── Settings (서버 저장, 기기 무관) ──────────────────────
+    getSetting(key) {
+      return _settings[key] ?? localStorage.getItem(key) ?? null;
+    },
+    setSetting(key, value) {
+      _settings[key] = String(value);
+      localStorage.setItem(key, String(value)); // 폴백용 로컬 캐시
+      Api.setSetting(key, value);
+    },
+    loadSettings(arr) {
+      arr.forEach(r => { if (r.key) _settings[r.key] = String(r.value ?? ''); });
+    },
   };
 
 })();
