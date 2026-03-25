@@ -137,6 +137,27 @@ const Api = (() => {
       await fetch(`${CONFIG.API_URL}?action=setupAll&token=${token}`).catch(() => {});
     },
 
+    /**
+     * 설정값 불러오기 (서버 저장, 기기 무관)
+     */
+    async getSetting(key) {
+      try {
+        const token = Auth.getToken();
+        const res  = await fetch(`${CONFIG.API_URL}?action=getSetting&key=${encodeURIComponent(key)}&token=${token}`);
+        const data = await res.json();
+        return data?.value ?? null;
+      } catch (err) {
+        return null;
+      }
+    },
+
+    /**
+     * 설정값 저장 (서버 저장, 기기 무관)
+     */
+    setSetting(key, value) {
+      return _enqueue({ action: 'setSetting', key, value, token: Auth.getToken() });
+    },
+
   };
 
 })();

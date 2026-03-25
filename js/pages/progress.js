@@ -21,7 +21,7 @@ Pages.Progress = (() => {
   const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
   const ST_STYLE = {
     upcoming: 'background:#E6F1FB;color:#0C447C',
-    inprog:   'background:#E1F5EE;color:#085041',
+    inprog:   'background:#E6F1FB;color:#0C447C',
     overdue:  'background:#FCEBEB;color:#791F1F',
     done:     'background:#E1F5EE;color:#085041',
   };
@@ -282,7 +282,7 @@ Pages.Progress = (() => {
       const isOpen    = _openLotId === lot.id;
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':''}">
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F7F7F6':''}">
           <td style="padding:11px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
