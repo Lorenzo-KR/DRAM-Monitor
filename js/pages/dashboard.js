@@ -202,13 +202,30 @@ Pages.Dashboard = (() => {
         <div style="font-size:14px;font-weight:600;min-width:72px;text-align:right;color:${kpi.revenue[co] > 0 ? 'var(--tx)' : 'var(--tx3)'}">$${formatNumber(Math.round(kpi.revenue[co] || 0))}</div>
       </div>`).join('');
 
+    // 빈 행 — Business 카드(3행)와 높이 맞추기 위한 투명 행
+    const regPadRow = `<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd);opacity:0;pointer-events:none">
+      <div style="min-width:110px;font-size:14px">—</div>
+      <div style="flex:1;height:5px"></div>
+      <div style="min-width:72px"></div>
+    </div>`;
+
+    // KPI 총 달성률
+    const totalTgtKpi = CONFIG.BIZ_LIST.reduce((s, b) => s + (Store.getTargetFor(year, b)?.target || 0), 0);
+    const totalActKpi = CONFIG.BIZ_LIST.reduce((s, b) =>
+      s + kpi.invoices.filter(r => r.biz === b && String(r.date || '').startsWith(String(year))).reduce((t, r) => t + parseNumber(r.total || r.amount), 0), 0);
+    const totalKpiPct = totalTgtKpi > 0 ? Math.min(100, Math.round(totalActKpi / totalTgtKpi * 100)) : null;
+    const kpiFooterColor = totalKpiPct === null ? 'var(--tx3)' : totalKpiPct >= 100 ? '#085041' : totalKpiPct >= 70 ? '#0C447C' : '#BA7517';
+    const kpiFooter = totalKpiPct !== null
+      ? `<span style="font-size:14px;font-weight:500;color:var(--tx)">총 달성률</span><span style="font-size:14px;font-weight:600;color:${kpiFooterColor}">${totalKpiPct}%</span>`
+      : '';
+
     return `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
         ${barCard('Revenue by business', 'USD', revBars || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>', revFooter)}
-        ${barCard('Revenue by region', 'USD', regBars || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>',
+        ${barCard('Revenue by region', 'USD', (regBars + regPadRow) || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>',
           revTotal > 0 ? `<span style="font-size:14px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$${formatNumber(Math.round(revTotal))}</span>` : '')}
         ${kpiBars
-          ? barCard('KPI 목표 달성', String(year) + '년', kpiBars)
+          ? barCard('KPI 목표 달성', String(year) + '년', kpiBars, kpiFooter)
           : barCard('KPI 목표 달성', '', '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">목표 미설정 — <a href="#" onclick="Nav.go(\'kpitarget\');return false;" style="color:var(--navy)">설정하기</a></div>')}
       </div>`;
   }
