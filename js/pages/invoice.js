@@ -144,6 +144,11 @@ Pages.Invoice = (() => {
   // ── 패널 ────────────────────────────────────────────────────
   function openPanel(id) {
     _editId = id;
+
+    const panel = document.getElementById('inv-panel');
+    const overlay = document.getElementById('inv-overlay');
+    if (!panel || !overlay) { console.error('[Invoice] Panel elements not found'); return; }
+
     document.getElementById('inv-panel-title').textContent = id ? '인보이스 수정' : '새 인보이스';
 
     const lotSel = document.getElementById('ip-lot');
@@ -151,7 +156,8 @@ Pages.Invoice = (() => {
       + Store.getLots().map(l => `<option value="${l.id}">[${CONFIG.COUNTRY_LABELS[l.country] || l.country}] ${l.lotNo || l.id} (${CONFIG.BIZ_LABELS[l.biz] || l.biz})</option>`).join('');
 
     if (id) {
-      const r = Store.getInvoiceById(id); if (!r) return;
+      const r = Store.getInvoiceById(id);
+      if (!r) { console.error('[Invoice] Invoice not found, id:', id); return; }
       document.getElementById('ip-no').value        = r.no           || '';
       document.getElementById('ip-date').value      = r.date         || '';
       document.getElementById('ip-biz').value       = r.biz          || 'DRAM';
@@ -177,8 +183,8 @@ Pages.Invoice = (() => {
       document.getElementById('ip-lot').value       = '';
       togglePaidFields('paid');
     }
-    document.getElementById('inv-panel').style.display   = 'block';
-    document.getElementById('inv-overlay').style.display = 'block';
+    panel.style.display   = 'block';
+    overlay.style.display = 'block';
     document.body.style.overflow = 'hidden';
   }
 
