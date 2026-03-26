@@ -289,8 +289,10 @@ Pages.Dashboard = (() => {
                 </div>`}
           </td>
           <td style="${S.tdm};font-size:15px;color:${isUpcoming ? '#0C447C' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};font-size:15px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
-            ${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:15px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
+          <td style="${S.tdm};font-size:15px;color:${st === 'overdue' ? '#A32D2D' : isDone ? '#085041' : 'var(--tx3)'}">
+            ${isDone
+              ? (lot.actualDone || lot.targetDate || '—')
+              : `${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:13px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}`}
           </td>
           <td style="${S.td}">${badge(stLabel, stStyle)} ${unpaidBadge}</td>
         </tr>`;
@@ -313,8 +315,13 @@ Pages.Dashboard = (() => {
 
   // ── 6. Completed Job Orders 표 ──────────────────────────────
   function _renderCompletedTable(doneLots, dailies, invoices) {
-    if (!doneLots.length) return '';
-    const sorted = [...doneLots].sort((a, b) => String(b.actualDone || b.inDate || '').localeCompare(String(a.actualDone || a.inDate || '')));
+    // 수금 완료된 LOT만 표시 (미수금/부분수금은 위 Active 테이블에 있음)
+    const paidLots = doneLots.filter(l => {
+      const inv = invoices.find(r => String(r.lotId) === String(l.id));
+      return inv && (inv.status === 'paid' || inv.status === 'partial');
+    });
+    if (!paidLots.length) return '';
+    const sorted = [...paidLots].sort((a, b) => String(b.actualDone || b.inDate || '').localeCompare(String(a.actualDone || a.inDate || '')));
     const rows = sorted.map(lot => {
       const inv = invoices.find(r => String(r.lotId) === String(lot.id));
       const rev = inv ? parseNumber(inv.total || inv.amount) : parseNumber(lot.price) * parseNumber(lot.qty);

@@ -169,7 +169,11 @@ Pages.Revenue = (() => {
             </td>
             <td style="padding:11px 18px;text-align:left">
               ${hasInv
-                ? `<span style="font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>`
+                ? `<div style="display:flex;align-items:center;gap:6px">
+                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:15px;font-weight:600;color:#085041">$${formatNumber(Math.round(amt))}</span>
+                    <input type="number" id="rv-amt-${lot.id}" value="${amt}"
+                      style="display:none;width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:15px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:#0C447C">
+                  </div>`
                 : st === 'upcoming'
                   ? `<span style="font-size:15px;color:var(--tx3)">—</span>`
                   : `<div style="display:flex;align-items:center;gap:6px">
@@ -182,8 +186,20 @@ Pages.Revenue = (() => {
             <td style="padding:11px 14px">
               ${bdg(paidLabel, paidStyle)}
             </td>
-            <td style="padding:4px 8px">
-              ${inv ? `<button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.openPanel('${inv.id}')">수정</button>` : ''}
+            <td style="padding:4px 8px;white-space:nowrap">
+              ${hasInv
+                ? `<button class="btn sm" style="font-size:13px;padding:2px 7px"
+                    onclick="(function(){
+                      var d=document.getElementById('rv-amt-display-${lot.id}');
+                      var i=document.getElementById('rv-amt-${lot.id}');
+                      var b=this;
+                      if(i.style.display==='none'){
+                        d.style.display='none';i.style.display='inline-block';b.textContent='저장';b.style.background='#185FA5';b.style.color='#fff';b.style.border='none';
+                      } else {
+                        Pages.Revenue.saveInvoice(${lot.id}, i.value);
+                      }
+                    }).call(this)">수정</button>`
+                : ''}
             </td>
           </tr>`;
       }).join('');
@@ -402,11 +418,11 @@ Pages.Revenue = (() => {
   }
 
   // ── 인라인 인보이스 저장 ─────────────────────────────────────
-  async function saveInvoice(lotId) {
+  async function saveInvoice(lotId, overrideAmt) {
     const lot    = Store.getLots().find(l => l.id === lotId || String(l.id) === String(lotId));
     if (!lot) return;
     const amtEl  = document.getElementById('rv-amt-' + lotId);
-    const amount = parseNumber(amtEl?.value);
+    const amount = parseNumber(overrideAmt !== undefined ? overrideAmt : amtEl?.value);
     if (!amount) { UI.toast('금액을 입력해 주세요', true); return; }
 
     const existing = Store.getInvoices().find(r => String(r.lotId) === String(lotId));
@@ -420,14 +436,14 @@ Pages.Revenue = (() => {
       country:      lot.country,
       customerName: lot.customerName || '',
       amount,
-      vat:          0,
+      vat:          existing?.vat || 0,
       total:        amount,
       currency:     lot.currency || 'USD',
-      status:       'paid',
-      paidDate:     lot.actualDone || today(),
+      status:       existing?.status || 'paid',
+      paidDate:     existing?.paidDate || lot.actualDone || today(),
       paidAmt:      amount,
-      due:          '',
-      note:         '',
+      due:          existing?.due || '',
+      note:         existing?.note || '',
     };
 
     Store.upsertInvoice(record);
