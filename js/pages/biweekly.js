@@ -82,46 +82,57 @@ Pages.Biweekly = (() => {
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
       const TH  = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;${attr}">${t}</th>`;
-      const THR = (t, attr='') => `<th style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;width:68px;${attr}">${t}</th>`;
-      const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:13px;border:0.5px solid var(--bd);width:68px;${attr}">${t}</td>`;
+      const THR = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
+      const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:12px;border:0.5px solid var(--bd);width:62px;${attr}">${t}</td>`;
       const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:500;border:0.5px solid var(--bd);white-space:nowrap;${attr}">${t}</td>`;
 
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
         const monthHeaders = MONTHS.map(m =>
           `<th colspan="${CO.length}" style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:${m===curMonth?'#0C447C':'var(--tx2)'};background:${m===curMonth?'#E6F1FB':'var(--bg)'};border:0.5px solid var(--bd)">${m}월</th>`
-        ).join('');
+        ).join('') + `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd)">연간합계</th>`;
 
         const coHeaders = MONTHS.map(m =>
           CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#EEF4FF;':'')).join('')
-        ).join('');
+        ).join('') + THR('합계', 'background:#F1EFE8;width:80px');
 
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
         const dataRows = BIZ.map(biz => {
+          let rowTotal = 0;
           const cells = MONTHS.map((m, mi) =>
             CO.map((co, ci) => {
               const val = type === 'proc'
                 ? _procByBizCo(biz, co, curYear, m)
                 : _revByBizCo(biz, co, curYear, m);
               grandTotal[mi * CO.length + ci] += val;
+              rowTotal += val;
               const display = val > 0
                 ? (type === 'proc' ? formatNumber(val) : '$' + formatNumber(Math.round(val)))
                 : '—';
               return TD(display, `color:${val>0?'var(--tx)':'var(--tx3)'};${m===curMonth?'background:#F5F9FF;':''}`);
             }).join('')
           ).join('');
-          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}</tr>`;
+          const rowTotalDisplay = rowTotal > 0
+            ? (type === 'proc' ? formatNumber(rowTotal) : '$' + formatNumber(Math.round(rowTotal)))
+            : '—';
+          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowTotalDisplay, 'font-weight:600;background:#F9F8F5;color:#085041;width:80px')}</tr>`;
         }).join('');
 
+        // 합계 행
+        let colGrandTotal = 0;
         const totalCells = MONTHS.map((m, mi) =>
           CO.map((co, ci) => {
             const v = grandTotal[mi * CO.length + ci];
+            colGrandTotal += v;
             const display = v > 0
               ? (type === 'proc' ? formatNumber(v) : '$' + formatNumber(Math.round(v)))
               : '—';
             return TD(display, `font-weight:600;color:${v>0?'#085041':'var(--tx3)'};background:var(--bg);${m===curMonth?'background:#EEF4FF;':''}`);
           }).join('')
         ).join('');
+        const grandTotalDisplay = colGrandTotal > 0
+          ? (type === 'proc' ? formatNumber(colGrandTotal) : '$' + formatNumber(Math.round(colGrandTotal)))
+          : '—';
 
         const unit  = type === 'proc' ? '(ea)' : '(USD)';
         const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
@@ -132,8 +143,9 @@ Pages.Biweekly = (() => {
           <div style="overflow-x:auto;margin-bottom:20px;width:100%">
             <table style="border-collapse:collapse;width:100%;table-layout:fixed">
               <colgroup>
-                <col style="width:100px">
-                ${MONTHS.map(() => CO.map(() => `<col style="width:68px">`).join('')).join('')}
+                <col style="width:90px">
+                ${MONTHS.map(() => CO.map(() => `<col style="width:62px">`).join('')).join('')}
+                <col style="width:80px">
               </colgroup>
               <thead>
                 <tr>${TH('사업명')}${monthHeaders}</tr>
@@ -141,7 +153,7 @@ Pages.Biweekly = (() => {
               </thead>
               <tbody>${dataRows}</tbody>
               <tfoot>
-                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}</tr>
+                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;background:#F1EFE8;color:#085041;width:80px')}</tr>
               </tfoot>
             </table>
           </div>`;
@@ -227,13 +239,20 @@ Pages.Biweekly = (() => {
 
           <div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">■ 처리 완료 (Invoice 발행 기준)</div>
           <div style="overflow-x:auto;margin-bottom:14px">
-            <table style="border-collapse:collapse;width:100%">
+            <table style="border-collapse:collapse;width:100%;table-layout:fixed">
+              <colgroup>
+                <col style="width:110px">
+                <col style="width:90px">
+                <col style="width:90px">
+                <col style="width:120px">
+                <col style="width:100px">
+              </colgroup>
               <thead>
                 <tr>
-                  ${TH('구분', 'min-width:110px;text-align:center')}
+                  ${TH('구분')}
                   ${THR('싱가포르')}
                   ${THR('홍콩')}
-                  ${THR('Invoice 발행 금액', 'width:130px')}
+                  ${THR('Invoice 발행 금액', 'width:120px')}
                   ${THR('평균 단가', 'width:100px')}
                 </tr>
               </thead>
@@ -243,10 +262,15 @@ Pages.Biweekly = (() => {
 
           <div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">■ 현재 진행중</div>
           <div style="overflow-x:auto;margin-bottom:24px">
-            <table style="border-collapse:collapse;width:100%">
+            <table style="border-collapse:collapse;width:100%;table-layout:fixed">
+              <colgroup>
+                <col style="width:110px">
+                <col style="width:90px">
+                <col style="width:90px">
+              </colgroup>
               <thead>
                 <tr>
-                  ${TH('구분', 'min-width:110px;text-align:center')}
+                  ${TH('구분')}
                   ${THR('싱가포르')}
                   ${THR('홍콩')}
                 </tr>

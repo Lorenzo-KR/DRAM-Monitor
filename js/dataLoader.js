@@ -92,26 +92,32 @@ const DataLoader = (() => {
      * 병렬 요청으로 빠르게 처리
      */
     async loadAll() {
-      await Api.setupSheets();
+      // 로딩 상태 표시
+      const loadEl = document.getElementById('loading-overlay');
+      if (loadEl) loadEl.style.display = 'flex';
 
-      const S = CONFIG.SHEETS;
-      const [customers, lots, dailies, invoices, shipments, targets, settings] = await Promise.all([
-        Api.getAll(S.CUSTOMERS),
-        Api.getAll(S.LOTS),
-        Api.getAll(S.DAILY),
-        Api.getAll(S.INVOICES),
-        Api.getAll(S.SHIPMENTS),
-        Api.getAll(S.TARGETS).catch(() => []),
-        Api.getAll('settings').catch(() => []),
-      ]);
+      try {
+        // 통합 API — 1번 호출로 전체 데이터 수신 (왕복 최소화)
+        const token = Auth.getToken();
+        const res   = await fetch(`${CONFIG.API_URL}?action=getAllData&token=${token}`);
+        const data  = await res.json();
 
-      Store.setCustomers(customers.map(normalizeCustomer));
-      Store.setLots(lots.map(normalizeLot));
-      Store.setDailies(dailies.map(normalizeDaily));
-      Store.setInvoices(invoices.map(normalizeInvoice));
-      Store.setShipments(shipments.map(normalizeShipment));
-      Store.setTargets(targets.map(normalizeTarget));
-      Store.loadSettings(settings);
+        if (data?.error === 'UNAUTHORIZED') {
+          sessionStorage.removeItem(Auth._TOKEN_KEY);
+          location.reload();
+          return;
+        }
+
+        Store.setCustomers((data.customers || []).map(normalizeCustomer));
+        Store.setLots((data.lots || []).map(normalizeLot));
+        Store.setDailies((data.daily || []).map(normalizeDaily));
+        Store.setInvoices((data.invoices || []).map(normalizeInvoice));
+        Store.setShipments((data.shipments || []).map(normalizeShipment));
+        Store.setTargets((data.targets || []).map(normalizeTarget));
+        Store.loadSettings(data.settings || []);
+      } finally {
+        if (loadEl) loadEl.style.display = 'none';
+      }
     },
 
     /**

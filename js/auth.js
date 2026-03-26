@@ -37,6 +37,8 @@ const Auth = {
       if (data.token) {
         sessionStorage.setItem(this._TOKEN_KEY, data.token);
         document.getElementById('login-screen').style.display = 'none';
+        const loadEl = document.getElementById('loading-overlay');
+        if (loadEl) loadEl.style.display = 'flex';
         await DataLoader.loadAll();
         Nav.go('dash');
       } else {
