@@ -241,6 +241,16 @@
           </div>
           <div class="fld"><label>제품</label><input type="text" id="ep-prod"></div>
           <div class="fld"><label>비고</label><input type="text" id="ep-note"></div>
+          <div style="border-top:0.5px solid var(--bd);padding-top:12px;margin-top:4px">
+            <div style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">완료 처리</div>
+            <div class="fld" style="margin-bottom:10px"><label>완료 여부</label>
+              <select id="ep-done">
+                <option value="0">진행 중</option>
+                <option value="1">완료</option>
+              </select>
+            </div>
+            <div class="fld"><label>실제 완료일</label><input type="date" id="ep-actual-done"></div>
+          </div>
         </div>
         <div style="display:flex;gap:8px;margin-top:20px">
           <button class="btn pri" onclick="Pages.Progress.saveLotEdit()" style="flex:1;padding:11px">저장</button>
