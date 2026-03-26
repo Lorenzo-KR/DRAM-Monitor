@@ -183,7 +183,7 @@ Pages.Revenue = (() => {
               ${bdg(paidLabel, paidStyle)}
             </td>
             <td style="padding:4px 8px">
-              ${inv ? `<button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.openPanel(${inv.id})">수정</button>` : ''}
+              ${inv ? `<button class="btn sm" style="font-size:14px;padding:2px 7px" onclick="Pages.Invoice.openPanel('${inv.id}')">수정</button>` : ''}
             </td>
           </tr>`;
       }).join('');
