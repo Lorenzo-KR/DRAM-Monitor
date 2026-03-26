@@ -232,14 +232,27 @@ Pages.Dashboard = (() => {
 
   // ── 5. Active + Upcoming Job Orders 표 ─────────────────────
   function _renderActiveTable(activeLots, dailies) {
-    // 입고예정(미래 입고일) 포함
-    const upcomingLots = activeLots.filter(l => l.inDate > today());
+    const invoices = Store.getInvoices();
+
+    // 진행중/입고예정 LOT
+    const upcomingLots   = activeLots.filter(l => l.inDate > today());
     const inProgressLots = activeLots.filter(l => l.inDate <= today());
-    const allLots = [...upcomingLots, ...inProgressLots];
+
+    // 완료됐지만 입금 대기 중인 LOT (미수금/부분수금)
+    const doneLots   = Store.getLots().filter(l => getLotStatus(l) === 'done');
+    const unpaidLots = doneLots.filter(l => {
+      const inv = invoices.find(r => String(r.lotId) === String(l.id));
+      return !inv || inv.status === 'unpaid' || inv.status === 'partial';
+    });
+
+    const allLots = [...upcomingLots, ...inProgressLots, ...unpaidLots];
     if (!allLots.length) return '';
 
     const rows = allLots.map(lot => {
       const isUpcoming = lot.inDate > today();
+      const isDone     = getLotStatus(lot) === 'done';
+      const inv        = invoices.find(r => String(r.lotId) === String(lot.id));
+      const isUnpaid   = isDone && (!inv || inv.status === 'unpaid' || inv.status === 'partial');
       const cum    = isUpcoming ? 0 : getLotCumulative(lot.id, dailies);
       const qty    = parseNumber(lot.qty);
       const rem    = Math.max(0, qty - cum);
@@ -248,12 +261,16 @@ Pages.Dashboard = (() => {
       const dd     = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
       const ddIn   = isUpcoming ? diffDays(today(), lot.inDate) : null;
       const pctColor = st === 'overdue' ? '#A32D2D' : pct >= 80 ? '#BA7517' : '#0C447C';
-      const barColor = st === 'overdue' ? '#E24B4A' : st === 'upcoming' ? '#378ADD' : pct >= 80 ? '#EF9F27' : '#185FA5';
+      const barColor = st === 'overdue' ? '#E24B4A' : st === 'upcoming' ? '#378ADD' : st === 'done' ? '#1D9E75' : pct >= 80 ? '#EF9F27' : '#185FA5';
       const stStyle  = st === 'upcoming' ? 'background:#E6F1FB;color:#0C447C' : ST_STYLE[st] || '';
       const stLabel  = st === 'upcoming' ? '입고예정' : ST_LABEL[st] || st;
+      const rowBg    = isUpcoming ? 'background:#F5F9FF' : isUnpaid ? 'background:#FFFBF3' : '';
+      const unpaidBadge = isUnpaid
+        ? badge(inv?.status === 'partial' ? '부분수금' : '미수금', inv?.status === 'partial' ? 'background:#FAEEDA;color:#633806' : 'background:#FCEBEB;color:#791F1F')
+        : '';
 
       return `
-        <tr style="${isUpcoming ? 'background:#F5F9FF' : ''}">
+        <tr style="${rowBg}">
           <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
@@ -275,12 +292,12 @@ Pages.Dashboard = (() => {
           <td style="${S.tdm};font-size:15px;color:${st === 'overdue' ? '#A32D2D' : 'var(--tx3)'}">
             ${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:15px;margin-left:4px;color:${dd < 0 ? '#A32D2D' : dd <= 3 ? '#BA7517' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}
           </td>
-          <td style="${S.td}">${badge(stLabel, stStyle)}</td>
+          <td style="${S.td}">${badge(stLabel, stStyle)} ${unpaidBadge}</td>
         </tr>`;
     }).join('');
 
     return `
-      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders</div>
+      <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정 · 미수금)</span></div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>

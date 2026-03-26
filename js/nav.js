@@ -19,7 +19,7 @@ const Nav = (() => {
   const PAGES = {
     dash:       { index: 0, render: () => Pages.Dashboard.render() },
     progress:   { index: 1, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
-    revenue:    { index: 2, render: () => { Pages.Revenue.setMode('year'); } },
+    revenue:    { index: 2, render: () => { Pages.Invoice.render(); Pages.Revenue.setMode('year'); } },
     kpitarget:  { index: 3, render: () => Pages.KpiTarget.render() },
     country:    { index: 4, render: () => Pages.Country.render() },
     verify:     { index: 5, render: () => Pages.Verify.render() },
