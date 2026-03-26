@@ -419,13 +419,26 @@ Pages.Revenue = (() => {
 
   // ── 인라인 인보이스 저장 ─────────────────────────────────────
   async function saveInvoice(lotId, overrideAmt) {
-    const lot    = Store.getLots().find(l => l.id === lotId || String(l.id) === String(lotId));
+    const lot = Store.getLots().find(l => l.id === lotId || String(l.id) === String(lotId));
     if (!lot) return;
-    const amtEl  = document.getElementById('rv-amt-' + lotId);
-    const amount = parseNumber(overrideAmt !== undefined ? overrideAmt : amtEl?.value);
-    if (!amount) { UI.toast('금액을 입력해 주세요', true); return; }
+    const amtEl   = document.getElementById('rv-amt-' + lotId);
+    const rawVal  = overrideAmt !== undefined ? String(overrideAmt) : (amtEl?.value || '');
+    const amount  = parseNumber(rawVal);
+    const isEmpty = rawVal.trim() === '' || amount === 0;
 
     const existing = Store.getInvoices().find(r => String(r.lotId) === String(lotId));
+
+    // 0 또는 빈값 → 기존 인보이스 삭제 (입력 대기 상태로 리셋)
+    if (isEmpty) {
+      if (existing) {
+        Store.deleteInvoice(existing.id);
+        Api.delete(CONFIG.SHEETS.INVOICES, existing.id);
+        UI.toast('입력 초기화됨');
+        render();
+      }
+      return;
+    }
+
     const record = {
       id:           existing ? existing.id : Date.now(),
       no:           existing?.no || ('INV-' + Date.now()),
