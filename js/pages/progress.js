@@ -571,17 +571,19 @@ Pages.Progress = (() => {
     const lot = Store.getLotById(lotId); if (!lot) return;
     _editLotId = lotId;
 
-    document.getElementById('ep-lot').value    = lot.lotNo    || '';
-    document.getElementById('ep-co').value     = lot.country  || 'HK';
-    document.getElementById('ep-biz').value    = lot.biz      || 'DRAM';
-    document.getElementById('ep-cust').value   = lot.customerName || '';
-    document.getElementById('ep-indate').value = lot.inDate   || '';
-    document.getElementById('ep-tgt').value    = lot.targetDate || '';
-    document.getElementById('ep-qty').value    = lot.qty      || '';
-    document.getElementById('ep-price').value  = lot.price    || '';
-    document.getElementById('ep-cur').value    = lot.currency || 'USD';
-    document.getElementById('ep-prod').value   = lot.product  || '';
-    document.getElementById('ep-note').value   = lot.note     || '';
+    document.getElementById('ep-lot').value          = lot.lotNo       || '';
+    document.getElementById('ep-co').value           = lot.country     || 'HK';
+    document.getElementById('ep-biz').value          = lot.biz         || 'DRAM';
+    document.getElementById('ep-cust').value         = lot.customerName|| '';
+    document.getElementById('ep-indate').value       = lot.inDate      || '';
+    document.getElementById('ep-tgt').value          = lot.targetDate  || '';
+    document.getElementById('ep-qty').value          = lot.qty         || '';
+    document.getElementById('ep-price').value        = lot.price       || '';
+    document.getElementById('ep-cur').value          = lot.currency    || 'USD';
+    document.getElementById('ep-prod').value         = lot.product     || '';
+    document.getElementById('ep-note').value         = lot.note        || '';
+    document.getElementById('ep-done').value         = lot.done        || '0';
+    document.getElementById('ep-actual-done').value  = lot.actualDone  || '';
 
     const ok = document.getElementById('ep-ok'); if (ok) ok.style.display = 'none';
     document.getElementById('lot-edit-panel').style.display   = 'block';
@@ -603,6 +605,8 @@ Pages.Progress = (() => {
 
   async function saveLotEdit() {
     const lot = Store.getLotById(_editLotId); if (!lot) return;
+    const doneVal      = document.getElementById('ep-done')?.value || '0';
+    const actualDone   = document.getElementById('ep-actual-done')?.value || '';
     const updated = {
       ...lot,
       lotNo:        document.getElementById('ep-lot').value.trim()   || lot.lotNo,
@@ -616,6 +620,8 @@ Pages.Progress = (() => {
       currency:     document.getElementById('ep-cur').value,
       product:      document.getElementById('ep-prod').value.trim(),
       note:         document.getElementById('ep-note').value.trim(),
+      done:         doneVal,
+      actualDone:   doneVal === '1' ? (actualDone || today()) : actualDone,
     };
     Store.upsertLot(updated);
     Api.update(CONFIG.SHEETS.LOTS, _editLotId, updated);
