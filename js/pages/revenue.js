@@ -124,7 +124,7 @@ Pages.Revenue = (() => {
         const stStyle = st === 'upcoming' ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
           : st === 'done'    ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
           : st === 'overdue' ? 'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2'
-          : 'border:1px solid var(--bd);color:var(--tx2);background:transparent';
+          : 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
         const stLabel = st === 'upcoming' ? '입고예정' : st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행중';
 
         // 입력 상태 (수금완료 → 입력완료)
@@ -132,7 +132,7 @@ Pages.Revenue = (() => {
           ? inv.status === 'paid'    ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
           : inv.status === 'partial' ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
           :                            'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2'
-          : 'border:1px solid var(--bd);color:var(--tx2);background:transparent';
+          : 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
         const paidLabel = inv
           ? inv.status === 'paid' ? '입력완료' : inv.status === 'partial' ? '부분입력' : '미입력'
           : '입력 대기';
@@ -144,7 +144,7 @@ Pages.Revenue = (() => {
         const doneDateColor = st === 'done' ? '#085041' : 'var(--tx3)';
 
         totalAmt += amt;
-        const rowBg = !hasInv && st !== 'upcoming' ? 'background:#FFFBF3' : st === 'upcoming' ? 'background:#F5F9FF' : '';
+        const rowBg = !hasInv && st !== 'upcoming' ? 'background:#FFFBEE' : st === 'upcoming' ? 'background:#F0F8FF' : '';
 
         return `
           <tr style="${rowBg}">
@@ -207,9 +207,9 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr style="background:var(--tbl-sum-bg)">
-          <td colspan="9" style="padding:11px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
-          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
-          <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
+          <td colspan="9" style="padding:11px 14px;font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">합계 (${lots.length}건)</td>
+          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="2" style="border-top:1px solid var(--tbl-sum-bd)"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
