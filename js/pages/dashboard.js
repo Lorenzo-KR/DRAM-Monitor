@@ -16,8 +16,8 @@ Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
   const S = {
-    th:  'padding:11px 14px;text-align:left;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
-    thr: 'padding:11px 14px;text-align:right;font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap',
+    th:  'padding:11px 14px;text-align:left;font-size:13px;font-weight:600;color:#E6F1FB;text-transform:uppercase;letter-spacing:.05em;background:#1B4F8A;border-bottom:0.5px solid #2563a8;white-space:nowrap',
+    thr: 'padding:11px 14px;text-align:right;font-size:13px;font-weight:600;color:#E6F1FB;text-transform:uppercase;letter-spacing:.05em;background:#1B4F8A;border-bottom:0.5px solid #2563a8;white-space:nowrap',
     td:  'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle',
     tdr: 'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:15px',
     tdm: 'padding:11px 14px;border-bottom:0.5px solid var(--bd);color:var(--tx3);vertical-align:middle;font-size:15px',
