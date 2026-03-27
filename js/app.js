@@ -20,6 +20,8 @@ window.addEventListener('error', (event) => {
     // 이미 로그인된 상태 — 바로 데이터 로드
     document.getElementById('login-screen').style.display = 'none';
     await DataLoader.loadAll();
+    // kpiTarget.js는 dataLoader보다 나중에 로드되므로 여기서 동기화
+    if (Pages.KpiTarget?.loadFromSettings) Pages.KpiTarget.loadFromSettings();
     Nav.go('dash');
   } else {
     // 로그인 화면 표시

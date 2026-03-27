@@ -92,31 +92,29 @@ function normalizeDate(value) {
   if (!value) return '';
   const s = String(value).trim();
 
-  // 이미 YYYY-MM-DD 형태면 그대로
+  // 이미 YYYY-MM-DD 형태면 그대로 반환 (가장 흔한 케이스)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // ISO 문자열(Z 또는 +HH:MM 포함)이면 로컬 타임존 기준 날짜 추출
+  // ISO 문자열(T 포함)이면 로컬 타임존 기준 날짜 추출
+  // ex) "2026-03-22T15:00:00.000Z" → 한국(UTC+9)에서는 2026-03-23
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d)) {
-      // 로컬 시각 기준 YYYY-MM-DD
       const yyyy = d.getFullYear();
       const mm   = String(d.getMonth() + 1).padStart(2, '0');
       const dd   = String(d.getDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     }
+    // 파싱 실패 시 T 앞부분만 반환
+    return s.split('T')[0];
   }
 
-  // "Sat Mar 22 2026 ..." 같은 Date.toString() 형태
-  const d = new Date(s);
-  if (!isNaN(d)) {
-    const yyyy = d.getFullYear();
-    const mm   = String(d.getMonth() + 1).padStart(2, '0');
-    const dd   = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  // "2026/03/23" 슬래시 형태
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
+    return s.replace(/\//g, '-');
   }
 
-  // 그 외 그대로 반환
+  // 그 외(빈 문자열, 숫자 등) — T 기준으로 앞부분만
   return s.split('T')[0];
 }
 

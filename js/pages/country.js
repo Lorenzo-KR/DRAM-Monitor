@@ -40,8 +40,8 @@ Pages.Country = (() => {
 
         if (bl.length === 0 && bill === 0) return `
           <div class="co-biz-card" style="border-top-color:${CONFIG.BIZ_COLORS[b]};opacity:.45">
-            <div class="co-biz-head"><span class="co-biz-name" style="color:${CONFIG.BIZ_COLORS[b]}">${CONFIG.BIZ_LABELS[b]}</span><span class="bdg b-neu" style="font-size:14px">없음</span></div>
-            <div style="font-size:14px;color:var(--tx3);text-align:center;padding:8px 0">LOT 없음</div>
+            <div class="co-biz-head"><span class="co-biz-name" style="color:${CONFIG.BIZ_COLORS[b]}">${CONFIG.BIZ_LABELS[b]}</span><span class="bdg b-neu" style="font-size:12px">없음</span></div>
+            <div style="font-size:12px;color:var(--tx3);text-align:center;padding:8px 0">LOT 없음</div>
           </div>`;
 
         const avgPct = actB.length > 0 ? Math.round(actB.reduce((s, l) => s + getLotProgress(l, dailies), 0) / actB.length) : 0;
@@ -55,7 +55,7 @@ Pages.Country = (() => {
             <div class="co-row"><span class="co-l">완료 LOT</span><span class="co-v" style="color:#166534">${doneB.length}건</span></div>
             <div class="co-row"><span class="co-l">잔량</span><span class="co-v" style="color:${remB > 0 ? '#92400e' : 'var(--tx3)'}">${formatNumber(remB)}</span></div>
             <div class="co-row"><span class="co-l">${useMonth ? '이달' : '누적'} 청구</span><span class="co-v" style="color:${CONFIG.BIZ_COLORS[b]}">${formatNumberShort(bill)}</span></div>
-            ${actB.length > 0 ? `<div class="pb-w" style="margin-top:6px"><div class="pb" style="width:${avgPct}%;background:${CONFIG.BIZ_COLORS[b]}"></div></div><div style="font-size:14px;color:var(--tx3);margin-top:2px">평균 진행률 ${avgPct}%</div>` : ''}
+            ${actB.length > 0 ? `<div class="pb-w" style="margin-top:6px"><div class="pb" style="width:${avgPct}%;background:${CONFIG.BIZ_COLORS[b]}"></div></div><div style="font-size:12px;color:var(--tx3);margin-top:2px">평균 진행률 ${avgPct}%</div>` : ''}
           </div>`;
       }).join('');
 
