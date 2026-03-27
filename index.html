@@ -71,49 +71,56 @@
      ═══════════════════════════════════════════════════════════ -->
 <div class="layout">
 
-  <!-- ─── Sidebar — 아이콘 전용 ──────────────────────────── -->
+  <!-- ─── Sidebar ────────────────────────────────────────── -->
   <aside class="sb">
     <div class="sb-logo">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
-        <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
-      </svg>
+      <div class="sb-logo-t">Test Ops Monitor</div>
+      <div class="sb-logo-s">DRAM · SSD · Mobile Ink Die</div>
     </div>
 
     <nav class="sb-nav">
-      <button class="ni on" data-tip="대시보드" onclick="Nav.go('dash')">
+      <div class="sb-sec">Overview</div>
+      <button class="ni on" onclick="Nav.go('dash')">
         <svg fill="none" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="9" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.4"/></svg>
+        대시보드
       </button>
-      <button class="ni" data-tip="Bi-Weekly" onclick="Nav.go('biweekly')">
+      <button class="ni" onclick="Nav.go('biweekly')">
         <svg fill="none" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="1.2" stroke="currentColor" stroke-width="1.4"/><path d="M5 1.5v2M11 1.5v2M1.5 6.5h13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Bi-Weekly
       </button>
-      <button class="ni" data-tip="LOT 진행현황" onclick="Nav.go('progress')">
+      <button class="ni" onclick="Nav.go('progress')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3l2 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        LOT 진행현황
       </button>
 
-      <div class="sb-sec"></div>
-
-      <button class="ni" data-tip="매출현황" onclick="Nav.go('revenue')">
+      <div class="sb-sec">재무</div>
+      <button class="ni" onclick="Nav.go('revenue')">
         <svg fill="none" viewBox="0 0 16 16"><path d="M1.5 11.5l3.5-3.5 2.5 2.5 3.5-4 3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        매출현황
       </button>
 
-      <div class="sb-sec"></div>
-
-      <button class="ni" data-tip="KPI 목표설정" onclick="Nav.go('kpitarget')">
+      <div class="sb-sec">관리</div>
+      <button class="ni" onclick="Nav.go('kpitarget')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2.8" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r=".8" fill="currentColor"/></svg>
+        KPI 목표설정
       </button>
-      <button class="ni" data-tip="국가별현황" onclick="Nav.go('country')">
+      <button class="ni" onclick="Nav.go('country')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M2 8h12M8 2c-1.5 2-2.2 3.8-2.2 6s.7 4 2.2 6M8 2c1.5 2 2.2 3.8 2.2 6s-.7 4-2.2 6" stroke="currentColor" stroke-width="1.1"/></svg>
+        국가별현황
       </button>
-      <button class="ni" data-tip="데이터검증" onclick="Nav.go('verify')">
+      <button class="ni" onclick="Nav.go('verify')">
         <svg fill="none" viewBox="0 0 16 16"><path d="M2 4.5h12M2 8h7M2 11.5h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="12" cy="11" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M11 11l.8.8 1.4-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        데이터검증
       </button>
-      <button class="ni" data-tip="고객사관리" onclick="Nav.go('customers')">
+      <button class="ni" onclick="Nav.go('customers')">
         <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 13.5c0-3 2.5-4.5 5.5-4.5s5.5 1.5 5.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        고객사관리
       </button>
     </nav>
 
     <div class="sb-bot">
       <div class="sdot" id="sdot"></div>
+      <span class="sb-bot-txt">연결됨</span>
     </div>
   </aside>
 
@@ -156,12 +163,12 @@
           <div style="display:flex;gap:4px" id="chart-year-tabs"></div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-          <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">지역</span>
+          <span style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">지역</span>
           <button class="pill pa on" data-chart-co="" onclick="Pages.Progress.setChartCountry(this)">전체</button>
           <button class="pill phk" data-chart-co="HK" onclick="Pages.Progress.setChartCountry(this)">홍콩</button>
           <button class="pill psg" data-chart-co="SG" onclick="Pages.Progress.setChartCountry(this)">싱가포르</button>
           <span class="sep"></span>
-          <span style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:2px">사업</span>
+          <span style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">사업</span>
           <button class="pill pa on" data-chart-biz="" onclick="Pages.Progress.setChartBiz(this)">전체</button>
           <button class="pill pd" data-chart-biz="DRAM" onclick="Pages.Progress.setChartBiz(this)">DRAM</button>
           <button class="pill ps" data-chart-biz="SSD" onclick="Pages.Progress.setChartBiz(this)">SSD</button>
@@ -186,7 +193,7 @@
         <button class="pill"  data-k="st" data-v="inprog" onclick="Pages.Progress.setFilter(this,'st')">진행중</button>
         <button class="pill"  data-k="st" data-v="overdue" onclick="Pages.Progress.setFilter(this,'st')">지연</button>
         <button class="pill"  data-k="st" data-v="done" onclick="Pages.Progress.setFilter(this,'st')">완료</button>
-        <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="pr-cnt"></span>
+        <span style="margin-left:auto;font-size:13px;color:var(--tx3)" id="pr-cnt"></span>
       </div>
       <div id="pr-cards"></div>
 

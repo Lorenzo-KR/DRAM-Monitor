@@ -30,7 +30,7 @@ Pages.Progress = (() => {
   const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', done: 'var(--tx)' };
 
   function _badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;font-size:13px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
   }
 
   // ── 차트 ───────────────────────────────────────────────────
@@ -142,7 +142,7 @@ Pages.Progress = (() => {
           <div style="font-size:15px;font-weight:600;color:${it.color};margin-bottom:4px">${it.label}</div>
           <div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">${formatNumber(it.yearTotal)}</div>
           <div style="font-size:14px;color:var(--tx3);margin-top:2px">${chartYear}년 누적</div>
-          <div style="font-size:14px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${formatNumber(it.thisM)}</div>
+          <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${formatNumber(it.thisM)}</div>
         </div>`).join('');
     }
   }
@@ -198,8 +198,8 @@ Pages.Progress = (() => {
         </td>
         <td style="${tdS}"></td>
         <td style="${tdS}">
-          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:500;cursor:pointer">+ 등록</button>
-          <span id="nl-ok" style="display:none;font-size:15px;color:#3B6D11;font-weight:500">✓</span>
+          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer">+ 등록</button>
+          <span id="nl-ok" style="display:none;font-size:13px;color:#3B6D11;font-weight:500">✓</span>
         </td>
       </tr>`;
   }
@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:11px 14px;text-align:${align};font-size:9.5px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -283,25 +283,25 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:var(--bg)':''}">
-          <td style="padding:11px 14px;text-align:center">
+          <td style="padding:10px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:11px 14px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:11px 14px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:11px 14px;font-size:15px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
+          <td style="padding:10px 14px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td style="padding:10px 14px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:11px 14px;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
           <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${rem>0?'var(--tx3)':'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="padding:11px 14px">
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'var(--tx3)':'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:10px 14px">
             ${st==='upcoming'
-              ? `<span style="font-size:15px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
+              ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
                   <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
-                  <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                  <span style="font-size:13px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:11px 14px;font-size:15px;color:${st==='upcoming'?'var(--tx2)':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
+          <td style="padding:11px 14px;font-size:13px;color:${st==='upcoming'?'var(--tx2)':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
           <td style="padding:11px 14px;font-size:15px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D':'color:var(--tx3)'}">
             ${st==='done'
               ? (lot.actualDone || lot.targetDate || '—')
@@ -309,7 +309,7 @@ Pages.Progress = (() => {
                 ? (lot.targetDate || '—')
                 : `${lot.targetDate||'—'}${dd!==null?`<span style="font-size:13px;margin-left:3px;color:${dd<0?'#dc2626':dd<=3?'var(--tx3)':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}`}
           </td>
-          <td style="padding:11px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td style="padding:10px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td style="padding:6px 8px;white-space:nowrap">
             <button class="btn sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
             <button class="btn del sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
@@ -326,7 +326,7 @@ Pages.Progress = (() => {
 
     el.innerHTML = `
       <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
           <colgroup>
             <col style="width:36px">
             <col style="width:56px">
@@ -365,7 +365,7 @@ Pages.Progress = (() => {
     const colGrid = isDram ? '90px 60px 60px 60px 70px 70px 70px 1fr 30px' : '90px 70px 70px 70px 1fr 30px';
 
     const histRows = hist.length === 0
-      ? `<div style="font-size:14px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
+      ? `<div style="font-size:13px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal)+parseNumber(r.noBoot)+parseNumber(r.abnormal))||parseNumber(r.proc) : parseNumber(r.proc);
           return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
@@ -374,13 +374,13 @@ Pages.Progress = (() => {
             <span style="font-family:var(--font-mono);font-weight:500;text-align:right">${formatNumber(tot)}</span>
             <span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.cumul))}</span>
             <span style="font-family:var(--font-mono);color:${parseNumber(r.remain)>0?'var(--tx3)':'var(--tx)'};text-align:right">${formatNumber(parseNumber(r.remain))}</span>
-            <span style="font-size:15px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
+            <span style="font-size:13px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
             <button class="btn del sm" style="padding:2px 6px;font-size:14px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
           </div>`;
         }).join('');
 
     const histHeader = `
-      <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1.5px solid var(--bd);font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">
+      <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1.5px solid var(--bd);font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">
         <span>날짜</span>${isDram?'<span style="text-align:right;color:#085041">Normal</span><span style="text-align:right;color:#633806">NoBoot</span><span style="text-align:right;color:#791F1F">Abnor.</span>':''}
         <span style="text-align:right">처리</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span>비고</span><span></span>
       </div>`;
@@ -389,7 +389,7 @@ Pages.Progress = (() => {
 
     return `
       <div style="padding:14px 16px;background:var(--bg)">
-        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
+        <div style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
         ${histHeader}${histRows}
 
         <div style="margin-top:14px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden">

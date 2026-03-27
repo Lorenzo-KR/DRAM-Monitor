@@ -68,7 +68,7 @@ Pages.Invoice = (() => {
               <td style="padding:9px 13px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
               <td style="padding:9px 13px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customerName || '—'}</td>
               <td style="padding:9px 13px;font-size:12px;color:var(--tx3)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
-              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
+              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
               <td style="padding:9px 13px;font-size:12px;color:${dueColor}">${r.due || '—'}${due !== null && r.status !== 'paid' ? ` (${dueText})` : ''}</td>
               <td style="padding:9px 13px">${badge(ST_LABEL[r.status] || '미수금', ST_STYLE[r.status] || ST_STYLE.unpaid)}</td>
               <td style="padding:4px 8px;white-space:nowrap">
@@ -125,7 +125,7 @@ Pages.Invoice = (() => {
           <tfoot>
             <tr style="background:var(--bg)">
               <td colspan="7" style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
-              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+              <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
             </tr>
           </tfoot>` : ''}
