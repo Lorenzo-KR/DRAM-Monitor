@@ -195,12 +195,16 @@ Pages.Biweekly = (() => {
         });
 
         // 더 직관적인 포맷으로 다시 구성
+        const BIZ_TD = (t) => `<td style="padding:7px 12px;text-align:center;font-size:13px;font-weight:500;border:0.5px solid var(--bd);background:var(--bg);white-space:nowrap">${t}</td>`;
+        const VAL_TD = (t, attr='') => `<td style="padding:7px 12px;text-align:right;font-size:13px;font-family:var(--font-mono);border:0.5px solid var(--bd);width:88px;${attr}">${t}</td>`;
+        const NA_TD  = (t) => `<td style="padding:7px 12px;text-align:right;font-size:13px;color:var(--tx3);border:0.5px solid var(--bd);width:88px">${t}</td>`;
+        const S_TH   = (t, w='88px') => `<th style="padding:7px 12px;text-align:center;font-size:12px;font-weight:500;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;width:${w}">${t}</th>`;
+
         const doneRows = BIZ.map(biz => {
           const sgKey = `${biz}_SG`;
           const hkKey = `${biz}_HK`;
           const sg = status[sgKey] || {};
           const hk = status[hkKey] || {};
-
           const sgQty  = sg.doneQty || 0;
           const hkQty  = hk.doneQty || 0;
           const sgAmt  = sg.doneAmt || 0;
@@ -208,17 +212,16 @@ Pages.Biweekly = (() => {
           const totAmt = sgAmt + hkAmt;
           const totQty = sgQty + hkQty;
           const avg    = totQty > 0 ? (totAmt / totQty).toFixed(1) + ' $/개' : '—';
-
           return `<tr>
-            <td style="padding:9px 16px;text-align:center;font-size:14px;font-weight:600;border:0.5px solid var(--bd);background:var(--bg)">${BIZ_LABELS[biz]}</td>
-            ${TD(sgQty > 0 ? formatNumber(sgQty) + ' 개' : 'NA')}
-            ${TD(hkQty > 0 ? formatNumber(hkQty) + ' 개' : (hkQty === 0 ? '0' : 'NA'))}
-            ${TD(totAmt > 0 ? '$' + formatNumber(Math.round(totAmt)) : '—', 'color:#085041;font-weight:500')}
-            ${TD(avg)}
+            ${BIZ_TD(BIZ_LABELS[biz])}
+            ${sgQty > 0 ? VAL_TD(formatNumber(sgQty) + ' 개') : NA_TD('NA')}
+            ${hkQty > 0 ? VAL_TD(formatNumber(hkQty) + ' 개') : NA_TD(hkQty === 0 ? '0' : 'NA')}
+            ${totAmt > 0 ? VAL_TD('$' + formatNumber(Math.round(totAmt)), 'color:#085041;font-weight:500') : NA_TD('—')}
+            ${avg !== '—' ? VAL_TD(avg) : NA_TD('—')}
           </tr>`;
         }).join('');
 
-        // 진행중 행 — 비고 제거
+        // 진행중 행
         const inProgRows = BIZ.map(biz => {
           const sgKey = `${biz}_SG`;
           const hkKey = `${biz}_HK`;
@@ -227,9 +230,9 @@ Pages.Biweekly = (() => {
           const sgProg = sg.inProgQty || 0;
           const hkProg = hk.inProgQty || 0;
           return `<tr>
-            <td style="padding:9px 16px;text-align:center;font-size:14px;font-weight:600;border:0.5px solid var(--bd);background:var(--bg)">${BIZ_LABELS[biz]}</td>
-            ${TD(sgProg > 0 ? formatNumber(sgProg) + ' 개' : '—')}
-            ${TD(hkProg > 0 ? formatNumber(hkProg) + ' 개' : 'NA')}
+            ${BIZ_TD(BIZ_LABELS[biz])}
+            ${sgProg > 0 ? VAL_TD(formatNumber(sgProg) + ' 개') : NA_TD('—')}
+            ${hkProg > 0 ? VAL_TD(formatNumber(hkProg) + ' 개') : NA_TD('NA')}
           </tr>`;
         }).join('');
 
@@ -238,22 +241,15 @@ Pages.Biweekly = (() => {
           <div style="font-size:12px;color:#E24B4A;font-weight:500;margin-bottom:10px">★ 처리 완료 기준: 인보이스 발행 완료 기준</div>
 
           <div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">■ 처리 완료 (Invoice 발행 기준)</div>
-          <div style="overflow-x:auto;margin-bottom:14px">
-            <table style="border-collapse:collapse;width:100%;table-layout:fixed">
-              <colgroup>
-                <col style="width:110px">
-                <col style="width:90px">
-                <col style="width:90px">
-                <col style="width:120px">
-                <col style="width:100px">
-              </colgroup>
+          <div style="margin-bottom:14px">
+            <table style="border-collapse:collapse;table-layout:auto">
               <thead>
                 <tr>
-                  ${TH('구분')}
-                  ${THR('싱가포르')}
-                  ${THR('홍콩')}
-                  ${THR('Invoice 발행 금액', 'width:120px')}
-                  ${THR('평균 단가', 'width:100px')}
+                  ${S_TH('구분', '110px')}
+                  ${S_TH('싱가포르')}
+                  ${S_TH('홍콩')}
+                  ${S_TH('Invoice 발행 금액', '130px')}
+                  ${S_TH('평균 단가', '90px')}
                 </tr>
               </thead>
               <tbody>${doneRows}</tbody>
@@ -261,18 +257,13 @@ Pages.Biweekly = (() => {
           </div>
 
           <div style="font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:6px">■ 현재 진행중</div>
-          <div style="overflow-x:auto;margin-bottom:24px">
-            <table style="border-collapse:collapse;width:100%;table-layout:fixed">
-              <colgroup>
-                <col style="width:110px">
-                <col style="width:90px">
-                <col style="width:90px">
-              </colgroup>
+          <div style="margin-bottom:24px">
+            <table style="border-collapse:collapse;table-layout:auto">
               <thead>
                 <tr>
-                  ${TH('구분')}
-                  ${THR('싱가포르')}
-                  ${THR('홍콩')}
+                  ${S_TH('구분', '110px')}
+                  ${S_TH('싱가포르')}
+                  ${S_TH('홍콩')}
                 </tr>
               </thead>
               <tbody>${inProgRows}</tbody>
@@ -296,11 +287,11 @@ Pages.Biweekly = (() => {
 
           <div style="height:1px;background:var(--bd);margin:8px 0 24px"></div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
-            <div>
+          <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+            <div style="flex:0 0 auto">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div>
+            <div style="flex:0 0 auto">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>
