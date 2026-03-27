@@ -63,9 +63,14 @@ function currentMonth() {
  * @returns {string} YYYY-MM-DD
  */
 function addDays(dateStr, days) {
-  const date = new Date(dateStr);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
+  // new Date("YYYY-MM-DD") 는 UTC 00:00 으로 파싱 → 한국에서 toISOString() 하면 하루 밀림
+  // 로컬 타임존 안전하게 처리
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const yyyy = date.getFullYear();
+  const mm   = String(date.getMonth() + 1).padStart(2, '0');
+  const dd   = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /**
@@ -78,9 +83,41 @@ function diffDays(a, b) {
   return Math.ceil((new Date(b) - new Date(a)) / (1000 * 86400));
 }
 
-/** ISO 문자열에서 YYYY-MM-DD만 추출 */
+/**
+ * ISO 문자열 또는 Date-like 값에서 YYYY-MM-DD만 추출
+ * ※ "2026-03-23T00:00:00.000Z" → UTC 기준 split → "2026-03-22" 오류 방지:
+ *    Date 객체나 ISO Z문자열이 들어왔을 때 로컬 타임존 기준으로 보정
+ */
 function normalizeDate(value) {
-  return value ? String(value).split('T')[0].trim() : '';
+  if (!value) return '';
+  const s = String(value).trim();
+
+  // 이미 YYYY-MM-DD 형태면 그대로
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // ISO 문자열(Z 또는 +HH:MM 포함)이면 로컬 타임존 기준 날짜 추출
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d)) {
+      // 로컬 시각 기준 YYYY-MM-DD
+      const yyyy = d.getFullYear();
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const dd   = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  // "Sat Mar 22 2026 ..." 같은 Date.toString() 형태
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    const yyyy = d.getFullYear();
+    const mm   = String(d.getMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // 그 외 그대로 반환
+  return s.split('T')[0];
 }
 
 // ─────────────────────────────────────────────────────────────
