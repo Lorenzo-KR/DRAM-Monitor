@@ -62,10 +62,11 @@ Pages.Biweekly = (() => {
       const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
       const prevYear  = curMonth === 1 ? curYear - 1 : curYear;
 
-      const MONTHS    = [1,2,3,4,5,6,7,8,9,10,11,12];
-      const BIZ       = CONFIG.BIZ_LIST;
-      const CO        = CONFIG.COUNTRY_LIST;
-      const CO_LABELS = { HK: '홍콩', SG: '싱가포르' };
+      const MONTHS     = [1,2,3,4,5,6,7,8,9,10,11,12];
+      const BIZ        = CONFIG.BIZ_LIST;
+      const CO         = CONFIG.COUNTRY_LIST;
+      const BIZ_LABELS = CONFIG.BIZ_LABELS;
+      const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
       // ── 공통 색상 상수 ──────────────────────────────────────
       // 표 선색: 헤더와 본문 모두 동일하게 #D2D2D7 사용
