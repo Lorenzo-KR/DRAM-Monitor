@@ -170,7 +170,7 @@ Pages.Revenue = (() => {
             <td style="padding:11px 18px;text-align:left">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;gap:6px">
-                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(amt))}</span>
+                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(amt))}</span>
                     <input type="number" id="rv-amt-${lot.id}" value="${amt}"
                       style="display:none;width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:var(--tx2)">
                   </div>`
@@ -208,7 +208,7 @@ Pages.Revenue = (() => {
       const totalRow = `
         <tr style="background:var(--bg)">
           <td colspan="9" style="padding:11px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
-          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
+          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
           <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
         </tr>`;
 

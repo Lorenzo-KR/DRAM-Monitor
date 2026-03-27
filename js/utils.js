@@ -89,33 +89,43 @@ function diffDays(a, b) {
  *    Date 객체나 ISO Z문자열이 들어왔을 때 로컬 타임존 기준으로 보정
  */
 function normalizeDate(value) {
-  if (!value) return '';
+  if (!value && value !== 0) return '';
   const s = String(value).trim();
+  if (!s) return '';
 
   // 이미 YYYY-MM-DD 형태면 그대로 반환 (가장 흔한 케이스)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // ISO 문자열(T 포함)이면 로컬 타임존 기준 날짜 추출
-  // ex) "2026-03-22T15:00:00.000Z" → 한국(UTC+9)에서는 2026-03-23
+  // ISO 문자열 (T 포함) — 로컬 타임존 기준 날짜 추출
+  // "2026-03-22T15:00:00.000Z" → 한국(UTC+9)에서는 2026-03-23
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d)) {
-      const yyyy = d.getFullYear();
-      const mm   = String(d.getMonth() + 1).padStart(2, '0');
-      const dd   = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
     }
-    // 파싱 실패 시 T 앞부분만 반환
-    return s.split('T')[0];
+    return s.slice(0, 10);
   }
 
   // "2026/03/23" 슬래시 형태
-  if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
-    return s.replace(/\//g, '-');
+  if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g, '-');
+
+  // "Sat Mar 22 2026 ..." 등 Date.toString() 형태 — Date 생성 후 로컬 기준 추출
+  // 숫자로만 된 타임스탬프(ms)도 처리
+  if (/^[A-Z]/.test(s) || /^\d{10,}$/.test(s)) {
+    const d = new Date(isNaN(s) ? s : Number(s));
+    if (!isNaN(d)) {
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
   }
 
-  // 그 외(빈 문자열, 숫자 등) — T 기준으로 앞부분만
-  return s.split('T')[0];
+  // 그 외: T 앞부분만 (혹시라도 잘라낼 수 있는 경우)
+  const cut = s.split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cut)) return cut;
+  return '';
 }
 
 // ─────────────────────────────────────────────────────────────

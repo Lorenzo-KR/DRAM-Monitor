@@ -16,11 +16,11 @@ Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
   const S = {
-    th:  'padding:10px 14px;text-align:left;font-size:9.5px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
-    thr: 'padding:10px 14px;text-align:right;font-size:9.5px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
-    td:  'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle',
-    tdr: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:15px',
-    tdm: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx2);vertical-align:middle;font-size:12px',
+    th:  'padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
+    thr: 'padding:10px 14px;text-align:right;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
+    td:  'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;font-size:13px',
+    tdr: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;font-size:13px;text-align:right;font-family:var(--font-mono);font-size:15px',
+    tdm: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx2);vertical-align:middle;font-size:13px',
   };
 
   // ── 배지 헬퍼 ───────────────────────────────────────────────
@@ -106,9 +106,9 @@ Pages.Dashboard = (() => {
 
     function kpiCard(label, value, sub, color = '', subExtra = '', fxInput = '') {
       return `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:4px">${label}</div>
-        <div style="font-size:20px;font-weight:600;line-height:1;${color ? 'color:' + color : ''}">${value}</div>
-        <div style="font-size:15px;color:var(--tx3);margin-top:3px">${sub}</div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">${label}</div>
+        <div style="font-size:22px;font-weight:600;line-height:1;${color ? 'color:' + color : ''}">${value}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:4px">${sub}</div>
         ${subExtra ? `<div style="font-size:13px;color:var(--tx3);margin-top:2px">${subExtra}</div>` : ''}
         ${fxInput ? `<div style="display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;border-top:0.5px solid var(--bd)">
           <span style="font-size:11px;color:var(--tx3)">환율</span>

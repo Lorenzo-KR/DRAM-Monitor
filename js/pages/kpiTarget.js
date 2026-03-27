@@ -293,6 +293,7 @@ Pages.KpiTarget = (() => {
     render() {
       // 페이지 진입 시 서버 settings → _rolling 재동기화 (로드 타이밍 보정)
       _loadFromSettings();
+      const el = document.getElementById('kpitarget-body'); if (!el) return;
       const year = _year;
 
       // 롤링 데이터 기반 연간 목표
@@ -338,8 +339,8 @@ Pages.KpiTarget = (() => {
           ${active?'background:var(--navy);color:#fff;border-color:var(--navy)':'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
       }).join('');
 
-      const TH  = l => `<th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
-      const THR = l => `<th style="padding:9px 14px;text-align:right;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
+      const TH  = l => `<th style="padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
+      const THR = l => `<th style="padding:10px 14px;text-align:right;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
 
       const bizBtns = [
         {key:'all', label:'전체', color:'#1B4F8A'},
