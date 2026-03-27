@@ -97,7 +97,8 @@ Pages.Dashboard = (() => {
   // ── 3. KPI 카드 (5개 한 줄) ─────────────────────────────────
   function _renderKpiRow(kpi) {
     const year     = new Date().getFullYear();
-    const totalTgt = CONFIG.BIZ_LIST.reduce((s, b) => s + (Store.getTargetFor(year, b)?.target || 0), 0);
+    // 롤링 기반 목표 (KPI 목표설정 탭과 동일한 값)
+    const totalTgt = Pages.KpiTarget.getTotalTarget(year);
     const totalAct = CONFIG.BIZ_LIST.reduce((s, b) =>
       s + kpi.invoices.filter(r => r.biz === b && String(r.date || '').startsWith(String(year))).reduce((t, r) => t + parseNumber(r.total || r.amount), 0), 0);
     const kpiPct   = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
@@ -154,7 +155,7 @@ Pages.Dashboard = (() => {
 
     const year     = new Date().getFullYear();
     const kpiBars  = CONFIG.BIZ_LIST.map(b => {
-      const tgt = Store.getTargetFor(year, b)?.target || 0; if (!tgt) return '';
+      const tgt = Pages.KpiTarget.getTarget(year, b); if (!tgt) return '';
       const act = kpi.invoices.filter(r => r.biz === b && String(r.date || '').startsWith(String(year))).reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
       const pct = Math.min(100, Math.round(act / tgt * 100));
       const color = CONFIG.BIZ_COLORS[b];
@@ -210,7 +211,7 @@ Pages.Dashboard = (() => {
     </div>`;
 
     // KPI 총 달성률
-    const totalTgtKpi = CONFIG.BIZ_LIST.reduce((s, b) => s + (Store.getTargetFor(year, b)?.target || 0), 0);
+    const totalTgtKpi = Pages.KpiTarget.getTotalTarget(year);
     const totalActKpi = CONFIG.BIZ_LIST.reduce((s, b) =>
       s + kpi.invoices.filter(r => r.biz === b && String(r.date || '').startsWith(String(year))).reduce((t, r) => t + parseNumber(r.total || r.amount), 0), 0);
     const totalKpiPct = totalTgtKpi > 0 ? Math.min(100, Math.round(totalActKpi / totalTgtKpi * 100)) : null;

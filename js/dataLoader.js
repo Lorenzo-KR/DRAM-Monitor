@@ -115,6 +115,9 @@ const DataLoader = (() => {
         Store.setShipments((data.shipments || []).map(normalizeShipment));
         Store.setTargets((data.targets || []).map(normalizeTarget));
         Store.loadSettings(data.settings || []);
+
+        // settings 시트의 kpi_rolling을 KpiTarget 내부 상태에 동기화
+        Pages.KpiTarget.loadFromSettings();
       } finally {
         if (loadEl) loadEl.style.display = 'none';
       }
