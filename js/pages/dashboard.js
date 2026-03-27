@@ -35,7 +35,7 @@ Pages.Dashboard = (() => {
   };
   const ST_STYLE = {
     done:    'border:1px solid var(--bd);color:var(--tx2);background:transparent',
-    inprog:  'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    inprog:  'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3',
     overdue: 'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2',
   };
   const ST_LABEL = { done: '완료', inprog: '진행중', overdue: '지연' };
@@ -263,7 +263,7 @@ Pages.Dashboard = (() => {
       const ddIn   = isUpcoming ? diffDays(today(), lot.inDate) : null;
       const pctColor = st === 'overdue' ? '#dc2626' : pct >= 80 ? 'var(--tx3)' : 'var(--tx2)';
       const barColor = st === 'overdue' ? '#dc2626' : st === 'upcoming' ? 'var(--tx3)' : st === 'done' ? 'var(--tx)' : pct >= 80 ? 'var(--tx3)' : 'var(--tx2)';
-      const stStyle  = st === 'upcoming' ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent' : ST_STYLE[st] || '';
+      const stStyle  = st === 'upcoming' ? 'border:1px solid #5AC8FA;color:#0077A8;background:#F0F8FF' : ST_STYLE[st] || '';
       const stLabel  = st === 'upcoming' ? '입고예정' : ST_LABEL[st] || st;
       const rowBg    = isUpcoming ? 'background:var(--bg)' : isUnpaid ? 'background:#FAFAF9' : '';
       const unpaidBadge = isUnpaid

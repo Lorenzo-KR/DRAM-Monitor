@@ -89,11 +89,11 @@ Pages.Biweekly = (() => {
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
         const monthHeaders = MONTHS.map(m =>
-          `<th colspan="${CO.length}" style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:${m===curMonth?'var(--tx)':'var(--tx2)'};background:${m===curMonth?'#EEECEA':'var(--bg)'};border:1px solid var(--bd);font-weight:${m===curMonth?'700':'600'}">${m}월</th>`
-        ).join('') + `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx3);background:var(--bg);border:0.5px solid #2563a8">연간합계</th>`;
+          `<th colspan="${CO.length}" style="padding:8px 6px;text-align:center;font-size:11px;font-weight:${m===curMonth?'700':'600'};color:var(--tbl-hd-tx);background:${m===curMonth?'#D8D8E8':'var(--tbl-hd-bg)'};border:1px solid var(--tbl-hd-bd)">${m}월</th>`
+        ).join('') + `<th style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-sum-bg);border:1px solid var(--tbl-hd-bd)">연간합계</th>`;
 
         const coHeaders = MONTHS.map(m =>
-          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#EAEAF2;':'')).join('')
+          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#D8D8E8;':'')).join('')
         ).join('') + THR('합계', 'width:80px;border-left:2px solid var(--bd2);background:var(--tbl-sum-bg)');
 
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
@@ -109,13 +109,13 @@ Pages.Biweekly = (() => {
               const display = val > 0
                 ? (type === 'proc' ? formatNumber(val) : '$' + formatNumber(Math.round(val)))
                 : '—';
-              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#EAEAF2;':''}`);
+              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#EAEAF2;border-left:1px solid #B8B8D0;':''}`);
             }).join('')
           ).join('');
           const rowTotalDisplay = rowTotal > 0
             ? (type === 'proc' ? formatNumber(rowTotal) : '$' + formatNumber(Math.round(rowTotal)))
             : '—';
-          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowTotalDisplay, 'font-weight:600;background:#F9F8F5;color:var(--tx);width:80px')}</tr>`;
+          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>`;
         }).join('');
 
         // 합계 행
@@ -127,7 +127,7 @@ Pages.Biweekly = (() => {
             const display = v > 0
               ? (type === 'proc' ? formatNumber(v) : '$' + formatNumber(Math.round(v)))
               : '—';
-            return TD(display, `font-weight:600;color:${v>0?'#085041':'var(--tx3)'};background:var(--bg);${m===curMonth?'background:var(--tbl-sum-bg);':''}`);
+            return TD(display, `font-weight:600;font-size:12px;color:${v>0?'var(--tbl-tx-sum)':'var(--tbl-empty)'};background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-sum-bd);${m===curMonth?'background:#D8D8E8;':''}`);
           }).join('')
         ).join('');
         const grandTotalDisplay = colGrandTotal > 0
@@ -153,7 +153,7 @@ Pages.Biweekly = (() => {
               </thead>
               <tbody>${dataRows}</tbody>
               <tfoot>
-                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>
+                <tr>${TDL('합계', 'font-weight:600;font-size:12px;color:var(--tbl-tx-sum);background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-sum-bd)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>
               </tfoot>
             </table>
           </div>`;
@@ -242,7 +242,7 @@ Pages.Biweekly = (() => {
 
           <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">처리 완료 — Invoice 발행 기준</div>
           <div style="margin-bottom:14px">
-            <table style="border-collapse:collapse;table-layout:auto">
+            <table style="border-collapse:collapse;table-layout:auto;width:100%">
               <thead>
                 <tr>
                   ${S_TH('구분', '110px')}
@@ -258,7 +258,7 @@ Pages.Biweekly = (() => {
 
           <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">현재 진행중</div>
           <div style="margin-bottom:24px">
-            <table style="border-collapse:collapse;table-layout:auto">
+            <table style="border-collapse:collapse;table-layout:auto;width:100%">
               <thead>
                 <tr>
                   ${S_TH('구분', '110px')}
@@ -287,11 +287,11 @@ Pages.Biweekly = (() => {
 
           <div style="height:1px;background:var(--bd);margin:8px 0 24px"></div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
-            <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+            <div style="background:var(--card);border:1px solid var(--tbl-wrap-bd);border-radius:10px;padding:20px 22px">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px">
+            <div style="background:var(--card);border:1px solid var(--tbl-wrap-bd);border-radius:10px;padding:20px 22px">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>
