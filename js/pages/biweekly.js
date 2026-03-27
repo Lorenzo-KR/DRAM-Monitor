@@ -83,8 +83,8 @@ Pages.Biweekly = (() => {
 
       const TH  = (t, attr='') => `<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;${attr}">${t}</th>`;
       const THR = (t, attr='') => `<th style="padding:8px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
-      const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:13px;font-family:var(--font-mono);border:1px solid var(--bd);width:62px;color:var(--tx);${attr}">${t}</td>`;
-      const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;${attr}">${t}</td>`;
+      const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);border:1px solid var(--bd);width:62px;white-space:nowrap;color:var(--tx);${attr}">${t}</td>`;
+      const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:var(--bg);${attr}">${t}</td>`;
 
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
@@ -94,7 +94,7 @@ Pages.Biweekly = (() => {
 
         const coHeaders = MONTHS.map(m =>
           CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#F5F4F1;':'')).join('')
-        ).join('') + THR('합계', 'width:80px');
+        ).join('') + THR('합계', 'width:80px;border-left:2px solid var(--bd2);background:#EEECEA');
 
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
         const dataRows = BIZ.map(biz => {
@@ -109,7 +109,7 @@ Pages.Biweekly = (() => {
               const display = val > 0
                 ? (type === 'proc' ? formatNumber(val) : '$' + formatNumber(Math.round(val)))
                 : '—';
-              return TD(display, `color:${val>0?'var(--tx)':'var(--tx3)'};${m===curMonth?'background:#F5F4F1;':''}`);
+              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#F5F4F1;':''}`);
             }).join('')
           ).join('');
           const rowTotalDisplay = rowTotal > 0
@@ -139,7 +139,7 @@ Pages.Biweekly = (() => {
         const basis = `<span style="font-size:11px;color:var(--tx3);margin-left:8px">인보이스 발행 완료 기준</span>`;
 
         return `
-          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:8px">${title} <span style="font-size:12px;font-weight:400;color:var(--tx3)">${unit}</span>${basis}</div>
+          <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">${title} <span style="font-size:12px;font-weight:400;color:var(--tx3)">${unit}</span>${basis}</div>
           <div style="overflow-x:auto;margin-bottom:20px;width:100%">
             <table style="border-collapse:collapse;width:100%;table-layout:fixed">
               <colgroup>
@@ -153,7 +153,7 @@ Pages.Biweekly = (() => {
               </thead>
               <tbody>${dataRows}</tbody>
               <tfoot>
-                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;background:var(--bg);color:var(--tx);width:80px')}</tr>
+                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;background:#EEECEA;color:var(--tx);width:80px;border-left:2px solid var(--bd2)')}</tr>
               </tfoot>
             </table>
           </div>`;
@@ -196,9 +196,9 @@ Pages.Biweekly = (() => {
 
         // 더 직관적인 포맷으로 다시 구성
         const BIZ_TD = (t) => `<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:600;color:var(--tx);border:1px solid var(--bd);background:var(--bg);white-space:nowrap">${t}</td>`;
-        const VAL_TD = (t, attr='') => `<td style="padding:8px 12px;text-align:right;font-size:13px;font-family:var(--font-mono);color:var(--tx);border:1px solid var(--bd);width:88px;${attr}">${t}</td>`;
-        const NA_TD  = (t) => `<td style="padding:8px 12px;text-align:right;font-size:13px;color:var(--tx4);border:1px solid var(--bd);width:88px">${t}</td>`;
-        const S_TH   = (t, w='88px') => `<th style="padding:8px 12px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;width:${w}">${t}</th>`;
+        const VAL_TD = (t, attr='') => `<td style="padding:8px 14px;text-align:right;font-size:13px;font-family:var(--font-mono);color:var(--tx);border:1px solid var(--bd);white-space:nowrap;min-width:110px;${attr}">${t}</td>`;
+        const NA_TD  = (t) => `<td style="padding:8px 14px;text-align:right;font-size:13px;color:var(--tx3);border:1px solid var(--bd);white-space:nowrap;min-width:110px">${t}</td>`;
+        const S_TH   = (t, w='110px') => `<th style="padding:8px 14px;text-align:center;font-size:13px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;min-width:${w}">${t}</th>`;
 
         const doneRows = BIZ.map(biz => {
           const sgKey = `${biz}_SG`;
@@ -237,8 +237,8 @@ Pages.Biweekly = (() => {
         }).join('');
 
         return `
-          <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:4px">${label}</div>
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">인보이스 발행 완료 기준</div>
+          <div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:4px">${label}</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">인보이스 발행 완료 기준</div>
 
           <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">처리 완료 — Invoice 발행 기준</div>
           <div style="margin-bottom:14px">
@@ -287,11 +287,11 @@ Pages.Biweekly = (() => {
 
           <div style="height:1px;background:var(--bd);margin:8px 0 24px"></div>
 
-          <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
-            <div style="flex:0 0 auto">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+            <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div style="flex:0 0 auto">
+            <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>

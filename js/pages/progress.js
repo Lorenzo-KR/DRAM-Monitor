@@ -138,11 +138,11 @@ Pages.Progress = (() => {
     if (totEl) {
       totEl.style.gridTemplateColumns = `repeat(${items.length},1fr)`;
       totEl.innerHTML = items.map(it => `
-        <div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">
-          <div style="font-size:15px;font-weight:600;color:${it.color};margin-bottom:4px">${it.label}</div>
-          <div style="font-size:16px;font-weight:600;font-family:var(--font-mono)">${formatNumber(it.yearTotal)}</div>
-          <div style="font-size:14px;color:var(--tx3);margin-top:2px">${chartYear}년 누적</div>
-          <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-top:4px">이달 ${formatNumber(it.thisM)}</div>
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px;text-align:center">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:6px">${it.label}</div>
+          <div style="font-size:18px;font-weight:600;font-family:var(--font-mono);color:var(--tx)">${formatNumber(it.yearTotal)}</div>
+          <div style="font-size:11px;color:var(--tx3);margin-top:3px">${chartYear}년 누적</div>
+          <div style="font-size:12px;color:var(--tx2);margin-top:4px">이달 <span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.thisM)}</span></div>
         </div>`).join('');
     }
   }
@@ -160,7 +160,7 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--bd);vertical-align:middle';
+    const tdS = 'padding:5px 8px;background:#F0EFEC;border-bottom:1px solid var(--bd);vertical-align:middle';
     const inp = 'border:1px solid var(--bd);border-radius:4px;background:#fff;font-size:14px';
     return `
       <tr id="new-lot-row">
@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:#F0EFEC;border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -282,7 +282,7 @@ Pages.Progress = (() => {
       const isOpen    = _openLotId === lot.id;
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:var(--bg)':''}">
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F4F3F1':''}">
           <td style="padding:10px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
@@ -717,7 +717,7 @@ Pages.Progress = (() => {
       </tr>`;
     }).join('');
 
-    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--bd)';
+    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;background:#F0EFEC;border-bottom:1px solid var(--bd)';
     previewEl.innerHTML = `
       <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">${parsed.length}건 인식됨 ${existing.size > 0 && parsed.some(r => existing.has(r.date)) ? '· <span style="color:#BA7517">노란색: 날짜 중복 (덮어쓰기)</span>' : ''}</div>
       <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);overflow:auto">
