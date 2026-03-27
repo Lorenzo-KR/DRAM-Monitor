@@ -6,8 +6,9 @@
 Pages.KpiTarget = (() => {
 
   let _year     = new Date().getFullYear();
-  let _bizSet   = new Set(['all']); // 복수 선택 가능, 'all'이면 전체
+  let _bizSet   = new Set(['all']);
   let _startMon = parseInt(localStorage.getItem('kpi_start_mon') || '4');
+  let _rollingYear = new Date().getFullYear();
 
   // ── 데이터 헬퍼 ────────────────────────────────────────────
   function _getActual(year, biz) {
@@ -375,19 +376,151 @@ Pages.KpiTarget = (() => {
           <!-- 월별 트래킹 섹션 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;gap:6px;flex-wrap:wrap">${bizBtns}</div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="font-size:12px;color:var(--tx3)">균등 배분</span>
-              <select onchange="Pages.KpiTarget.setStartMon(this.value)"
-                style="padding:4px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;background:var(--bg);color:var(--tx)">
-                ${monOpts}
-              </select>
-              <span style="font-size:12px;color:var(--tx3)">12월 균등</span>
-            </div>
+            <button onclick="Pages.KpiTarget.openRolling()"
+              style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:13px;font-weight:500;cursor:pointer">
+              <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              KPI 롤링 데이터 입력
+            </button>
           </div>
           <div id="kpi-tracking-wrap"></div>
         </div>`;
 
       _renderTracking();
+    },
+
+    openRolling() {
+      const el = document.getElementById('kpi-rolling-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      if (el) { el.style.display = 'block'; document.body.style.overflow = 'hidden'; }
+      if (ov) ov.style.display = 'block';
+      Pages.KpiTarget.renderRolling();
+    },
+
+    closeRolling() {
+      const el = document.getElementById('kpi-rolling-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      if (el) el.style.display = 'none';
+      if (ov) ov.style.display = 'none';
+      document.body.style.overflow = '';
+    },
+
+    setRollingYear(y) {
+      _rollingYear = parseInt(y);
+      Pages.KpiTarget.renderRolling();
+    },
+
+    calcRollingRow(input) {
+      const row = input.closest('tr');
+      const inputs = row.querySelectorAll('input[type=number]');
+      let sum = 0;
+      inputs.forEach(i => { sum += parseFloat(i.value)||0; });
+      const rt = row.querySelector('.rolling-rowtotal');
+      if (rt) rt.textContent = sum > 0 ? +sum.toFixed(4)+'' : '—';
+      Pages.KpiTarget.calcRollingAll();
+    },
+
+    calcRollingAll() {
+      const body = document.getElementById('rolling-tbody'); if (!body) return;
+      const rows = body.querySelectorAll('tr');
+      const colSums = Array(12).fill(0);
+      let grand = 0;
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll('input[type=number]');
+        let rowSum = 0;
+        inputs.forEach((inp, ci) => {
+          const v = parseFloat(inp.value)||0;
+          colSums[ci] += v; rowSum += v;
+        });
+        const rt = row.querySelector('.rolling-rowtotal');
+        if (rt) rt.textContent = rowSum > 0 ? +rowSum.toFixed(4)+'' : '—';
+      });
+      colSums.forEach((v, i) => {
+        const el = document.getElementById('rs'+i);
+        if (el) el.textContent = v > 0 ? +v.toFixed(4)+'' : '0';
+        grand += v;
+      });
+      const st = document.getElementById('rstotal');
+      if (st) st.textContent = grand > 0 ? +grand.toFixed(4)+'' : '0';
+    },
+
+    renderRolling() {
+      const wrap = document.getElementById('kpi-rolling-inner'); if (!wrap) return;
+      const y = _rollingYear;
+
+      // 초기값 데이터
+      const INIT = {
+        2026: {
+          DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
+          SSD:  [0,0,0.1,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667],
+          MID:  [0,0,1.2,0,0,1.2,0,0,1.2,0,0,1.2],
+        },
+      };
+      const ROWS = [
+        { key:'DRAM', label:'DRAM Test', fixed:true },
+        { key:'SSD',  label:'SSD Test',  fixed:true },
+        { key:'MID',  label:'Mobile Ink Die', fixed:true },
+        { key:'TBD1', label:'TBD', fixed:false },
+        { key:'TBD2', label:'TBD', fixed:false },
+        { key:'TBD3', label:'TBD', fixed:false },
+        { key:'TBD4', label:'TBD', fixed:false },
+        { key:'TBD5', label:'TBD', fixed:false },
+      ];
+      const MO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      const thS = 'padding:6px 6px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap';
+      const inpW = 'width:52px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
+
+      const tableRows = ROWS.map((r, i) => {
+        const initVals = INIT[y]?.[r.key] || Array(12).fill('');
+        const cells = initVals.map((v, mi) =>
+          `<td style="padding:3px 3px;border:0.5px solid var(--bd)"><input type="number" value="${v}" placeholder="0" step="0.0001" style="${inpW}" oninput="Pages.KpiTarget.calcRollingRow(this)"></td>`
+        ).join('');
+        const rowSum = initVals.reduce((s,v) => s + (parseFloat(v)||0), 0);
+        return `<tr>
+          <td style="padding:6px 8px;text-align:center;font-size:12px;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd)">${i+1}</td>
+          <td style="padding:6px 10px;font-size:13px;font-weight:${r.fixed?'500':'400'};color:${r.fixed?'var(--tx)':'var(--tx3)'};background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;text-align:center">${r.label}</td>
+          ${cells}
+          <td class="rolling-rowtotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;color:#085041;background:var(--bg);border:0.5px solid var(--bd);font-family:var(--font-mono)">${rowSum>0?+rowSum.toFixed(4):'—'}</td>
+        </tr>`;
+      }).join('');
+
+      // 초기 열 합계
+      const colSums = Array(12).fill(0);
+      ROWS.forEach(r => {
+        const vals = INIT[y]?.[r.key] || [];
+        vals.forEach((v,i) => { colSums[i] += parseFloat(v)||0; });
+      });
+      const grand = colSums.reduce((s,v)=>s+v,0);
+      const sumCells = colSums.map((v,i) =>
+        `<td id="rs${i}" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:0.5px solid var(--bd);font-family:var(--font-mono)">${v>0?+v.toFixed(4):'0'}</td>`
+      ).join('');
+
+      wrap.innerHTML = `
+        <div style="font-size:12px;color:#E24B4A;font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; 셀을 클릭해서 직접 입력하세요</div>
+        <div style="overflow-x:auto">
+          <table style="border-collapse:collapse;table-layout:auto">
+            <thead>
+              <tr>
+                <th style="${thS};width:30px">No.</th>
+                <th style="${thS};min-width:110px">구분</th>
+                ${MO.map(m=>`<th style="${thS};width:56px">${m}</th>`).join('')}
+                <th style="${thS};width:60px;background:#F1EFE8">합계</th>
+              </tr>
+            </thead>
+            <tbody id="rolling-tbody">${tableRows}</tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2" style="padding:6px 10px;text-align:center;font-size:13px;font-weight:500;background:#F1EFE8;border:0.5px solid var(--bd)">합계</td>
+                ${sumCells}
+                <td id="rstotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:600;color:#085041;background:#E8E4D8;border:0.5px solid var(--bd);font-family:var(--font-mono)">${grand>0?+grand.toFixed(4):'0'}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>`;
+    },
+
+    saveRolling() {
+      UI.toast('롤링 데이터 저장됨');
+      Pages.KpiTarget.closeRolling();
     },
 
     startEdit(year, biz, currentTgt) {

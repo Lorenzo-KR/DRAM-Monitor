@@ -466,7 +466,33 @@ Pages.Revenue = (() => {
     render();
   }
 
-  function exportExcel() { Pages.Invoice.exportExcel(); }
+  function exportExcel() {
+    const lots     = Store.getLots();
+    const invoices = Store.getInvoices();
+    const dailies  = Store.getDailies();
+
+    const data = lots.map((lot, i) => {
+      const inv = invoices.find(r => String(r.lotId) === String(lot.id));
+      const amt = inv ? parseNumber(inv.amount) : 0;
+      const pct = getLotProgress(lot, dailies);
+      const st  = lot.inDate > today() ? '입고예정' : getLotStatus(lot) === 'done' ? '완료' : getLotStatus(lot) === 'overdue' ? '지연' : '진행중';
+      return {
+        'No':         i + 1,
+        '입고일':      lot.inDate     || '',
+        '작업완료일':  lot.actualDone || '',
+        'LOT번호':     lot.lotNo      || '',
+        '사업':        CONFIG.BIZ_LABELS[lot.biz] || lot.biz,
+        '지역':        lot.country    || '',
+        '고객사':      lot.customerName || '',
+        '수량':        parseNumber(lot.qty),
+        '진행률(%)':   pct,
+        '상태':        st,
+        '매출액(USD)': amt > 0 ? amt : '',
+        '입력상태':    inv ? (inv.status === 'paid' ? '입력완료' : inv.status === 'partial' ? '부분입력' : '미입력') : '입력대기',
+      };
+    });
+    _xlsxExport(data, '매출현황_' + today() + '.xlsx', '매출현황');
+  }
 
   return { render, setMode, setBiz, setCo, saveInvoice };
 
