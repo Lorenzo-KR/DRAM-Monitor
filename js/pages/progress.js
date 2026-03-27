@@ -20,10 +20,10 @@ Pages.Progress = (() => {
 
   const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
   const ST_STYLE = {
-    upcoming: 'border:1px solid var(--bd);color:var(--tx2);background:transparent',
-    inprog:   'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    upcoming: 'border:1px solid #B0B0B8;color:#6E6E73;background:transparent',
+    inprog:   'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3',
     overdue:  'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2',
-    done:     'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    done:     'border:1px solid #B0B0B8;color:#6E6E73;background:#F5F5F7',
   };
   const CO_STYLE  = { HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
   const BIZ_STYLE = { DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SSD: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', MID: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
@@ -160,8 +160,8 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 8px;background:#F0EFEC;border-bottom:1px solid var(--bd);vertical-align:middle';
-    const inp = 'border:1px solid var(--bd);border-radius:4px;background:#fff;font-size:14px';
+    const tdS = 'padding:5px 8px;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);vertical-align:middle';
+    const inp = 'border:1px solid var(--tbl-wrap-bd);border-radius:4px;background:#fff;font-size:14px';
     return `
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:#F0EFEC;border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -282,7 +282,7 @@ Pages.Progress = (() => {
       const isOpen    = _openLotId === lot.id;
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F4F3F1':''}">
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F5F5F7':''}">
           <td style="padding:10px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
@@ -325,7 +325,7 @@ Pages.Progress = (() => {
     }).join('');
 
     el.innerHTML = `
-      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:auto">
+      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
           <colgroup>
             <col style="width:36px">
@@ -717,7 +717,7 @@ Pages.Progress = (() => {
       </tr>`;
     }).join('');
 
-    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;background:#F0EFEC;border-bottom:1px solid var(--bd)';
+    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)';
     previewEl.innerHTML = `
       <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">${parsed.length}건 인식됨 ${existing.size > 0 && parsed.some(r => existing.has(r.date)) ? '· <span style="color:#BA7517">노란색: 날짜 중복 (덮어쓰기)</span>' : ''}</div>
       <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);overflow:auto">

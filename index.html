@@ -20,7 +20,7 @@
 <body>
 
 <!-- 로딩 오버레이 -->
-<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:#F7F7F5;z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:#F5F5F7;z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:20px">
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
     <div style="display:flex;gap:5px">
       <div style="width:6px;height:6px;border-radius:50%;background:#111110;animation:ld-bounce .75s ease-in-out infinite"></div>
@@ -38,7 +38,7 @@
      LOGIN SCREEN
      ═══════════════════════════════════════════════════════════ -->
 <div id="login-screen"
-  style="position:fixed;inset:0;background:#F7F7F5;display:flex;align-items:center;justify-content:center;z-index:9999">
+  style="position:fixed;inset:0;background:#F5F5F7;display:flex;align-items:center;justify-content:center;z-index:9999">
   <div style="background:#fff;border:1px solid #E2E0DB;border-radius:14px;padding:40px 44px;width:340px">
     <div style="margin-bottom:32px">
       <div style="font-size:15px;font-weight:600;color:#111110;letter-spacing:-.01em;margin-bottom:4px">Test Ops Monitor</div>
@@ -47,7 +47,7 @@
     <div style="margin-bottom:12px">
       <label style="font-size:9.5px;font-weight:600;color:#A8A49E;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:6px">비밀번호</label>
       <input type="password" id="login-pw" placeholder="••••••"
-        style="width:100%;padding:9px 12px;border:1px solid #E2E0DB;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;background:#F7F7F5;color:#111110;outline:none;transition:border-color .12s"
+        style="width:100%;padding:9px 12px;border:1px solid #E2E0DB;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;background:#F5F5F7;color:#111110;outline:none;transition:border-color .12s"
         onkeydown="if(event.key==='Enter') Auth.login()"
         onfocus="this.style.borderColor='#A8A49E';this.style.background='#fff'"
         onblur="this.style.borderColor='#E2E0DB';this.style.background='#F7F7F5'">
@@ -199,7 +199,7 @@
 
       <!-- 삭제 확인 모달 -->
       <div id="lot-delete-modal" style="display:none;position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center">
-        <div onclick="Pages.Progress.cancelDelete()" style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>
+        <div onclick="Pages.Progress.cancelDelete()" style="position:absolute;inset:0;background:rgba(0,0,0,0.25)"></div>
         <div style="position:relative;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rm);padding:28px 28px 22px;width:360px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
             <div style="width:40px;height:40px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -223,7 +223,7 @@
       </div>
 
       <!-- LOT 수정 패널 -->
-      <div id="lot-edit-panel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:400;padding:24px;overflow-y:auto">
+      <div id="lot-edit-panel" style="display:none;position:fixed;top:0;right:0;width:380px;height:100vh;background:#FFFFFF;border-left:1px solid var(--tbl-wrap-bd);z-index:400;padding:24px;overflow-y:auto">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
           <div style="font-size:13px;font-weight:600">LOT 수정</div>
           <button onclick="Pages.Progress.closeEditPanel()" style="border:none;background:none;font-size:18px;color:var(--tx3);cursor:pointer;padding:0 4px;line-height:1">×</button>
@@ -351,7 +351,7 @@
       </div>
       <div id="ship-cards"><div class="empty" style="padding:48px">등록된 입고 예정이 없습니다</div></div>
       <!-- 입력 패널 (slide-in) -->
-      <div id="ship-panel" style="display:none;position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+      <div id="ship-panel" style="display:none;position:fixed;top:0;right:0;width:min(440px,100vw);height:100vh;background:#FFFFFF;border-left:1px solid var(--tbl-wrap-bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
         <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
           <div style="font-size:16px;font-weight:600" id="ship-panel-title">새 Shipment</div>
           <button onclick="Pages.Shipment.closePanel()" style="border:none;background:none;font-size:18px;color:var(--tx3);cursor:pointer;padding:0 4px">×</button>
@@ -498,7 +498,7 @@
       </div>
       <div id="inv-cards"></div>
       <!-- 인보이스 입력 패널 -->
-      <div id="inv-panel" style="display:none;position:fixed;top:0;right:0;width:min(480px,100vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
+      <div id="inv-panel" style="display:none;position:fixed;top:0;right:0;width:min(480px,100vw);height:100vh;background:#FFFFFF;border-left:1px solid var(--tbl-wrap-bd);z-index:300;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.12)">
         <div style="padding:20px 24px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1">
           <div style="font-size:16px;font-weight:600" id="inv-panel-title">새 인보이스</div>
           <button onclick="Pages.Invoice.closePanel()" style="border:none;background:none;font-size:18px;color:var(--tx3);cursor:pointer;line-height:1;padding:0 4px">×</button>
@@ -632,7 +632,7 @@
 
     <!-- KPI 롤링 데이터 패널 -->
     <div id="kpi-rolling-overlay" onclick="Pages.KpiTarget.closeRolling()"
-      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:499"></div>
+      style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:499"></div>
     <div id="kpi-rolling-panel"
       style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;width:min(96vw,1100px);max-height:90vh;overflow-y:auto;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r)">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:0.5px solid var(--bd);position:sticky;top:0;background:var(--card);z-index:1">
