@@ -46,14 +46,18 @@ function sumField(array, field) {
 // 2. 날짜
 // ─────────────────────────────────────────────────────────────
 
-/** 오늘 날짜를 YYYY-MM-DD로 */
+/** 오늘 날짜를 YYYY-MM-DD로 (로컬 타임존 기준) */
 function today() {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
 }
 
-/** 이번 달을 YYYY-MM로 */
+/** 이번 달을 YYYY-MM로 (로컬 타임존 기준) */
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
 /**
@@ -93,38 +97,42 @@ function normalizeDate(value) {
   const s = String(value).trim();
   if (!s) return '';
 
-  // 이미 YYYY-MM-DD 형태면 그대로 반환 (가장 흔한 케이스)
+  // ① YYYY-MM-DD 그대로
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // ISO 문자열 (T 포함) — 로컬 타임존 기준 날짜 추출
-  // "2026-03-22T15:00:00.000Z" → 한국(UTC+9)에서는 2026-03-23
+  // ② ISO 문자열 (T 포함) — 로컬 타임존 기준
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
-    if (!isNaN(d)) {
+    if (!isNaN(d.getTime())) {
       return d.getFullYear() + '-' +
         String(d.getMonth() + 1).padStart(2, '0') + '-' +
         String(d.getDate()).padStart(2, '0');
     }
-    return s.slice(0, 10);
+    const cut = s.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cut)) return cut;
   }
 
-  // "2026/03/23" 슬래시 형태
+  // ③ YYYY/MM/DD 슬래시
   if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g, '-');
 
-  // "Sat Mar 22 2026 ..." 등 Date.toString() 형태 — Date 생성 후 로컬 기준 추출
-  // 숫자로만 된 타임스탬프(ms)도 처리
-  if (/^[A-Z]/.test(s) || /^\d{10,}$/.test(s)) {
-    const d = new Date(isNaN(s) ? s : Number(s));
-    if (!isNaN(d)) {
-      return d.getFullYear() + '-' +
-        String(d.getMonth() + 1).padStart(2, '0') + '-' +
-        String(d.getDate()).padStart(2, '0');
-    }
+  // ④ M/D/YYYY 또는 MM/DD/YYYY (미국식)
+  const mdyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdyMatch) {
+    return mdyMatch[3] + '-' + mdyMatch[1].padStart(2,'0') + '-' + mdyMatch[2].padStart(2,'0');
   }
 
-  // 그 외: T 앞부분만 (혹시라도 잘라낼 수 있는 경우)
-  const cut = s.split('T')[0];
+  // ⑤ 숫자 타임스탬프(ms) 또는 "Sat Mar 22 2026..." 형태
+  const d = new Date(isNaN(s) ? s : Number(s));
+  if (!isNaN(d.getTime()) && d.getFullYear() > 2000) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  // ⑥ 그 외 T 기준으로 잘라보기
+  const cut = s.split('T')[0].trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(cut)) return cut;
+
   return '';
 }
 

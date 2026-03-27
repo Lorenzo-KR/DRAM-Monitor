@@ -100,11 +100,25 @@ const DataLoader = (() => {
         // 통합 API — 1번 호출로 전체 데이터 수신 (왕복 최소화)
         const token = Auth.getToken();
         const res   = await fetch(`${CONFIG.API_URL}?action=getAllData&token=${token}`);
-        const data  = await res.json();
+
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          console.error('[DataLoader] JSON 파싱 실패:', jsonErr);
+          UI.toast('데이터 파싱 오류 — 새로고침 해주세요', true);
+          return;
+        }
 
         if (data?.error === 'UNAUTHORIZED') {
           sessionStorage.removeItem(Auth._TOKEN_KEY);
           location.reload();
+          return;
+        }
+
+        if (data?.error) {
+          console.error('[DataLoader] API 오류:', data.error);
+          UI.toast('데이터 로드 오류: ' + data.error, true);
           return;
         }
 
@@ -116,11 +130,22 @@ const DataLoader = (() => {
         Store.setTargets((data.targets || []).map(normalizeTarget));
         Store.loadSettings(data.settings || []);
 
+        // 로드 결과 콘솔 확인 (개발용)
+        console.log('[DataLoader] 로드 완료 —',
+          'lots:', Store.getLots().length,
+          '| dailies:', Store.getDailies().length,
+          '| invoices:', Store.getInvoices().length,
+          '| customers:', Store.getCustomers().length
+        );
+
         // settings 시트의 kpi_rolling을 KpiTarget 내부 상태에 동기화
         // ※ Pages.KpiTarget은 dataLoader보다 나중에 로드되므로 존재 여부 확인 필수
         if (typeof Pages !== 'undefined' && Pages.KpiTarget?.loadFromSettings) {
           Pages.KpiTarget.loadFromSettings();
         }
+      } catch (err) {
+        console.error('[DataLoader] loadAll 오류:', err);
+        UI.toast('서버 연결 오류 — 새로고침 해주세요', true);
       } finally {
         if (loadEl) loadEl.style.display = 'none';
       }
