@@ -75,6 +75,22 @@ Pages.KpiTarget = (() => {
     Api.setSetting('kpi_rolling', JSON.stringify(_rolling));
   }
 
+  // ── 서버 settings에서 rolling 데이터 동기화 ───────────────
+  function _loadFromSettings() {
+    const raw = Store.getSetting('kpi_rolling');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        // 서버 값을 로컬에 병합 (서버 우선)
+        Object.keys(parsed).forEach(y => {
+          _rolling[y] = { ...(_rolling[y] || {}), ...parsed[y] };
+        });
+        localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
+      }
+    } catch(e) { /* ignore */ }
+  }
+
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
 
   function switchBiz(biz) {
@@ -263,6 +279,16 @@ Pages.KpiTarget = (() => {
   // ── 메인 렌더 ──────────────────────────────────────────────
   return {
     selectYear, switchBiz,
+
+    // ── 외부 참조용 (dashboard 등) ─────────────────────────
+    /** 연간 목표 합계 (USD) — 롤링 기반 */
+    getTarget:        (year, biz)        => _getTarget(year, biz),
+    /** 전 사업 연간 목표 합계 (USD) */
+    getTotalTarget:   (year)             => _getTotalTarget(year),
+    /** 월별 목표 (USD, month: 1~12) */
+    getMonthlyTarget: (year, biz, month) => _getMonthlyTarget(year, biz, month),
+    /** 앱 로드 후 서버 settings → _rolling 동기화 */
+    loadFromSettings: ()                 => _loadFromSettings(),
 
     render() {
       const el = document.getElementById('kpitarget-body'); if (!el) return;
