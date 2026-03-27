@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:11px 14px;text-align:${align};font-size:14px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:11px 14px;text-align:${align};font-size:13px;font-weight:600;color:#E6F1FB;text-transform:uppercase;letter-spacing:.05em;background:#1B4F8A;border-bottom:0.5px solid #2563a8;white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -717,7 +717,7 @@ Pages.Progress = (() => {
       </tr>`;
     }).join('');
 
-    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:0.5px solid var(--bd)';
+    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:#E6F1FB;text-transform:uppercase;background:#1B4F8A;border-bottom:0.5px solid #2563a8';
     previewEl.innerHTML = `
       <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">${parsed.length}건 인식됨 ${existing.size > 0 && parsed.some(r => existing.has(r.date)) ? '· <span style="color:#BA7517">노란색: 날짜 중복 (덮어쓰기)</span>' : ''}</div>
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);overflow:auto">

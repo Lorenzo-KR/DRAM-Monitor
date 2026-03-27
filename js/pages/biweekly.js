@@ -81,20 +81,20 @@ Pages.Biweekly = (() => {
       const BIZ_LABELS = CONFIG.BIZ_LABELS;
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
-      const TH  = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;${attr}">${t}</th>`;
-      const THR = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
+      const TH  = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:#E6F1FB;background:#1B4F8A;border:0.5px solid #2563a8;white-space:nowrap;${attr}">${t}</th>`;
+      const THR = (t, attr='') => `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:#E6F1FB;background:#1B4F8A;border:0.5px solid #2563a8;white-space:nowrap;width:62px;${attr}">${t}</th>`;
       const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:12px;border:0.5px solid var(--bd);width:62px;${attr}">${t}</td>`;
-      const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:500;border:0.5px solid var(--bd);white-space:nowrap;${attr}">${t}</td>`;
+      const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:700;border:0.5px solid var(--bd);white-space:nowrap;${attr}">${t}</td>`;
 
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
         const monthHeaders = MONTHS.map(m =>
-          `<th colspan="${CO.length}" style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:${m===curMonth?'#0C447C':'var(--tx2)'};background:${m===curMonth?'#E6F1FB':'var(--bg)'};border:0.5px solid var(--bd)">${m}월</th>`
-        ).join('') + `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:0.5px solid var(--bd)">연간합계</th>`;
+          `<th colspan="${CO.length}" style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:${m===curMonth?'#fff':'#E6F1FB'};background:${m===curMonth?'#0C447C':'#1B4F8A'};border:0.5px solid #2563a8">${m}월</th>`
+        ).join('') + `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:#E6F1FB;background:#1B4F8A;border:0.5px solid #2563a8">연간합계</th>`;
 
         const coHeaders = MONTHS.map(m =>
-          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#EEF4FF;':'')).join('')
-        ).join('') + THR('합계', 'background:#F1EFE8;width:80px');
+          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#0C447C;border-color:#185FA5;':'')).join('')
+        ).join('') + THR('합계', 'background:#0C447C;border-color:#185FA5;width:80px');
 
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
         const dataRows = BIZ.map(biz => {
@@ -195,10 +195,10 @@ Pages.Biweekly = (() => {
         });
 
         // 더 직관적인 포맷으로 다시 구성
-        const BIZ_TD = (t) => `<td style="padding:7px 12px;text-align:center;font-size:13px;font-weight:500;border:0.5px solid var(--bd);background:var(--bg);white-space:nowrap">${t}</td>`;
+        const BIZ_TD = (t) => `<td style="padding:7px 12px;text-align:center;font-size:13px;font-weight:700;border:0.5px solid var(--bd);background:var(--bg);white-space:nowrap">${t}</td>`;
         const VAL_TD = (t, attr='') => `<td style="padding:7px 12px;text-align:right;font-size:13px;font-family:var(--font-mono);border:0.5px solid var(--bd);width:88px;${attr}">${t}</td>`;
         const NA_TD  = (t) => `<td style="padding:7px 12px;text-align:right;font-size:13px;color:var(--tx3);border:0.5px solid var(--bd);width:88px">${t}</td>`;
-        const S_TH   = (t, w='88px') => `<th style="padding:7px 12px;text-align:center;font-size:12px;font-weight:500;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;width:${w}">${t}</th>`;
+        const S_TH   = (t, w='88px') => `<th style="padding:7px 12px;text-align:center;font-size:12px;font-weight:600;color:#E6F1FB;background:#1B4F8A;border:0.5px solid #2563a8;white-space:nowrap;width:${w}">${t}</th>`;
 
         const doneRows = BIZ.map(biz => {
           const sgKey = `${biz}_SG`;
