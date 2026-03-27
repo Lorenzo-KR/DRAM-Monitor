@@ -130,13 +130,42 @@ const DataLoader = (() => {
         Store.setTargets((data.targets || []).map(normalizeTarget));
         Store.loadSettings(data.settings || []);
 
-        // 로드 결과 콘솔 확인 (개발용)
+        // 로드 결과 콘솔 확인
+        const _lots = Store.getLots();
+        const _dailies = Store.getDailies();
+        const _invoices = Store.getInvoices();
         console.log('[DataLoader] 로드 완료 —',
-          'lots:', Store.getLots().length,
-          '| dailies:', Store.getDailies().length,
-          '| invoices:', Store.getInvoices().length,
+          'lots:', _lots.length,
+          '| dailies:', _dailies.length,
+          '| invoices:', _invoices.length,
           '| customers:', Store.getCustomers().length
         );
+        // 첫 번째 행 raw 데이터 확인 (날짜 형식 진단)
+        if (_lots.length > 0) {
+          const l = _lots[0];
+          console.log('[DataLoader] lots[0] raw 날짜 —',
+            'inDate:', JSON.stringify(l.inDate),
+            '| targetDate:', JSON.stringify(l.targetDate),
+            '| actualDone:', JSON.stringify(l.actualDone)
+          );
+        }
+        if (_invoices.length > 0) {
+          const inv = _invoices[0];
+          console.log('[DataLoader] invoices[0] raw —',
+            'date:', JSON.stringify(inv.date),
+            '| biz:', inv.biz,
+            '| amount:', inv.amount,
+            '| total:', inv.total
+          );
+        }
+        if (_dailies.length > 0) {
+          const d = _dailies[0];
+          console.log('[DataLoader] dailies[0] raw —',
+            'date:', JSON.stringify(d.date),
+            '| proc:', d.proc,
+            '| biz:', d.biz
+          );
+        }
 
         // settings 시트의 kpi_rolling을 KpiTarget 내부 상태에 동기화
         // ※ Pages.KpiTarget은 dataLoader보다 나중에 로드되므로 존재 여부 확인 필수

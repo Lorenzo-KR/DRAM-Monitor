@@ -93,14 +93,34 @@ function diffDays(a, b) {
  *    Date 객체나 ISO Z문자열이 들어왔을 때 로컬 타임존 기준으로 보정
  */
 function normalizeDate(value) {
-  if (!value && value !== 0) return '';
-  const s = String(value).trim();
-  if (!s) return '';
+  if (value === null || value === undefined || value === '') return '';
 
-  // ① YYYY-MM-DD 그대로
+  // ── Google Sheets serial date number (예: 46083 → 2026-03-23) ──
+  // Sheets는 날짜를 정수로 저장. 1899-12-30 기준 일수
+  if (typeof value === 'number' && value > 1000 && value < 100000) {
+    const msPerDay = 86400000;
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(epoch.getTime() + value * msPerDay);
+    if (!isNaN(d.getTime())) {
+      return d.getUTCFullYear() + '-' +
+        String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getUTCDate()).padStart(2, '0');
+    }
+  }
+
+  const s = String(value).trim();
+  if (!s || s === '[object Object]' || s === 'null' || s === 'undefined') return '';
+
+  // ① YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // ② ISO 문자열 (T 포함) — 로컬 타임존 기준
+  // ② YYYY-M-D (leading zero 없는 경우)
+  const ymdMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (ymdMatch) {
+    return ymdMatch[1] + '-' + ymdMatch[2].padStart(2,'0') + '-' + ymdMatch[3].padStart(2,'0');
+  }
+
+  // ③ ISO 문자열 (T 포함) — 로컬 타임존 기준
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
@@ -112,24 +132,42 @@ function normalizeDate(value) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(cut)) return cut;
   }
 
-  // ③ YYYY/MM/DD 슬래시
-  if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) return s.replace(/\//g, '-');
+  // ④ YYYY/MM/DD 또는 YYYY/M/D
+  if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(s)) {
+    const _p = s.split('/');
+    return _p[0] + '-' + _p[1].padStart(2,'0') + '-' + _p[2].padStart(2,'0');
+  }
 
-  // ④ M/D/YYYY 또는 MM/DD/YYYY (미국식)
+  // ⑤ M/D/YYYY 미국식
   const mdyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (mdyMatch) {
     return mdyMatch[3] + '-' + mdyMatch[1].padStart(2,'0') + '-' + mdyMatch[2].padStart(2,'0');
   }
 
-  // ⑤ 숫자 타임스탬프(ms) 또는 "Sat Mar 22 2026..." 형태
-  const d = new Date(isNaN(s) ? s : Number(s));
-  if (!isNaN(d.getTime()) && d.getFullYear() > 2000) {
-    return d.getFullYear() + '-' +
-      String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0');
+  // ⑥ 숫자 문자열 (Sheets serial)
+  const num = Number(s);
+  if (!isNaN(num) && num > 1000 && num < 100000) {
+    const msPerDay = 86400000;
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    const d = new Date(epoch.getTime() + num * msPerDay);
+    if (!isNaN(d.getTime())) {
+      return d.getUTCFullYear() + '-' +
+        String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getUTCDate()).padStart(2, '0');
+    }
   }
 
-  // ⑥ 그 외 T 기준으로 잘라보기
+  // ⑦ "Sat Mar 22 2026..." Date.toString() 형태
+  if (/^[A-Za-z]{3}\s/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2000) {
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+  }
+
+  // ⑧ T 기준 앞부분만
   const cut = s.split('T')[0].trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(cut)) return cut;
 
