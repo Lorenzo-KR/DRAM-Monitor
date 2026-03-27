@@ -1,16 +1,58 @@
 /**
  * pages/kpiTarget.js
- * KPI 목표 설정 — 연간 목표 설정 + 월별 트래킹
+ * KPI 목표 설정 — 롤링 데이터 기반 (직접 입력/수정 버튼 없음)
  */
 
 Pages.KpiTarget = (() => {
 
-  let _year     = new Date().getFullYear();
-  let _bizSet   = new Set(['all']);
-  let _startMon = parseInt(localStorage.getItem('kpi_start_mon') || '4');
+  let _year        = new Date().getFullYear();
+  let _bizSet      = new Set(['all']);
   let _rollingYear = new Date().getFullYear();
 
-  // ── 데이터 헬퍼 ────────────────────────────────────────────
+  // ── 롤링 데이터 저장소 ─────────────────────────────────────
+  // 구조: { 2026: { DRAM: [m1..m12], SSD: [...], MID: [...], TBD1..TBD5 } }
+  let _rolling = JSON.parse(localStorage.getItem('kpi_rolling') || 'null') || {
+    2026: {
+      DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
+      SSD:  [0,0,0.1,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667],
+      MID:  [0,0,1.2,0,0,1.2,0,0,1.2,0,0,1.2],
+      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
+      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+    },
+    2027: {
+      DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
+      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
+      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+    },
+    2028: {
+      DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
+      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
+      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+    },
+  };
+
+  const BIZ_KEY = { DRAM: 'DRAM', SSD: 'SSD', MID: 'MID' };
+
+  // ── 롤링 기반 목표 계산 ─────────────────────────────────────
+  function _getRollingMonths(year, biz) {
+    // Million USD → USD 변환 (* 1,000,000)
+    return (_rolling[year]?.[biz] || Array(12).fill(0)).map(v => (parseFloat(v)||0) * 1000000);
+  }
+
+  function _getTarget(year, biz) {
+    return _getRollingMonths(year, biz).reduce((s,v) => s+v, 0);
+  }
+
+  function _getTotalTarget(year) {
+    return CONFIG.BIZ_LIST.reduce((s, b) => s + _getTarget(year, b), 0);
+  }
+
+  function _getMonthlyTarget(year, biz, month) {
+    // month: 1~12
+    return _getRollingMonths(year, biz)[month - 1] || 0;
+  }
+
+  // ── 실적 헬퍼 ──────────────────────────────────────────────
   function _getActual(year, biz) {
     return Store.getInvoices()
       .filter(r => r.biz === biz && String(r.date || '').startsWith(String(year)))
@@ -24,44 +66,29 @@ Pages.KpiTarget = (() => {
       .reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
   }
 
-  function _getTarget(year, biz) {
-    return parseNumber(Store.getTargetFor(year, biz)?.target || 0);
-  }
-
-  function _getTotalTarget(year) {
-    return CONFIG.BIZ_LIST.reduce((s, b) => s + _getTarget(year, b), 0);
-  }
-
-  // ── 저장 ───────────────────────────────────────────────────
-  async function save(year, biz, rawValue) {
-    const amount   = parseNumber(rawValue);
-    const existing = Store.getTargetFor(year, biz);
-    const record   = { id: existing ? existing.id : (Date.now() + Math.random()), year: String(year), biz, target: amount };
-    Store.upsertTarget(record);
-    if (existing) await Api.update(CONFIG.SHEETS.TARGETS, existing.id, record);
-    else          await Api.append(CONFIG.SHEETS.TARGETS, record);
-    UI.toast('목표 저장됨');
-    Pages.KpiTarget.render();
-    if (typeof Nav !== 'undefined' && Nav.current && Nav.current() === 'dash') Pages.Dashboard.render();
+  // ── 롤링 저장 ──────────────────────────────────────────────
+  function _saveRollingData(year, data) {
+    if (!_rolling[year]) _rolling[year] = {};
+    Object.assign(_rolling[year], data);
+    localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
+    // 서버에도 저장 (settings 시트)
+    Api.setSetting('kpi_rolling', JSON.stringify(_rolling));
   }
 
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
 
   function switchBiz(biz) {
     if (biz === 'all') {
-      // 전체 → 단독 선택
       _bizSet = new Set(['all']);
     } else {
-      // 개별 선택 시 'all' 제거
       _bizSet.delete('all');
       if (_bizSet.has(biz)) {
         _bizSet.delete(biz);
-        if (_bizSet.size === 0) _bizSet = new Set(['all']); // 모두 해제 시 전체로
+        if (_bizSet.size === 0) _bizSet = new Set(['all']);
       } else {
         _bizSet.add(biz);
       }
     }
-    // 버튼 활성화 상태 업데이트
     ['all','DRAM','SSD','MID'].forEach(b => {
       const btn = document.getElementById('kpi-biz-' + b); if (!btn) return;
       const color = b === 'all' ? '#1B4F8A' : CONFIG.BIZ_COLORS[b];
@@ -70,12 +97,6 @@ Pages.KpiTarget = (() => {
       btn.style.color       = on ? '#fff' : 'var(--tx2)';
       btn.style.borderColor = on ? color  : 'var(--bd2)';
     });
-    _renderTracking();
-  }
-
-  function setStartMon(val) {
-    _startMon = parseInt(val);
-    localStorage.setItem('kpi_start_mon', String(_startMon));
     _renderTracking();
   }
 
@@ -88,18 +109,18 @@ Pages.KpiTarget = (() => {
 
     const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b), 0);
     if (totalTgt === 0) {
-      el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tx3);font-size:14px">목표를 먼저 설정해주세요</div>`;
+      el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tx3);font-size:14px">롤링 데이터를 먼저 입력해주세요</div>`;
       return;
     }
 
-    const numMonths  = 13 - _startMon;
-    const monthlyTgt = Math.round(totalTgt / numMonths);
-    const now        = new Date();
-    const curMonIdx  = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
+    const now       = new Date();
+    const curMonIdx = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
+    const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
-    const MONTHS      = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    const monthTargets = MONTHS.map((_, i) => i >= _startMon - 1 ? monthlyTgt : 0);
-
+    // 롤링 기반 월별 목표 (합산)
+    const monthTargets = MONTHS.map((_, i) =>
+      bizList.reduce((s, b) => s + _getMonthlyTarget(year, b, i+1), 0)
+    );
     const monthActuals = MONTHS.map((_, i) => {
       if (i > curMonIdx) return null;
       return bizList.reduce((s, b) => s + _getActualMonth(year, b, i+1), 0);
@@ -119,18 +140,15 @@ Pages.KpiTarget = (() => {
     const curCumT    = cumTargets[curMonIdx] ?? 0;
     const overallPct = curCumT > 0 ? Math.round(curCumA / curCumT * 100) : 0;
     const diff       = curCumA - curCumT;
+    const bizLabel   = isAll ? '전체' : bizList.map(b => CONFIG.BIZ_LABELS[b]).join(' + ');
 
-    // 선택된 사업 레이블
-    const bizLabel = isAll ? '전체' : bizList.map(b => CONFIG.BIZ_LABELS[b]).join(' + ');
-
-    // 요약 카드
     const periodLabel = `1~${curMonIdx + 1}월`;
     const cards = `
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
           <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
           <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px">월 $${formatNumber(monthlyTgt)} (${_startMon}~12월)</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">롤링 데이터 기준</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
           <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적 (${periodLabel})</div>
@@ -149,25 +167,22 @@ Pages.KpiTarget = (() => {
         </div>
       </div>`;
 
-    // 차트 HTML
     const chartHtml = `
       <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">
         <div style="display:flex;gap:16px;margin-bottom:10px;font-size:13px;align-items:center">
           <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>
           <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>
-          <span style="font-size:12px;color:var(--tx3);margin-left:auto">목표는 ${_startMon}월부터 적용</span>
+          <span style="font-size:12px;color:var(--tx3);margin-left:auto">롤링 데이터 기준</span>
         </div>
         <div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div>
       </div>`;
 
-    // 표
     const thS = 'padding:9px 12px;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)';
     let cumTA2 = 0, cumAA2 = 0;
     const tableRows = MONTHS.map((m, i) => {
       cumTA2 += monthTargets[i];
       const isPast = i <= curMonIdx;
       const isCur  = i === curMonIdx;
-      const noTgt  = monthTargets[i] === 0;
       const act    = isPast ? (monthActuals[i] || 0) : null;
       if (isPast) cumAA2 += (monthActuals[i] || 0);
       const cumAVal = isPast ? cumAA2 : null;
@@ -179,11 +194,8 @@ Pages.KpiTarget = (() => {
         : dif >= 0 ? `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;background:#E1F5EE;color:#085041">+$${Math.round(dif).toLocaleString()}</span>`
                    : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;background:#FCEBEB;color:#791F1F">-$${Math.round(Math.abs(dif)).toLocaleString()}</span>`;
       return `<tr style="${isCur?'background:#F0F7FF':''}${!isPast?';opacity:0.38':''}">
-        <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">
-          ${m}${isCur?' ◀':''}
-          ${noTgt&&isPast?'<span style="font-size:11px;color:var(--tx3);margin-left:4px">(목표전)</span>':''}
-        </td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx3)">${noTgt?'—':'$'+monthlyTgt.toLocaleString()}</td>
+        <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">${m}${isCur?' ◀':''}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx3)">${monthTargets[i]>0?'$'+formatNumber(Math.round(monthTargets[i])):'—'}</td>
         <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${act!==null?'$'+Math.round(act).toLocaleString():'—'}</td>
         <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx3)">${cumTA2>0?'$'+Math.round(cumTA2).toLocaleString():'—'}</td>
         <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:${isPast?'500':'400'};color:#085041">${cumAVal!==null?'$'+Math.round(cumAVal).toLocaleString():'—'}</td>
@@ -193,7 +205,7 @@ Pages.KpiTarget = (() => {
               <div style="height:100%;border-radius:3px;background:${barC};width:${Math.min(100,pct)}%"></div>
             </div>
             <span style="font-size:13px;font-weight:500;color:${pctC};min-width:36px;text-align:right">${pct}%</span>
-          </div>`:`<span style="font-size:13px;color:var(--tx3)">${isPast?'목표전':'—'}</span>`}
+          </div>`:`<span style="font-size:13px;color:var(--tx3)">${isPast?'—':'—'}</span>`}
         </td>
         <td style="padding:9px 12px;text-align:right">${difBadge}</td>
       </tr>`;
@@ -217,7 +229,6 @@ Pages.KpiTarget = (() => {
         </table>
       </div>`;
 
-    // 차트 그리기
     setTimeout(() => {
       const canvas = document.getElementById('cv-kpi-monthly'); if (!canvas) return;
       if (window._kpiChart) { window._kpiChart.destroy(); window._kpiChart = null; }
@@ -227,7 +238,7 @@ Pages.KpiTarget = (() => {
           labels: MONTHS,
           datasets: [
             { label:'목표 누적', data:cumTargets, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3],
-              pointRadius:cumTargets.map((_,i)=>i>=_startMon-1?3:0), pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
+              pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
             { label:'실적 누적', data:cumActuals, borderColor:'#1D9E75', borderWidth:2.5,
               pointRadius:cumActuals.map(v=>v!==null?4:0), pointBackgroundColor:'#1D9E75',
               fill:{target:0, above:'rgba(29,158,117,0.08)', below:'rgba(226,75,74,0.08)'}, tension:0.2 },
@@ -251,12 +262,13 @@ Pages.KpiTarget = (() => {
 
   // ── 메인 렌더 ──────────────────────────────────────────────
   return {
-    save, selectYear, switchBiz, setStartMon,
+    selectYear, switchBiz,
 
     render() {
       const el = document.getElementById('kpitarget-body'); if (!el) return;
       const year = _year;
 
+      // 롤링 데이터 기반 연간 목표
       const bizRows = CONFIG.BIZ_LIST.map(b => {
         const tgt    = _getTarget(year, b);
         const act    = _getActual(year, b);
@@ -265,23 +277,12 @@ Pages.KpiTarget = (() => {
         const color  = CONFIG.BIZ_COLORS[b];
         const barClr = pct >= 100 ? '#1D9E75' : pct >= 70 ? color : '#EF9F27';
 
-        const tgtCell = tgt > 0
-          ? `<span style="font-family:var(--font-mono);font-size:14px;font-weight:600">$${formatNumber(Math.round(tgt))}</span>`
-          : `<div style="display:flex;align-items:center;gap:6px">
-               <input type="number" id="kpi-input-${b}" placeholder="목표 입력" min="0" step="1000"
-                 style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:14px;background:#EAF3FE;color:#0C447C;text-align:right">
-               <button class="btn pri sm" onclick="Pages.KpiTarget.save(${year},'${b}',document.getElementById('kpi-input-${b}').value)">저장</button>
-             </div>`;
-
-        const actionCell = tgt > 0
-          ? `<button onclick="Pages.KpiTarget.startEdit(${year},'${b}',${tgt})"
-               style="padding:4px 12px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:13px;cursor:pointer">수정</button>`
-          : '';
-
         return `
-          <tr id="kpi-row-${b}" style="border-bottom:0.5px solid var(--bd)">
+          <tr style="border-bottom:0.5px solid var(--bd)">
             <td style="padding:12px 14px"><span style="font-size:14px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span></td>
-            <td style="padding:12px 14px" id="kpi-tgt-cell-${b}">${tgtCell}</td>
+            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:14px;font-weight:600">
+              ${tgt > 0 ? '$' + formatNumber(Math.round(tgt)) : '<span style="color:var(--tx3);font-weight:400">롤링 데이터 미입력</span>'}
+            </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;color:#085041">${act>0?'$'+formatNumber(Math.round(act)):'—'}</td>
             <td style="padding:12px 14px;min-width:160px">
               ${tgt>0?`<div style="display:flex;align-items:center;gap:8px">
@@ -289,16 +290,15 @@ Pages.KpiTarget = (() => {
                   <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
                 </div>
                 <span style="font-size:14px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
-              </div>`:'<span style="font-size:14px;color:var(--tx3)">목표 미설정</span>'}
+              </div>`:'<span style="font-size:14px;color:var(--tx3)">롤링 데이터 필요</span>'}
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;color:${rem>0?'#BA7517':'var(--tx3)'}">
               ${tgt>0?'$'+formatNumber(Math.round(rem)):'—'}
             </td>
-            <td style="padding:12px 14px;width:100px" id="kpi-act-cell-${b}">${actionCell}</td>
           </tr>`;
       }).join('');
 
-      const totalTgt = CONFIG.BIZ_LIST.reduce((s, b) => s + _getTarget(year, b), 0);
+      const totalTgt = _getTotalTarget(year);
       const totalAct = CONFIG.BIZ_LIST.reduce((s, b) => s + _getActual(year, b), 0);
       const totalPct = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
       const totalRem = Math.max(0, totalTgt - totalAct);
@@ -314,7 +314,6 @@ Pages.KpiTarget = (() => {
       const TH  = l => `<th style="padding:9px 14px;text-align:left;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${l}</th>`;
       const THR = l => `<th style="padding:9px 14px;text-align:right;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${l}</th>`;
 
-      // 사업 필터 버튼
       const bizBtns = [
         {key:'all', label:'전체', color:'#1B4F8A'},
         ...CONFIG.BIZ_LIST.map(b => ({key:b, label:CONFIG.BIZ_LABELS[b], color:CONFIG.BIZ_COLORS[b]}))
@@ -325,11 +324,6 @@ Pages.KpiTarget = (() => {
           background:${on?color:'none'};color:${on?'#fff':color};transition:.15s">${label}</button>`;
       }).join('');
 
-      // 시작월 옵션 1~6월
-      const monOpts = Array.from({length:6},(_,i)=>i+1).map(m =>
-        `<option value="${m}" ${m===_startMon?'selected':''}>${m}월부터</option>`
-      ).join('');
-
       el.innerHTML = `
         <div style="max-width:1000px">
           <div style="display:flex;gap:6px;margin-bottom:16px">${yearTabs}</div>
@@ -339,6 +333,7 @@ Pages.KpiTarget = (() => {
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">연간 목표</div>
               <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
+              <div style="font-size:12px;color:var(--tx3);margin-top:2px">롤링 데이터 합계</div>
             </div>
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">누적 달성</div>
@@ -348,11 +343,15 @@ Pages.KpiTarget = (() => {
               <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">전체 달성률</div>
               <div style="font-size:20px;font-weight:600;color:${totalClr}">${totalPct}%</div>
             </div>
-          </div>` : ''}
+          </div>` : `
+          <div style="background:#FFF3E0;border-left:3px solid #EF9F27;padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:14px;color:#633806">
+            롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
+            <button onclick="Pages.KpiTarget.openRolling()" style="background:none;border:none;color:#185FA5;font-size:14px;font-weight:500;cursor:pointer;text-decoration:underline">KPI 롤링 데이터 입력</button>
+          </div>`}
 
           <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
             <table style="width:100%;border-collapse:collapse">
-              <thead><tr>${TH('사업')}${TH('목표 매출 (USD)')}${THR('누적 실적')}${TH('달성률')}${THR('잔여')}${TH('')}</tr></thead>
+              <thead><tr>${TH('사업')}${TH('목표 매출 (USD)')}${THR('누적 실적')}${TH('달성률')}${THR('잔여')}</tr></thead>
               <tbody>${bizRows}</tbody>
               ${totalTgt > 0 ? `
               <tfoot><tr style="background:var(--bg)">
@@ -368,12 +367,11 @@ Pages.KpiTarget = (() => {
                   </div>
                 </td>
                 <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
-                <td style="border-top:0.5px solid var(--bd)"></td>
               </tr></tfoot>` : ''}
             </table>
           </div>
 
-          <!-- 월별 트래킹 섹션 -->
+          <!-- 월별 트래킹 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;gap:6px;flex-wrap:wrap">${bizBtns}</div>
             <button onclick="Pages.KpiTarget.openRolling()"
@@ -389,8 +387,12 @@ Pages.KpiTarget = (() => {
     },
 
     openRolling() {
+      _rollingYear = _year;
       const el = document.getElementById('kpi-rolling-panel');
       const ov = document.getElementById('kpi-rolling-overlay');
+      // 연도 select 동기화
+      const sel = document.querySelector('#kpi-rolling-panel select');
+      if (sel) sel.value = String(_rollingYear);
       if (el) { el.style.display = 'block'; document.body.style.overflow = 'hidden'; }
       if (ov) ov.style.display = 'block';
       Pages.KpiTarget.renderRolling();
@@ -446,15 +448,8 @@ Pages.KpiTarget = (() => {
     renderRolling() {
       const wrap = document.getElementById('kpi-rolling-inner'); if (!wrap) return;
       const y = _rollingYear;
+      const yData = _rolling[y] || {};
 
-      // 초기값 데이터
-      const INIT = {
-        2026: {
-          DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
-          SSD:  [0,0,0.1,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667],
-          MID:  [0,0,1.2,0,0,1.2,0,0,1.2,0,0,1.2],
-        },
-      };
       const ROWS = [
         { key:'DRAM', label:'DRAM Test', fixed:true },
         { key:'SSD',  label:'SSD Test',  fixed:true },
@@ -470,11 +465,11 @@ Pages.KpiTarget = (() => {
       const inpW = 'width:52px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
 
       const tableRows = ROWS.map((r, i) => {
-        const initVals = INIT[y]?.[r.key] || Array(12).fill('');
-        const cells = initVals.map((v, mi) =>
-          `<td style="padding:3px 3px;border:0.5px solid var(--bd)"><input type="number" value="${v}" placeholder="0" step="0.0001" style="${inpW}" oninput="Pages.KpiTarget.calcRollingRow(this)"></td>`
+        const vals = yData[r.key] || Array(12).fill(0);
+        const cells = vals.map((v) =>
+          `<td style="padding:3px 3px;border:0.5px solid var(--bd)"><input type="number" value="${v||''}" placeholder="0" step="0.0001" style="${inpW}" oninput="Pages.KpiTarget.calcRollingRow(this)"></td>`
         ).join('');
-        const rowSum = initVals.reduce((s,v) => s + (parseFloat(v)||0), 0);
+        const rowSum = vals.reduce((s,v) => s+(parseFloat(v)||0), 0);
         return `<tr>
           <td style="padding:6px 8px;text-align:center;font-size:12px;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd)">${i+1}</td>
           <td style="padding:6px 10px;font-size:13px;font-weight:${r.fixed?'500':'400'};color:${r.fixed?'var(--tx)':'var(--tx3)'};background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;text-align:center">${r.label}</td>
@@ -483,10 +478,9 @@ Pages.KpiTarget = (() => {
         </tr>`;
       }).join('');
 
-      // 초기 열 합계
       const colSums = Array(12).fill(0);
       ROWS.forEach(r => {
-        const vals = INIT[y]?.[r.key] || [];
+        const vals = yData[r.key] || [];
         vals.forEach((v,i) => { colSums[i] += parseFloat(v)||0; });
       });
       const grand = colSums.reduce((s,v)=>s+v,0);
@@ -495,7 +489,7 @@ Pages.KpiTarget = (() => {
       ).join('');
 
       wrap.innerHTML = `
-        <div style="font-size:12px;color:#E24B4A;font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; 셀을 클릭해서 직접 입력하세요</div>
+        <div style="font-size:12px;color:#E24B4A;font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; 저장하면 목표 설정에 즉시 반영됩니다</div>
         <div style="overflow-x:auto">
           <table style="border-collapse:collapse;table-layout:auto">
             <thead>
@@ -519,26 +513,21 @@ Pages.KpiTarget = (() => {
     },
 
     saveRolling() {
-      UI.toast('롤링 데이터 저장됨');
+      const body = document.getElementById('rolling-tbody'); if (!body) return;
+      const y = _rollingYear;
+      const ROWS = ['DRAM','SSD','MID','TBD1','TBD2','TBD3','TBD4','TBD5'];
+      const rows = body.querySelectorAll('tr');
+      const newData = {};
+      rows.forEach((row, ri) => {
+        const key = ROWS[ri]; if (!key) return;
+        const inputs = row.querySelectorAll('input[type=number]');
+        newData[key] = Array.from(inputs).map(i => parseFloat(i.value)||0);
+      });
+      _saveRollingData(y, newData);
       Pages.KpiTarget.closeRolling();
-    },
-
-    startEdit(year, biz, currentTgt) {
-      const cell    = document.getElementById('kpi-tgt-cell-' + biz);
-      const actCell = document.getElementById('kpi-act-cell-' + biz);
-      const row     = document.getElementById('kpi-row-' + biz);
-      if (!cell) return;
-      row.style.background = '#F5F9FF';
-      cell.innerHTML = `
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="number" id="kpi-input-${biz}" value="${currentTgt}" min="0" step="1000"
-            style="width:130px;padding:6px 10px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:14px;background:#EAF3FE;color:#0C447C;text-align:right">
-          <button class="btn pri sm" onclick="Pages.KpiTarget.save(${year},'${biz}',document.getElementById('kpi-input-${biz}').value)">저장</button>
-          <button onclick="Pages.KpiTarget.render()"
-            style="padding:4px 10px;border:0.5px solid var(--bd2);border-radius:5px;background:none;color:var(--tx2);font-size:13px;cursor:pointer">취소</button>
-        </div>`;
-      actCell.innerHTML = '';
-      document.getElementById('kpi-input-' + biz)?.focus();
+      Pages.KpiTarget.render();
+      if (typeof Nav !== 'undefined' && Nav.current && Nav.current() === 'dash') Pages.Dashboard.render();
+      UI.toast(`${y}년 KPI 롤링 데이터 저장됨`);
     },
   };
 
