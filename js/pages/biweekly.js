@@ -5,12 +5,10 @@
 
 Pages.Biweekly = (() => {
 
-  // ── 헬퍼 ───────────────────────────────────────────────────
   function _getMonthPrefix(year, month) {
     return `${year}-${String(month).padStart(2,'0')}`;
   }
 
-  // 사업+지역 기준 해당 월 처리량 (완료된 daily 기준)
   function _procByBizCo(biz, co, year, month) {
     const prefix = _getMonthPrefix(year, month);
     return Store.getDailies()
@@ -18,7 +16,6 @@ Pages.Biweekly = (() => {
       .reduce((s, d) => s + parseNumber(d.proc), 0);
   }
 
-  // 사업+지역 기준 해당 월 매출 (인보이스 완료 기준)
   function _revByBizCo(biz, co, year, month) {
     const prefix = _getMonthPrefix(year, month);
     return Store.getInvoices()
@@ -26,17 +23,14 @@ Pages.Biweekly = (() => {
       .reduce((s, r) => s + parseNumber(r.amount || r.total), 0);
   }
 
-  // 이번달/지난달 현황 요약 계산
   function _calcStatus(year, month) {
     const invoices = Store.getInvoices();
     const lots     = Store.getLots();
     const dailies  = Store.getDailies();
     const prefix   = _getMonthPrefix(year, month);
-
-    const result = {};
+    const result   = {};
     CONFIG.BIZ_LIST.forEach(biz => {
       CONFIG.COUNTRY_LIST.forEach(co => {
-        // 인보이스 완료된 LOT (처리 완료 기준)
         const doneInvs = invoices.filter(r =>
           r.biz === biz && r.country === co && String(r.date || '').startsWith(prefix)
         );
@@ -45,57 +39,81 @@ Pages.Biweekly = (() => {
           return s + parseNumber(lot?.qty || 0);
         }, 0);
         const doneAmt = doneInvs.reduce((s, r) => s + parseNumber(r.amount || r.total), 0);
-
-        // 인보이스 없는 완료 LOT → 진행중
         const inProgLots = lots.filter(l => {
           if (l.biz !== biz || l.country !== co) return false;
           const st  = getLotStatus(l);
           const inv = invoices.find(r => String(r.lotId) === String(l.id));
           return (st === 'done' && !inv) || (st !== 'done' && st !== 'upcoming');
         });
-        const inProgQty = inProgLots.reduce((s, l) => {
-          const cum = getLotCumulative(l.id, dailies);
-          return s + cum;
-        }, 0);
-
+        const inProgQty = inProgLots.reduce((s, l) => s + getLotCumulative(l.id, dailies), 0);
         result[`${biz}_${co}`] = { doneQty, doneAmt, inProgQty };
       });
     });
     return result;
   }
 
-  // ── 렌더 ───────────────────────────────────────────────────
   return {
     render() {
       const el = document.getElementById('biweekly-root'); if (!el) return;
 
-      const now      = new Date();
-      const curYear  = now.getFullYear();
-      const curMonth = now.getMonth() + 1; // 1~12
+      const now       = new Date();
+      const curYear   = now.getFullYear();
+      const curMonth  = now.getMonth() + 1;
       const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
       const prevYear  = curMonth === 1 ? curYear - 1 : curYear;
 
-      const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12];
-      const BIZ    = CONFIG.BIZ_LIST;   // ['DRAM','SSD','MID']
-      const CO     = CONFIG.COUNTRY_LIST; // ['HK','SG']
-      const BIZ_LABELS = CONFIG.BIZ_LABELS;
-      const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
+      const MONTHS    = [1,2,3,4,5,6,7,8,9,10,11,12];
+      const BIZ       = CONFIG.BIZ_LIST;
+      const CO        = CONFIG.COUNTRY_LIST;
+      const CO_LABELS = { HK: '홍콩', SG: '싱가포르' };
 
-      const TH  = (t, attr='') => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;${attr}">${t}</th>`;
-      const THR = (t, attr='') => `<th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
-      const TD  = (t, attr='') => `<td style="padding:10px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);width:62px;white-space:nowrap;color:var(--tbl-tx-body);${attr}">${t}</td>`;
-      const TDL = (t, attr='') => `<td style="padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tbl-tx-1st);border-top:1px solid var(--tbl-row-bd);border-right:1px solid var(--tbl-hd-bd);white-space:nowrap;background:var(--tbl-hd-bg);${attr}">${t}</td>`;
+      // ── 공통 색상 상수 ──────────────────────────────────────
+      // 표 선색: 헤더와 본문 모두 동일하게 #D2D2D7 사용
+      const BD   = '#D2D2D7';   // 모든 셀 보더
+      const HBG  = '#E8E8ED';   // 헤더 배경
+      const HBG2 = '#DCDCE6';   // 현재달 헤더 배경 (약간 더 진하게)
+      const HTX  = '#3A3A3C';   // 헤더 텍스트
+      const SBG  = '#EFEFF4';   // 합계행 배경
+      const STX  = '#1D1D1F';   // 합계행 텍스트
+      const BTX  = '#1D1D1F';   // 본문 첫 컬럼
+      const VTX  = '#3A3A3C';   // 본문 값 텍스트
+      const ETX  = '#C7C7CC';   // 빈값
+
+      // ── 셀 스타일 빌더 ──────────────────────────────────────
+      // 헤더 셀 — 모든 방향 보더
+      const TH = (t, extra='') =>
+        `<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
+
+      // 데이터 헤더 (월/지역) — 동일
+      const THM = (t, bg=HBG, extra='') =>
+        `<th style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
+
+      // 데이터 셀 — 모든 방향 보더
+      const TD = (t, bg='#FFFFFF', color=VTX, fw='400', extra='') =>
+        `<td style="padding:9px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:${fw};color:${color};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</td>`;
+
+      // 사업명 셀 (첫 컬럼, 좌측 정렬)
+      const TDL = (t, bg=HBG, fw='600', extra='') =>
+        `<td style="padding:9px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</td>`;
 
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
-        const monthHeaders = MONTHS.map(m =>
-          `<th colspan="${CO.length}" style="padding:8px 6px;text-align:center;font-size:11px;font-weight:${m===curMonth?'700':'600'};color:var(--tbl-hd-tx);background:${m===curMonth?'#D8D8E8':'var(--tbl-hd-bg)'};border:1px solid var(--tbl-hd-bd)">${m}월</th>`
-        ).join('') + `<th style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-sum-bg);border:1px solid var(--tbl-hd-bd)">연간합계</th>`;
+        const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
+        const unit  = type === 'proc' ? 'ea'          : 'USD';
 
-        const coHeaders = MONTHS.map(m =>
-          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#D8D8E8;':'')).join('')
-        ).join('') + THR('합계', 'width:80px;border-left:2px solid var(--bd2);background:var(--tbl-sum-bg)');
+        // 월 헤더 행 (colspan=2: HK+SG)
+        const monthHeaders = MONTHS.map(m => {
+          const isCur = m === curMonth;
+          return THM(`${m}월`, isCur ? HBG2 : HBG, `font-weight:${isCur?700:600}`);
+        }).join('') + THM('연간합계', SBG, `background:${SBG}`);
 
+        // 지역 소헤더 행
+        const coHeaders = MONTHS.map(m => {
+          const isCur = m === curMonth;
+          return CO.map(co => THM(CO_LABELS[co], isCur ? HBG2 : HBG)).join('');
+        }).join('') + THM('합계', SBG, `background:${SBG};width:80px`);
+
+        // 데이터 행
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
         const dataRows = BIZ.map(biz => {
           let rowTotal = 0;
@@ -106,166 +124,125 @@ Pages.Biweekly = (() => {
                 : _revByBizCo(biz, co, curYear, m);
               grandTotal[mi * CO.length + ci] += val;
               rowTotal += val;
-              const display = val > 0
-                ? (type === 'proc' ? formatNumber(val) : '$' + formatNumber(Math.round(val)))
-                : '—';
-              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#EAEAF2;border-left:1px solid #B8B8D0;':''}`);
+              const isCur  = m === curMonth;
+              const disp   = val > 0 ? (type==='proc' ? formatNumber(val) : '$'+formatNumber(Math.round(val))) : '—';
+              const color  = val > 0 ? VTX : ETX;
+              return TD(disp, isCur ? '#EAEAF2' : '#FFFFFF', color);
             }).join('')
           ).join('');
-          const rowTotalDisplay = rowTotal > 0
-            ? (type === 'proc' ? formatNumber(rowTotal) : '$' + formatNumber(Math.round(rowTotal)))
-            : '—';
-          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>`;
+          const rowDisp = rowTotal > 0 ? (type==='proc' ? formatNumber(rowTotal) : '$'+formatNumber(Math.round(rowTotal))) : '—';
+          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowDisp, SBG, STX, '600')}</tr>`;
         }).join('');
 
         // 합계 행
-        let colGrandTotal = 0;
+        let colTotal = 0;
         const totalCells = MONTHS.map((m, mi) =>
           CO.map((co, ci) => {
             const v = grandTotal[mi * CO.length + ci];
-            colGrandTotal += v;
-            const display = v > 0
-              ? (type === 'proc' ? formatNumber(v) : '$' + formatNumber(Math.round(v)))
-              : '—';
-            return TD(display, `font-weight:600;font-size:12px;color:${v>0?'var(--tbl-tx-sum)':'var(--tbl-empty)'};background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-sum-bd);${m===curMonth?'background:#D8D8E8;':''}`);
+            colTotal += v;
+            const isCur = m === curMonth;
+            const disp  = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
+            return TD(disp, isCur ? HBG2 : SBG, v>0?STX:ETX, '600');
           }).join('')
         ).join('');
-        const grandTotalDisplay = colGrandTotal > 0
-          ? (type === 'proc' ? formatNumber(colGrandTotal) : '$' + formatNumber(Math.round(colGrandTotal)))
-          : '—';
-
-        const unit  = type === 'proc' ? '(ea)' : '(USD)';
-        const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
-        const basis = `<span style="font-size:11px;font-weight:400;color:#86868B;margin-left:8px">인보이스 발행 완료 기준</span>`;
+        const colDisp = colTotal > 0 ? (type==='proc' ? formatNumber(colTotal) : '$'+formatNumber(Math.round(colTotal))) : '—';
 
         return `
-          <div style="font-size:13px;font-weight:600;color:#1D1D1F;margin-bottom:4px">${title} <span style="font-size:12px;font-weight:400;color:var(--tx3)">${unit}</span>${basis}</div>
-          <div style="overflow-x:auto;margin-bottom:20px;width:100%">
-            <table style="border-collapse:collapse;width:100%;table-layout:fixed">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+            <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
+            <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
+          </div>
+          <div style="overflow-x:auto;margin-bottom:24px">
+            <table style="border-collapse:collapse;table-layout:fixed;min-width:100%">
               <colgroup>
-                <col style="width:90px">
-                ${MONTHS.map(() => CO.map(() => `<col style="width:62px">`).join('')).join('')}
-                <col style="width:80px">
+                <col style="width:88px">
+                ${MONTHS.map(() => CO.map(() => `<col style="width:60px">`).join('')).join('')}
+                <col style="width:78px">
               </colgroup>
               <thead>
-                <tr>${TH('사업명')}${monthHeaders}</tr>
+                <tr>${TH('사업')}${monthHeaders}</tr>
                 <tr>${TH('')}${coHeaders}</tr>
               </thead>
               <tbody>${dataRows}</tbody>
               <tfoot>
-                <tr>${TDL('합계', 'font-weight:600;font-size:12px;color:var(--tbl-tx-sum);background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-sum-bd)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>
+                <tr>${TDL('합계', SBG, '600')}${totalCells}${TD(colDisp, SBG, STX, '600')}</tr>
               </tfoot>
             </table>
           </div>`;
       }
 
-      // ── 2. 이번달/지난달 현황 요약 표 ────────────────────
+      // ── 2. 이번달/지난달 현황 카드 ───────────────────────
       function buildStatusTable(year, month, label) {
-        const status = _calcStatus(year, month);
+        const status   = _calcStatus(year, month);
         const invoices = Store.getInvoices();
 
-        const rows = BIZ.map(biz => {
-          return CO.map(co => {
-            const key  = `${biz}_${co}`;
-            const s    = status[key] || { doneQty: 0, doneAmt: 0, inProgQty: 0 };
-            const avgPrice = s.doneQty > 0 ? (s.doneAmt / s.doneQty).toFixed(1) : '—';
-            const coLabel  = CO_LABELS[co];
+        // 셀 스타일 — 모든 방향 보더 통일
+        const S_TH  = (t) =>
+          `<th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap">${t}</th>`;
+        const S_TD1 = (t) =>   // 사업명 셀
+          `<td style="padding:9px 12px;text-align:left;font-size:12px;font-weight:600;color:${BTX};background:${HBG};border:1px solid ${BD};white-space:nowrap">${t}</td>`;
+        const S_TDV = (t, color=VTX) =>   // 값 셀
+          `<td style="padding:9px 14px;text-align:right;font-size:12px;font-family:var(--font-mono);color:${color};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap">${t}</td>`;
+        const S_TDE = (t) =>   // 빈값 셀
+          `<td style="padding:9px 14px;text-align:right;font-size:12px;color:${ETX};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap">${t}</td>`;
 
-            // 진행중 비고 — 진행중 LOT의 홍콩/싱가폴 누적 처리량 및 메모
-            const inProgLots = Store.getLots().filter(l => {
-              if (l.biz !== biz || l.country !== co) return false;
-              const st  = getLotStatus(l);
-              const inv = invoices.find(r => String(r.lotId) === String(l.id));
-              return (st === 'done' && !inv) || (st !== 'done' && st !== 'upcoming');
-            });
-            const noteQty = inProgLots.reduce((s, l) => s + getLotCumulative(l.id, Store.getDailies()), 0);
-            const noteText = noteQty > 0 ? `${coLabel}(${formatNumber(noteQty)}개) 처리 완료<br>인보이스 작성중` : '—';
-
-            if (co === CO[0]) {
-              // 첫 지역: rowspan 처리 없이 그냥 biz 표시
-              return `<tr>
-                ${co === CO[0] ? `<td style="padding:9px 14px;text-align:center;font-size:12px;font-weight:600;border:1px solid var(--bd);background:var(--bg)">${BIZ_LABELS[biz]}</td>` : ''}
-                ${TD(s.doneQty > 0 ? formatNumber(s.doneQty) + ' 개' : 'NA')}
-                ${TD(s.doneAmt > 0 ? '$' + formatNumber(Math.round(s.doneAmt)) : (noteQty > 0 ? `<span style="color:var(--tx3);font-size:12px">작성중</span>` : 'NA'))}
-                ${TD(avgPrice !== '—' ? avgPrice + ' $/개' : '—')}
-              </tr>`;
-            }
-            return '';
-          }).filter(Boolean).join('');
-        });
-
-        // 더 직관적인 포맷으로 다시 구성
-        const BIZ_TD = (t) => `<td style="padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tbl-tx-1st);border-top:1px solid var(--tbl-row-bd);border-right:1px solid var(--tbl-hd-bd);background:var(--tbl-hd-bg);white-space:nowrap">${t}</td>`;
-        const VAL_TD = (t, attr='') => `<td style="padding:10px 14px;text-align:right;font-size:12px;font-family:var(--font-mono);color:var(--tbl-tx-body);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);white-space:nowrap;min-width:110px;${attr}">${t}</td>`;
-        const NA_TD  = (t) => `<td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--tbl-empty);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);white-space:nowrap;min-width:110px">${t}</td>`;
-        const S_TH   = (t, w='110px') => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;min-width:${w}">${t}</th>`;
-
+        // 처리완료 표
         const doneRows = BIZ.map(biz => {
-          const sgKey = `${biz}_SG`;
-          const hkKey = `${biz}_HK`;
-          const sg = status[sgKey] || {};
-          const hk = status[hkKey] || {};
-          const sgQty  = sg.doneQty || 0;
-          const hkQty  = hk.doneQty || 0;
-          const sgAmt  = sg.doneAmt || 0;
-          const hkAmt  = hk.doneAmt || 0;
-          const totAmt = sgAmt + hkAmt;
+          const sg = status[`${biz}_SG`] || {};
+          const hk = status[`${biz}_HK`] || {};
+          const sgQty = sg.doneQty || 0;
+          const hkQty = hk.doneQty || 0;
+          const totAmt = (sg.doneAmt||0) + (hk.doneAmt||0);
           const totQty = sgQty + hkQty;
-          const avg    = totQty > 0 ? (totAmt / totQty).toFixed(1) + ' $/개' : '—';
+          const avg = totQty > 0 ? (totAmt/totQty).toFixed(1)+' $/개' : null;
           return `<tr>
-            ${BIZ_TD(BIZ_LABELS[biz])}
-            ${sgQty > 0 ? VAL_TD(formatNumber(sgQty) + ' 개') : NA_TD('NA')}
-            ${hkQty > 0 ? VAL_TD(formatNumber(hkQty) + ' 개') : NA_TD(hkQty === 0 ? '0' : 'NA')}
-            ${totAmt > 0 ? VAL_TD('$' + formatNumber(Math.round(totAmt)), 'color:var(--tx);font-weight:500') : NA_TD('—')}
-            ${avg !== '—' ? VAL_TD(avg) : NA_TD('—')}
+            ${S_TD1(BIZ_LABELS[biz])}
+            ${sgQty > 0 ? S_TDV(formatNumber(sgQty)+' 개') : S_TDE('—')}
+            ${hkQty > 0 ? S_TDV(formatNumber(hkQty)+' 개') : S_TDE('—')}
+            ${totAmt > 0 ? S_TDV('$'+formatNumber(Math.round(totAmt)), STX) : S_TDE('—')}
+            ${avg ? S_TDV(avg) : S_TDE('—')}
           </tr>`;
         }).join('');
 
-        // 진행중 행
+        // 진행중 표
         const inProgRows = BIZ.map(biz => {
-          const sgKey = `${biz}_SG`;
-          const hkKey = `${biz}_HK`;
-          const sg = status[sgKey] || {};
-          const hk = status[hkKey] || {};
+          const sg = status[`${biz}_SG`] || {};
+          const hk = status[`${biz}_HK`] || {};
           const sgProg = sg.inProgQty || 0;
           const hkProg = hk.inProgQty || 0;
           return `<tr>
-            ${BIZ_TD(BIZ_LABELS[biz])}
-            ${sgProg > 0 ? VAL_TD(formatNumber(sgProg) + ' 개') : NA_TD('—')}
-            ${hkProg > 0 ? VAL_TD(formatNumber(hkProg) + ' 개') : NA_TD('NA')}
+            ${S_TD1(BIZ_LABELS[biz])}
+            ${sgProg > 0 ? S_TDV(formatNumber(sgProg)+' 개') : S_TDE('—')}
+            ${hkProg > 0 ? S_TDV(formatNumber(hkProg)+' 개') : S_TDE('—')}
           </tr>`;
         }).join('');
 
         return `
-          <div style="font-size:13px;font-weight:600;color:#1D1D1F;margin-bottom:4px">${label}</div>
-          <div style="font-size:11px;color:#86868B;margin-bottom:12px">인보이스 발행 완료 기준</div>
+          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:2px">${label}</div>
+          <div style="font-size:12px;color:#86868B;margin-bottom:14px">인보이스 발행 완료 기준</div>
 
-          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">처리 완료 — Invoice 발행 기준</div>
-          <div style="margin-bottom:14px">
-            <table style="border-collapse:collapse;table-layout:auto;width:100%">
-              <thead>
-                <tr>
-                  ${S_TH('구분', '110px')}
-                  ${S_TH('싱가포르')}
-                  ${S_TH('홍콩')}
-                  ${S_TH('Invoice 발행 금액', '130px')}
-                  ${S_TH('평균 단가', '90px')}
-                </tr>
-              </thead>
+          <div style="font-size:11px;font-weight:600;color:#6E6E73;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">처리 완료</div>
+          <div style="overflow-x:auto;margin-bottom:16px">
+            <table style="border-collapse:collapse;table-layout:auto">
+              <thead><tr>
+                ${S_TH('구분')}
+                ${S_TH('싱가포르')}
+                ${S_TH('홍콩')}
+                ${S_TH('발행금액')}
+                ${S_TH('평균단가')}
+              </tr></thead>
               <tbody>${doneRows}</tbody>
             </table>
           </div>
 
-          <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">현재 진행중</div>
-          <div style="margin-bottom:24px">
-            <table style="border-collapse:collapse;table-layout:auto;width:100%">
-              <thead>
-                <tr>
-                  ${S_TH('구분', '110px')}
-                  ${S_TH('싱가포르')}
-                  ${S_TH('홍콩')}
-                </tr>
-              </thead>
+          <div style="font-size:11px;font-weight:600;color:#6E6E73;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">진행중</div>
+          <div style="overflow-x:auto;margin-bottom:8px">
+            <table style="border-collapse:collapse;table-layout:auto">
+              <thead><tr>
+                ${S_TH('구분')}
+                ${S_TH('싱가포르')}
+                ${S_TH('홍콩')}
+              </tr></thead>
               <tbody>${inProgRows}</tbody>
             </table>
           </div>`;
@@ -274,24 +251,24 @@ Pages.Biweekly = (() => {
       // ── 최종 렌더 ────────────────────────────────────────
       el.innerHTML = `
         <div style="width:100%">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div>
-              <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--tx)">Bi-Weekly</div>
-              <div style="font-size:12px;color:var(--tx3);margin-top:2px">${curYear}년 운영 현황</div>
+              <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;color:#1D1D1F">Bi-Weekly</div>
+              <div style="font-size:12px;color:#86868B;margin-top:2px">${curYear}년 운영 현황</div>
             </div>
-            <div style="font-size:12px;color:var(--tx3)">${curYear}년 ${curMonth}월 기준</div>
+            <div style="font-size:12px;color:#86868B">${curYear}년 ${curMonth}월 기준</div>
           </div>
 
           ${buildMonthlyTable('proc')}
           ${buildMonthlyTable('rev')}
 
-          <div style="height:1px;background:var(--bd);margin:8px 0 24px"></div>
+          <div style="height:1px;background:#D2D2D7;margin:4px 0 24px"></div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
-            <div style="background:var(--card);border:1px solid var(--tbl-wrap-bd);border-radius:10px;padding:20px 22px">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:20px 22px">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div style="background:var(--card);border:1px solid var(--tbl-wrap-bd);border-radius:10px;padding:20px 22px">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:20px 22px">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>
