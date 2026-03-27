@@ -108,7 +108,7 @@ Pages.Revenue = (() => {
     function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
 
     if (!lots.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--tx3)">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--tbl-tx-body)">데이터 없음</td></tr>`;
     } else {
       let totalAmt = 0;
       const rows = lots.map((lot, i) => {
@@ -148,8 +148,8 @@ Pages.Revenue = (() => {
 
         return `
           <tr style="${rowBg}">
-            <td style="padding:11px 14px;color:var(--tx3);font-size:12px;text-align:center">${i + 1}</td>
-            <td style="padding:11px 14px;font-size:12px;color:var(--tx3)">${lot.inDate || '—'}</td>
+            <td style="padding:11px 14px;color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
+            <td style="padding:11px 14px;font-size:12px;color:var(--tbl-tx-body)">${lot.inDate || '—'}</td>
             <td style="padding:11px 14px;font-size:12px;color:${doneDateColor};font-weight:${st==='done'?'500':'400'}">${doneDate}</td>
             <td style="padding:11px 14px;font-family:var(--font-mono);font-size:12px;font-weight:500">${lot.lotNo || lot.id}</td>
             <td style="padding:11px 14px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
@@ -175,7 +175,7 @@ Pages.Revenue = (() => {
                       style="display:none;width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:var(--tx2)">
                   </div>`
                 : st === 'upcoming'
-                  ? `<span style="font-size:12px;color:var(--tx3)">—</span>`
+                  ? `<span style="font-size:12px;color:var(--tbl-tx-body)">—</span>`
                   : `<div style="display:flex;align-items:center;gap:6px">
                       <input type="number" placeholder="금액 입력" id="rv-amt-${lot.id}"
                         style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:var(--tx2)">
@@ -206,7 +206,7 @@ Pages.Revenue = (() => {
 
       // 합계 행
       const totalRow = `
-        <tr style="background:var(--bg)">
+        <tr style="background:var(--tbl-sum-bg)">
           <td colspan="9" style="padding:11px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${lots.length}건)</td>
           <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
           <td colspan="2" style="border-top:0.5px solid var(--bd)"></td>
@@ -255,12 +255,12 @@ Pages.Revenue = (() => {
       const grandTotal = Object.values(bizTotals).reduce((s, v) => s + v, 0);
 
       const summaryCards = [
-        `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+        `<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
+          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `
-        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
+        <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
           <div style="font-size:12px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
           <div style="font-size:18px;font-weight:600;color:${CONFIG.BIZ_COLORS[b]}">$${formatNumber(Math.round(bizTotals[b]))}</div>
         </div>`),
@@ -344,12 +344,12 @@ Pages.Revenue = (() => {
       const grandTotal = Object.values(bizTotals).reduce((s, v) => s + v, 0);
 
       const summaryCards = [
-        `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+        `<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
+          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `
-        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
+        <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center;border-top:2px solid ${CONFIG.BIZ_COLORS[b]}">
           <div style="font-size:12px;color:${CONFIG.BIZ_COLORS[b]};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${CONFIG.BIZ_LABELS[b]}</div>
           <div style="font-size:18px;font-weight:600;color:${CONFIG.BIZ_COLORS[b]}">$${formatNumber(Math.round(bizTotals[b]))}</div>
         </div>`),

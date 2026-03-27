@@ -48,11 +48,11 @@ Pages.Invoice = (() => {
     function th(label, key, align = 'left') {
       const active = _sortKey === key;
       const arrow  = active ? (_sortDir > 0 ? ' ↑' : ' ↓') : '';
-      return `<th onclick="Pages.Invoice.sort('${key}')" style="padding:9px 13px;text-align:${align};font-size:12px;font-weight:500;color:${active ? 'var(--tx)' : 'var(--tx3)'};text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;cursor:pointer">${label}${arrow}</th>`;
+      return `<th onclick="Pages.Invoice.sort('${key}')" style="padding:9px 13px;text-align:${align};font-size:12px;font-weight:500;color:${active ? 'var(--tx)' : 'var(--tx3)'};text-transform:uppercase;letter-spacing:.05em;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd);white-space:nowrap;cursor:pointer">${label}${arrow}</th>`;
     }
 
     const rows = list.length === 0
-      ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tx3);font-size:12px">인보이스가 없습니다</td></tr>`
+      ? `<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--tbl-tx-body);font-size:12px">인보이스가 없습니다</td></tr>`
       : list.map((r, i) => {
           const lot      = Store.getLotById(r.lotId);
           const due      = r.due ? diffDays(today(), r.due) : null;
@@ -60,14 +60,14 @@ Pages.Invoice = (() => {
           const dueText  = r.status === 'paid' ? '수금완료' : due === null ? '—' : due < 0 ? 'D+' + Math.abs(due) : 'D-' + due;
           const lotInDate = lot?.inDate || '—';
           return `
-            <tr style="border-bottom:1px solid var(--bd)">
-              <td style="padding:9px 13px;color:var(--tx3);font-size:12px;text-align:center">${i + 1}</td>
-              <td style="padding:9px 13px;font-size:12px;color:var(--tx3)">${lotInDate}</td>
-              <td style="padding:9px 13px;font-size:12px;color:var(--tx3)">${r.date || '—'}</td>
+            <tr style="border-top:1px solid var(--tbl-row-bd)">
+              <td style="padding:9px 13px;color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
+              <td style="padding:9px 13px;font-size:12px;color:var(--tbl-tx-body)">${lotInDate}</td>
+              <td style="padding:9px 13px;font-size:12px;color:var(--tbl-tx-body)">${r.date || '—'}</td>
               <td style="padding:9px 13px;font-family:var(--font-mono);font-size:12px">${r.no || '—'}</td>
               <td style="padding:9px 13px">${badge(r.country, CO_STYLE[r.country] || '')} ${badge(r.biz, BIZ_STYLE[r.biz] || '')}</td>
               <td style="padding:9px 13px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.customerName || '—'}</td>
-              <td style="padding:9px 13px;font-size:12px;color:var(--tx3)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
+              <td style="padding:9px 13px;font-size:12px;color:var(--tbl-tx-body)">${lot ? (lot.lotNo || lot.id) : (r.lotNo || '—')}</td>
               <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600">$${formatNumber(Math.round(parseNumber(r.amount)))}</td>
               <td style="padding:9px 13px;font-size:12px;color:${dueColor}">${r.due || '—'}${due !== null && r.status !== 'paid' ? ` (${dueText})` : ''}</td>
               <td style="padding:9px 13px">${badge(ST_LABEL[r.status] || '미수금', ST_STYLE[r.status] || ST_STYLE.unpaid)}</td>
@@ -87,43 +87,43 @@ Pages.Invoice = (() => {
         <div style="display:flex;gap:4px">
           ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
         </div>
-        <span style="font-size:12px;color:var(--tx3);margin-left:auto">${list.length}건</span>
+        <span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">${list.length}건</span>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">총 매출액</div>
+        <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">총 매출액</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalAmt))}</div>
         </div>
-        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">수금 완료</div>
+        <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">수금 완료</div>
           <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(paidAmt))}</div>
         </div>
-        <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">미수금</div>
+        <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
+          <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">미수금</div>
           <div style="font-size:18px;font-weight:600;color:${unpaidAmt > 0 ? '#A32D2D' : 'var(--tx3)'}">$${formatNumber(Math.round(unpaidAmt))}</div>
         </div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:auto">
+      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr>
-            <th style="padding:9px 13px;text-align:center;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--bd);width:32px">#</th>
+            <th style="padding:9px 13px;text-align:center;font-size:12px;font-weight:500;color:var(--tbl-tx-body);text-transform:uppercase;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd);width:32px">#</th>
             ${th('입고일', 'inDate')}
             ${th('발행일', 'date')}
             ${th('번호', 'no')}
-            <th style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--bd)">지역/사업</th>
+            <th style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tbl-tx-body);text-transform:uppercase;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd)">지역/사업</th>
             ${th('고객사', 'customerName')}
-            <th style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--bd)">LOT</th>
+            <th style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tbl-tx-body);text-transform:uppercase;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd)">LOT</th>
             ${th('매출액', 'amount', 'right')}
             ${th('결제기한', 'due')}
             ${th('상태', 'status')}
-            <th style="padding:9px 13px;background:var(--bg);border-bottom:1px solid var(--bd);width:100px"></th>
+            <th style="padding:9px 13px;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd);width:100px"></th>
           </tr></thead>
           <tbody>${rows}</tbody>
           ${list.length > 0 ? `
           <tfoot>
-            <tr style="background:var(--bg)">
+            <tr style="background:var(--tbl-sum-bg)">
               <td colspan="7" style="padding:9px 13px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계 (${list.length}건)</td>
               <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAmt))}</td>
               <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>

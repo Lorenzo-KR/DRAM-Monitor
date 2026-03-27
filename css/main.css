@@ -4,7 +4,7 @@
 
 /* 1. Design Tokens */
 :root {
-  --bg:     #F7F7F5;
+  --bg:     #F5F5F7;
   --card:   #FFFFFF;
   --bd:     #E2E0DB;
   --bd2:    #D0CEC9;
@@ -13,7 +13,22 @@
   --tx3:    #A8A49E;
   --tx4:    #D0CEC9;
   --tx5:    #C0BCB7;
-  --sb-bg:  #1A1A1A;
+
+  /* 표(Table) 전용 토큰 */
+  --tbl-bg:      #FFFFFF;       /* 표 카드 배경 */
+  --tbl-hd-bg:   #E8E8ED;       /* 헤더 배경 */
+  --tbl-hd-tx:   #3A3A3C;       /* 헤더 텍스트 */
+  --tbl-hd-bd:   #D2D2D7;       /* 헤더 하단 보더 */
+  --tbl-row-bd:  #F2F2F7;       /* 행 구분선 */
+  --tbl-wrap-bd: #D2D2D7;       /* 컨테이너 보더 */
+  --tbl-sum-bg:  #EFEFF4;       /* 합계행 배경 */
+  --tbl-sum-bd:  #D2D2D7;       /* 합계행 상단 보더 */
+  --tbl-empty:   #C7C7CC;       /* 빈값 — */
+  --tbl-tx-hd:   #3A3A3C;       /* 헤더 텍스트 */
+  --tbl-tx-body: #6E6E73;       /* 본문 텍스트 */
+  --tbl-tx-1st:  #1D1D1F;       /* 본문 첫 컬럼(사업명 등) */
+  --tbl-tx-sum:  #1D1D1F;       /* 합계행 텍스트 */
+  --sb-bg:  #1B3A6B;
   --sb-tx:  rgba(255,255,255,0.50);
   --sb-on:  rgba(255,255,255,0.09);
   --dot-on:  #111110;
@@ -146,22 +161,22 @@ body {
 .mc-s { font-size: 12px; color: var(--tx2); margin-top: 5px; }
 
 /* 7. Tables */
-.etw             { background: var(--card); border: 1px solid var(--bd); border-radius: var(--r); overflow: auto; margin-bottom: 14px; }
-.etw table       { width: 100%; border-collapse: collapse; font-size: 13px; }
+.etw             { background: var(--tbl-bg); border: 1px solid var(--tbl-wrap-bd); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.etw table       { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .etw th          {
   padding: 10px 14px;
   text-align: left;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--tx2);
-  background: var(--bg);
-  border-bottom: 1px solid var(--bd);
+  color: var(--tbl-hd-tx);
+  background: var(--tbl-hd-bg);
+  border-bottom: 1px solid var(--tbl-hd-bd);
   white-space: nowrap;
   position: sticky; top: 0; z-index: 1;
 }
-.etw td          { padding: 0; border-bottom: 1px solid var(--bd); vertical-align: middle; }
-.etw tr:last-child td { border-bottom: none; }
-.etw tr:hover td { background: #FAFAF8; }
+.etw td          { padding: 0; border-top: 1px solid var(--tbl-row-bd); vertical-align: middle; }
+.etw tr:first-child td { border-top: none; }
+.etw tr:hover td { background: #F5F5F7; }
 .ec {
   width: 100%; height: 100%; padding: 10px 14px;
   border: none; background: transparent;

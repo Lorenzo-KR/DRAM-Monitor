@@ -15,12 +15,12 @@
 Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
-  const S = {
-    th:  'padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
-    thr: 'padding:10px 14px;text-align:right;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap',
-    td:  'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;font-size:13px',
-    tdr: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx);vertical-align:middle;font-size:13px;text-align:right;font-family:var(--font-mono);font-size:15px',
-    tdm: 'padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--tx2);vertical-align:middle;font-size:13px',
+    const S = {
+    th:  'padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap',
+    thr: 'padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap',
+    td:  'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;font-size:12px',
+    tdr: 'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:12px',
+    tdm: 'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;font-size:12px',
   };
 
   // ── 배지 헬퍼 ───────────────────────────────────────────────
@@ -301,7 +301,7 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정 · 미수금)</span></div>
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
+      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
@@ -348,7 +348,7 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Completed job orders</div>
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
+      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
@@ -390,7 +390,7 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">입고 예정</div>
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto;margin-bottom:12px">
+      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th>

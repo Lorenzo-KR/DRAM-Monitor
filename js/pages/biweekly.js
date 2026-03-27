@@ -81,10 +81,10 @@ Pages.Biweekly = (() => {
       const BIZ_LABELS = CONFIG.BIZ_LABELS;
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
-      const TH  = (t, attr='') => `<th style="padding:8px 10px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;${attr}">${t}</th>`;
-      const THR = (t, attr='') => `<th style="padding:8px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
-      const TD  = (t, attr='') => `<td style="padding:7px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);border:1px solid var(--bd);width:62px;white-space:nowrap;color:var(--tx);${attr}">${t}</td>`;
-      const TDL = (t, attr='') => `<td style="padding:7px 10px;text-align:left;font-size:13px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:var(--bg);${attr}">${t}</td>`;
+      const TH  = (t, attr='') => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;${attr}">${t}</th>`;
+      const THR = (t, attr='') => `<th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;width:62px;${attr}">${t}</th>`;
+      const TD  = (t, attr='') => `<td style="padding:10px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);width:62px;white-space:nowrap;color:var(--tbl-tx-body);${attr}">${t}</td>`;
+      const TDL = (t, attr='') => `<td style="padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tbl-tx-1st);border-top:1px solid var(--tbl-row-bd);border-right:1px solid var(--tbl-hd-bd);white-space:nowrap;background:var(--tbl-hd-bg);${attr}">${t}</td>`;
 
       // ── 1. 월별 표 ───────────────────────────────────────
       function buildMonthlyTable(type) {
@@ -93,8 +93,8 @@ Pages.Biweekly = (() => {
         ).join('') + `<th style="padding:7px 8px;text-align:center;font-size:12px;font-weight:600;color:var(--tx3);background:var(--bg);border:0.5px solid #2563a8">연간합계</th>`;
 
         const coHeaders = MONTHS.map(m =>
-          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#F5F4F1;':'')).join('')
-        ).join('') + THR('합계', 'width:80px;border-left:2px solid var(--bd2);background:#EEECEA');
+          CO.map(co => THR(CO_LABELS[co], m===curMonth?'background:#EAEAF2;':'')).join('')
+        ).join('') + THR('합계', 'width:80px;border-left:2px solid var(--bd2);background:var(--tbl-sum-bg)');
 
         let grandTotal = Array(MONTHS.length * CO.length).fill(0);
         const dataRows = BIZ.map(biz => {
@@ -109,7 +109,7 @@ Pages.Biweekly = (() => {
               const display = val > 0
                 ? (type === 'proc' ? formatNumber(val) : '$' + formatNumber(Math.round(val)))
                 : '—';
-              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#F5F4F1;':''}`);
+              return TD(display, `color:${val>0?'var(--tx)':'var(--tx4)'};${m===curMonth?'background:#EAEAF2;':''}`);
             }).join('')
           ).join('');
           const rowTotalDisplay = rowTotal > 0
@@ -127,7 +127,7 @@ Pages.Biweekly = (() => {
             const display = v > 0
               ? (type === 'proc' ? formatNumber(v) : '$' + formatNumber(Math.round(v)))
               : '—';
-            return TD(display, `font-weight:600;color:${v>0?'#085041':'var(--tx3)'};background:var(--bg);${m===curMonth?'background:#EEECEA;':''}`);
+            return TD(display, `font-weight:600;color:${v>0?'#085041':'var(--tx3)'};background:var(--bg);${m===curMonth?'background:var(--tbl-sum-bg);':''}`);
           }).join('')
         ).join('');
         const grandTotalDisplay = colGrandTotal > 0
@@ -136,10 +136,10 @@ Pages.Biweekly = (() => {
 
         const unit  = type === 'proc' ? '(ea)' : '(USD)';
         const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
-        const basis = `<span style="font-size:11px;color:var(--tx3);margin-left:8px">인보이스 발행 완료 기준</span>`;
+        const basis = `<span style="font-size:11px;font-weight:400;color:#86868B;margin-left:8px">인보이스 발행 완료 기준</span>`;
 
         return `
-          <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">${title} <span style="font-size:12px;font-weight:400;color:var(--tx3)">${unit}</span>${basis}</div>
+          <div style="font-size:13px;font-weight:600;color:#1D1D1F;margin-bottom:4px">${title} <span style="font-size:12px;font-weight:400;color:var(--tx3)">${unit}</span>${basis}</div>
           <div style="overflow-x:auto;margin-bottom:20px;width:100%">
             <table style="border-collapse:collapse;width:100%;table-layout:fixed">
               <colgroup>
@@ -153,7 +153,7 @@ Pages.Biweekly = (() => {
               </thead>
               <tbody>${dataRows}</tbody>
               <tfoot>
-                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;background:#EEECEA;color:var(--tx);width:80px;border-left:2px solid var(--bd2)')}</tr>
+                <tr>${TDL('합계', 'font-weight:600;background:var(--bg)')}${totalCells}${TD(grandTotalDisplay, 'font-weight:600;font-size:12px;background:var(--tbl-sum-bg);color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd);width:80px;border-left:2px solid var(--tbl-hd-bd)')}</tr>
               </tfoot>
             </table>
           </div>`;
@@ -195,10 +195,10 @@ Pages.Biweekly = (() => {
         });
 
         // 더 직관적인 포맷으로 다시 구성
-        const BIZ_TD = (t) => `<td style="padding:8px 12px;text-align:center;font-size:13px;font-weight:600;color:var(--tx);border:1px solid var(--bd);background:var(--bg);white-space:nowrap">${t}</td>`;
-        const VAL_TD = (t, attr='') => `<td style="padding:8px 14px;text-align:right;font-size:13px;font-family:var(--font-mono);color:var(--tx);border:1px solid var(--bd);white-space:nowrap;min-width:110px;${attr}">${t}</td>`;
-        const NA_TD  = (t) => `<td style="padding:8px 14px;text-align:right;font-size:13px;color:var(--tx3);border:1px solid var(--bd);white-space:nowrap;min-width:110px">${t}</td>`;
-        const S_TH   = (t, w='110px') => `<th style="padding:8px 14px;text-align:center;font-size:13px;font-weight:600;color:var(--tx2);background:var(--bg);border:1px solid var(--bd);white-space:nowrap;min-width:${w}">${t}</th>`;
+        const BIZ_TD = (t) => `<td style="padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--tbl-tx-1st);border-top:1px solid var(--tbl-row-bd);border-right:1px solid var(--tbl-hd-bd);background:var(--tbl-hd-bg);white-space:nowrap">${t}</td>`;
+        const VAL_TD = (t, attr='') => `<td style="padding:10px 14px;text-align:right;font-size:12px;font-family:var(--font-mono);color:var(--tbl-tx-body);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);white-space:nowrap;min-width:110px;${attr}">${t}</td>`;
+        const NA_TD  = (t) => `<td style="padding:10px 14px;text-align:right;font-size:12px;color:var(--tbl-empty);border-top:1px solid var(--tbl-row-bd);border-left:1px solid var(--tbl-row-bd);white-space:nowrap;min-width:110px">${t}</td>`;
+        const S_TH   = (t, w='110px') => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border:1px solid var(--tbl-hd-bd);white-space:nowrap;min-width:${w}">${t}</th>`;
 
         const doneRows = BIZ.map(biz => {
           const sgKey = `${biz}_SG`;
@@ -237,8 +237,8 @@ Pages.Biweekly = (() => {
         }).join('');
 
         return `
-          <div style="font-size:15px;font-weight:600;color:var(--tx);margin-bottom:4px">${label}</div>
-          <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">인보이스 발행 완료 기준</div>
+          <div style="font-size:13px;font-weight:600;color:#1D1D1F;margin-bottom:4px">${label}</div>
+          <div style="font-size:11px;color:#86868B;margin-bottom:12px">인보이스 발행 완료 기준</div>
 
           <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">처리 완료 — Invoice 발행 기준</div>
           <div style="margin-bottom:14px">
