@@ -23,29 +23,20 @@ const Api = (() => {
   // ── Status indicator ────────────────────────────────────────
   function _setStatus(status) {
     const dot  = document.getElementById('sdot');
-    const text = document.getElementById('stext');
     const bar  = document.getElementById('ss-bar');
 
-    if (!dot || !text) return;
+    if (!dot) return;
 
     const states = {
-      ok:      { dot: '',      text: '연결됨',    bar: 'ok' },
-      saving:  { dot: ' spin', text: '저장 중...', bar: 'saving' },
-      loading: { dot: ' spin', text: '로딩 중...', bar: 'saving' },
-      err:     { dot: ' err',  text: '저장 오류', bar: 'err' },
+      ok:      { dot: '',     bar: 'ok' },
+      saving:  { dot: ' spin', bar: 'saving' },
+      loading: { dot: ' spin', bar: 'saving' },
+      err:     { dot: ' err', bar: 'err' },
     };
 
     const s = states[status] || states.ok;
     dot.className  = 'sdot' + s.dot;
-    text.textContent = s.text;
     if (bar) bar.className = s.bar;
-
-    // 저장 완료 후 2초 뒤 "연결됨"으로 복귀
-    if (status === 'ok') {
-      setTimeout(() => {
-        if (text.textContent === '저장됨') text.textContent = '연결됨';
-      }, 2000);
-    }
   }
 
   // ── Flush queue (sequential, stable) ───────────────────────

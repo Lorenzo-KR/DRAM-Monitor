@@ -117,7 +117,10 @@ const DataLoader = (() => {
         Store.loadSettings(data.settings || []);
 
         // settings 시트의 kpi_rolling을 KpiTarget 내부 상태에 동기화
-        Pages.KpiTarget.loadFromSettings();
+        // ※ Pages.KpiTarget은 dataLoader보다 나중에 로드되므로 존재 여부 확인 필수
+        if (typeof Pages !== 'undefined' && Pages.KpiTarget?.loadFromSettings) {
+          Pages.KpiTarget.loadFromSettings();
+        }
       } finally {
         if (loadEl) loadEl.style.display = 'none';
       }

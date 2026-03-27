@@ -40,6 +40,7 @@ const Auth = {
         const loadEl = document.getElementById('loading-overlay');
         if (loadEl) loadEl.style.display = 'flex';
         await DataLoader.loadAll();
+        if (Pages.KpiTarget?.loadFromSettings) Pages.KpiTarget.loadFromSettings();
         Nav.go('dash');
       } else {
         if (errEl) {

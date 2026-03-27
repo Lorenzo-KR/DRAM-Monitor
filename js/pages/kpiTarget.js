@@ -125,7 +125,7 @@ Pages.KpiTarget = (() => {
 
     const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b), 0);
     if (totalTgt === 0) {
-      el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tx3);font-size:14px">롤링 데이터를 먼저 입력해주세요</div>`;
+      el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tx3);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>`;
       return;
     }
 
@@ -162,30 +162,30 @@ Pages.KpiTarget = (() => {
     const cards = `
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
-          <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
+          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
+          <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">롤링 데이터 기준</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적 (${periodLabel})</div>
-          <div style="font-size:20px;font-weight:600;color:#085041">$${formatNumber(Math.round(curCumA))}</div>
+          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적 (${periodLabel})</div>
+          <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(curCumA))}</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">목표 $${formatNumber(Math.round(curCumT))}</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (${periodLabel})</div>
-          <div style="font-size:20px;font-weight:600;color:${overallPct>=100?'#085041':overallPct>=70?'#0C447C':'#A32D2D'}">${overallPct}%</div>
+          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (${periodLabel})</div>
+          <div style="font-size:18px;font-weight:600;color:${overallPct>=100?'#085041':overallPct>=70?'#0C447C':'#A32D2D'}">${overallPct}%</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">목표 대비</div>
         </div>
         <div style="background:var(--bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:13px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (${periodLabel})</div>
-          <div style="font-size:20px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}$${formatNumber(Math.round(Math.abs(diff)))}</div>
+          <div style="font-size:12px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (${periodLabel})</div>
+          <div style="font-size:18px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}$${formatNumber(Math.round(Math.abs(diff)))}</div>
           <div style="font-size:12px;color:var(--tx3);margin-top:2px">${diff>=0?'목표 초과':'목표 미달'}</div>
         </div>
       </div>`;
 
     const chartHtml = `
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">
-        <div style="display:flex;gap:16px;margin-bottom:10px;font-size:13px;align-items:center">
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">
+        <div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;align-items:center">
           <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>
           <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>
           <span style="font-size:12px;color:var(--tx3);margin-left:auto">롤링 데이터 기준</span>
@@ -193,7 +193,7 @@ Pages.KpiTarget = (() => {
         <div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div>
       </div>`;
 
-    const thS = 'padding:9px 12px;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)';
+    const thS = 'padding:9px 12px;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd)';
     let cumTA2 = 0, cumAA2 = 0;
     const tableRows = MONTHS.map((m, i) => {
       cumTA2 += monthTargets[i];
@@ -207,21 +207,21 @@ Pages.KpiTarget = (() => {
       const barC = pct === null ? '#e5e7eb' : pct >= 100 ? '#1D9E75' : pct >= 70 ? '#185FA5' : '#E24B4A';
       const pctC = pct === null ? 'var(--tx3)' : pct >= 100 ? '#085041' : pct >= 70 ? '#0C447C' : '#791F1F';
       const difBadge = dif === null ? '—'
-        : dif >= 0 ? `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;background:#E1F5EE;color:#085041">+$${Math.round(dif).toLocaleString()}</span>`
-                   : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;background:#FCEBEB;color:#791F1F">-$${Math.round(Math.abs(dif)).toLocaleString()}</span>`;
+        : dif >= 0 ? `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--tx2);background:transparent">+$${Math.round(dif).toLocaleString()}</span>`
+                   : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid #FECACA;color:#dc2626;background:#FEF2F2">-$${Math.round(Math.abs(dif)).toLocaleString()}</span>`;
       return `<tr style="${isCur?'background:#F0F7FF':''}${!isPast?';opacity:0.38':''}">
         <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">${m}${isCur?' ◀':''}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx3)">${monthTargets[i]>0?'$'+formatNumber(Math.round(monthTargets[i])):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px">${act!==null?'$'+Math.round(act).toLocaleString():'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx3)">${cumTA2>0?'$'+Math.round(cumTA2).toLocaleString():'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:${isPast?'500':'400'};color:#085041">${cumAVal!==null?'$'+Math.round(cumAVal).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx3)">${monthTargets[i]>0?'$'+formatNumber(Math.round(monthTargets[i])):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px">${act!==null?'$'+Math.round(act).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx3)">${cumTA2>0?'$'+Math.round(cumTA2).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?'$'+Math.round(cumAVal).toLocaleString():'—'}</td>
         <td style="padding:9px 12px;min-width:130px">
           ${pct!==null?`<div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
               <div style="height:100%;border-radius:3px;background:${barC};width:${Math.min(100,pct)}%"></div>
             </div>
-            <span style="font-size:13px;font-weight:500;color:${pctC};min-width:36px;text-align:right">${pct}%</span>
-          </div>`:`<span style="font-size:13px;color:var(--tx3)">${isPast?'—':'—'}</span>`}
+            <span style="font-size:12px;font-weight:500;color:${pctC};min-width:36px;text-align:right">${pct}%</span>
+          </div>`:`<span style="font-size:12px;color:var(--tx3)">${isPast?'—':'—'}</span>`}
         </td>
         <td style="padding:9px 12px;text-align:right">${difBadge}</td>
       </tr>`;
@@ -230,8 +230,8 @@ Pages.KpiTarget = (() => {
     el.innerHTML = `
       ${cards}
       ${chartHtml}
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:8px">
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:8px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr>
             <th style="${thS};text-align:left">월</th>
             <th style="${thS};text-align:right">월 목표</th>
@@ -291,7 +291,8 @@ Pages.KpiTarget = (() => {
     loadFromSettings: ()                 => _loadFromSettings(),
 
     render() {
-      const el = document.getElementById('kpitarget-body'); if (!el) return;
+      // 페이지 진입 시 서버 settings → _rolling 재동기화 (로드 타이밍 보정)
+      _loadFromSettings();
       const year = _year;
 
       // 롤링 데이터 기반 연간 목표
@@ -304,21 +305,21 @@ Pages.KpiTarget = (() => {
         const barClr = pct >= 100 ? '#1D9E75' : pct >= 70 ? color : '#EF9F27';
 
         return `
-          <tr style="border-bottom:0.5px solid var(--bd)">
-            <td style="padding:12px 14px"><span style="font-size:14px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span></td>
-            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:14px;font-weight:600">
+          <tr style="border-bottom:1px solid var(--bd)">
+            <td style="padding:12px 14px"><span style="font-size:12px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span></td>
+            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
               ${tgt > 0 ? '$' + formatNumber(Math.round(tgt)) : '<span style="color:var(--tx3);font-weight:400">롤링 데이터 미입력</span>'}
             </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;color:#085041">${act>0?'$'+formatNumber(Math.round(act)):'—'}</td>
+            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">${act>0?'$'+formatNumber(Math.round(act)):'—'}</td>
             <td style="padding:12px 14px;min-width:160px">
               ${tgt>0?`<div style="display:flex;align-items:center;gap:8px">
                 <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                   <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
                 </div>
-                <span style="font-size:14px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
-              </div>`:'<span style="font-size:14px;color:var(--tx3)">롤링 데이터 필요</span>'}
+                <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
+              </div>`:'<span style="font-size:12px;color:var(--tx3)">롤링 데이터 필요</span>'}
             </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;color:${rem>0?'#BA7517':'var(--tx3)'}">
+            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">
               ${tgt>0?'$'+formatNumber(Math.round(rem)):'—'}
             </td>
           </tr>`;
@@ -333,12 +334,12 @@ Pages.KpiTarget = (() => {
       const yearTabs = [year-1, year, year+1].map(y => {
         const active = y === year;
         return `<button onclick="Pages.KpiTarget.selectYear(${y})"
-          style="padding:4px 14px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.15s;
+          style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.15s;
           ${active?'background:var(--navy);color:#fff;border-color:var(--navy)':'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
       }).join('');
 
-      const TH  = l => `<th style="padding:9px 14px;text-align:left;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${l}</th>`;
-      const THR = l => `<th style="padding:9px 14px;text-align:right;font-size:13px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:0.5px solid var(--bd)">${l}</th>`;
+      const TH  = l => `<th style="padding:9px 14px;text-align:left;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
+      const THR = l => `<th style="padding:9px 14px;text-align:right;font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--bd)">${l}</th>`;
 
       const bizBtns = [
         {key:'all', label:'전체', color:'#1B4F8A'},
@@ -346,7 +347,7 @@ Pages.KpiTarget = (() => {
       ].map(({key, label, color}) => {
         const on = _bizSet.has(key);
         return `<button id="kpi-biz-${key}" onclick="Pages.KpiTarget.switchBiz('${key}')"
-          style="padding:5px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid ${color};
+          style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid ${color};
           background:${on?color:'none'};color:${on?'#fff':color};transition:.15s">${label}</button>`;
       }).join('');
 
@@ -357,42 +358,42 @@ Pages.KpiTarget = (() => {
           ${totalTgt > 0 ? `
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">연간 목표</div>
-              <div style="font-size:20px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">연간 목표</div>
+              <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
               <div style="font-size:12px;color:var(--tx3);margin-top:2px">롤링 데이터 합계</div>
             </div>
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">누적 달성</div>
-              <div style="font-size:20px;font-weight:600;color:#085041">$${formatNumber(Math.round(totalAct))}</div>
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">누적 달성</div>
+              <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(totalAct))}</div>
             </div>
             <div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">전체 달성률</div>
-              <div style="font-size:20px;font-weight:600;color:${totalClr}">${totalPct}%</div>
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:3px">전체 달성률</div>
+              <div style="font-size:18px;font-weight:600;color:${totalClr}">${totalPct}%</div>
             </div>
           </div>` : `
-          <div style="background:#FFF3E0;border-left:3px solid #EF9F27;padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:14px;color:#633806">
+          <div style="background:#FFF3E0;border-left:3px solid #EF9F27;padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:#633806">
             롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
-            <button onclick="Pages.KpiTarget.openRolling()" style="background:none;border:none;color:#185FA5;font-size:14px;font-weight:500;cursor:pointer;text-decoration:underline">KPI 롤링 데이터 입력</button>
+            <button onclick="Pages.KpiTarget.openRolling()" style="background:none;border:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer;text-decoration:underline">KPI 롤링 데이터 입력</button>
           </div>`}
 
-          <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:20px">
             <table style="width:100%;border-collapse:collapse">
               <thead><tr>${TH('사업')}${TH('목표 매출 (USD)')}${THR('누적 실적')}${TH('달성률')}${THR('잔여')}</tr></thead>
               <tbody>${bizRows}</tbody>
               ${totalTgt > 0 ? `
               <tfoot><tr style="background:var(--bg)">
-                <td style="padding:10px 14px;font-size:14px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-                <td style="padding:10px 14px;font-family:var(--font-mono);font-size:14px;font-weight:600;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalTgt))}</td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:#085041;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAct))}</td>
+                <td style="padding:10px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
+                <td style="padding:10px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalTgt))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAct))}</td>
                 <td style="padding:10px 14px;border-top:0.5px solid var(--bd)">
                   <div style="display:flex;align-items:center;gap:8px">
                     <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                       <div style="height:100%;border-radius:3px;background:${totalClr};width:${totalPct}%"></div>
                     </div>
-                    <span style="font-size:14px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
+                    <span style="font-size:12px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
                   </div>
                 </td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:14px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
               </tr></tfoot>` : ''}
             </table>
           </div>
@@ -401,7 +402,7 @@ Pages.KpiTarget = (() => {
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;gap:6px;flex-wrap:wrap">${bizBtns}</div>
             <button onclick="Pages.KpiTarget.openRolling()"
-              style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:13px;font-weight:500;cursor:pointer">
+              style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer">
               <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
               KPI 롤링 데이터 입력
             </button>
@@ -487,20 +488,20 @@ Pages.KpiTarget = (() => {
         { key:'TBD5', label:'TBD', fixed:false },
       ];
       const MO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-      const thS = 'padding:6px 6px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap';
+      const thS = 'padding:6px 6px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);background:var(--bg);border:1px solid var(--bd);white-space:nowrap';
       const inpW = 'width:52px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
 
       const tableRows = ROWS.map((r, i) => {
         const vals = yData[r.key] || Array(12).fill(0);
         const cells = vals.map((v) =>
-          `<td style="padding:3px 3px;border:0.5px solid var(--bd)"><input type="number" value="${v||''}" placeholder="0" step="0.0001" style="${inpW}" oninput="Pages.KpiTarget.calcRollingRow(this)"></td>`
+          `<td style="padding:3px 3px;border:1px solid var(--bd)"><input type="number" value="${v||''}" placeholder="0" step="0.0001" style="${inpW}" oninput="Pages.KpiTarget.calcRollingRow(this)"></td>`
         ).join('');
         const rowSum = vals.reduce((s,v) => s+(parseFloat(v)||0), 0);
         return `<tr>
-          <td style="padding:6px 8px;text-align:center;font-size:12px;color:var(--tx3);background:var(--bg);border:0.5px solid var(--bd)">${i+1}</td>
-          <td style="padding:6px 10px;font-size:13px;font-weight:${r.fixed?'500':'400'};color:${r.fixed?'var(--tx)':'var(--tx3)'};background:var(--bg);border:0.5px solid var(--bd);white-space:nowrap;text-align:center">${r.label}</td>
+          <td style="padding:6px 8px;text-align:center;font-size:12px;color:var(--tx3);background:var(--bg);border:1px solid var(--bd)">${i+1}</td>
+          <td style="padding:6px 10px;font-size:12px;font-weight:${r.fixed?'500':'400'};color:${r.fixed?'var(--tx)':'var(--tx3)'};background:var(--bg);border:1px solid var(--bd);white-space:nowrap;text-align:center">${r.label}</td>
           ${cells}
-          <td class="rolling-rowtotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;color:#085041;background:var(--bg);border:0.5px solid var(--bd);font-family:var(--font-mono)">${rowSum>0?+rowSum.toFixed(4):'—'}</td>
+          <td class="rolling-rowtotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;color:var(--tx);background:var(--bg);border:1px solid var(--bd);font-family:var(--font-mono)">${rowSum>0?+rowSum.toFixed(4):'—'}</td>
         </tr>`;
       }).join('');
 
@@ -511,7 +512,7 @@ Pages.KpiTarget = (() => {
       });
       const grand = colSums.reduce((s,v)=>s+v,0);
       const sumCells = colSums.map((v,i) =>
-        `<td id="rs${i}" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:0.5px solid var(--bd);font-family:var(--font-mono)">${v>0?+v.toFixed(4):'0'}</td>`
+        `<td id="rs${i}" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd);font-family:var(--font-mono)">${v>0?+v.toFixed(4):'0'}</td>`
       ).join('');
 
       wrap.innerHTML = `
@@ -529,9 +530,9 @@ Pages.KpiTarget = (() => {
             <tbody id="rolling-tbody">${tableRows}</tbody>
             <tfoot>
               <tr>
-                <td colspan="2" style="padding:6px 10px;text-align:center;font-size:13px;font-weight:500;background:#F1EFE8;border:0.5px solid var(--bd)">합계</td>
+                <td colspan="2" style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd)">합계</td>
                 ${sumCells}
-                <td id="rstotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:600;color:#085041;background:#E8E4D8;border:0.5px solid var(--bd);font-family:var(--font-mono)">${grand>0?+grand.toFixed(4):'0'}</td>
+                <td id="rstotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grand>0?+grand.toFixed(4):'0'}</td>
               </tr>
             </tfoot>
           </table>

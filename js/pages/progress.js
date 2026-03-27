@@ -20,14 +20,14 @@ Pages.Progress = (() => {
 
   const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
   const ST_STYLE = {
-    upcoming: 'background:#E6F1FB;color:#0C447C',
-    inprog:   'background:#E6F1FB;color:#0C447C',
-    overdue:  'background:#FCEBEB;color:#791F1F',
-    done:     'background:#E1F5EE;color:#085041',
+    upcoming: 'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    inprog:   'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    overdue:  'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2',
+    done:     'border:1px solid var(--bd);color:var(--tx2);background:transparent',
   };
-  const CO_STYLE  = { HK: 'background:#FAEEDA;color:#633806', SG: 'background:#E1F5EE;color:#085041' };
-  const BIZ_STYLE = { DRAM: 'background:#E6F1FB;color:#0C447C', SSD: 'background:#E1F5EE;color:#085041', MID: 'background:#EEEDFE;color:#3C3489' };
-  const BAR_COLOR = { upcoming: '#378ADD', inprog: '#185FA5', overdue: '#E24B4A', done: '#1D9E75' };
+  const CO_STYLE  = { HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
+  const BIZ_STYLE = { DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SSD: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', MID: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
+  const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', done: 'var(--tx)' };
 
   function _badge(text, style) {
     return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
@@ -160,11 +160,11 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 8px;background:#EAF3DE;border-bottom:0.5px solid #C0DD97;vertical-align:middle';
-    const inp = 'border:1px solid #C0DD97;border-radius:4px;background:#fff;font-size:14px';
+    const tdS = 'padding:5px 8px;background:var(--bg);border-bottom:1px solid var(--bd);vertical-align:middle';
+    const inp = 'border:1px solid var(--bd);border-radius:4px;background:#fff;font-size:14px';
     return `
       <tr id="new-lot-row">
-        <td style="${tdS};text-align:center;color:#3B6D11;font-size:16px;font-weight:500">+</td>
+        <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
         <td style="${tdS}">
           <select id="nl-co" style="${inp};width:100%;padding:4px 3px">
             <option value="HK">HK</option><option value="SG">SG</option>
@@ -198,7 +198,7 @@ Pages.Progress = (() => {
         </td>
         <td style="${tdS}"></td>
         <td style="${tdS}">
-          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:#3B6D11;color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:500;cursor:pointer">+ 등록</button>
+          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:500;cursor:pointer">+ 등록</button>
           <span id="nl-ok" style="display:none;font-size:15px;color:#3B6D11;font-weight:500">✓</span>
         </td>
       </tr>`;
@@ -267,7 +267,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:11px 14px;text-align:${align};font-size:13px;font-weight:600;color:#E6F1FB;text-transform:uppercase;letter-spacing:.05em;background:#1B4F8A;border-bottom:0.5px solid #2563a8;white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:11px 14px;text-align:${align};font-size:9.5px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -277,12 +277,12 @@ Pages.Progress = (() => {
       const rem   = Math.max(0, qty - cum);
       const pct   = (qty > 0 && st !== 'upcoming') ? Math.min(100, Math.round(cum/qty*100)) : 0;
       const dd    = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const pctColor  = st==='overdue'?'#A32D2D': st==='done'?'#085041': pct>=80?'#BA7517':'#0C447C';
-      const barColor  = BAR_COLOR[st] || '#185FA5';
+      const pctColor  = st==='overdue'?'#dc2626': st==='done'?'var(--tx)': pct>=80?'var(--tx3)':'var(--tx2)';
+      const barColor  = BAR_COLOR[st] || 'var(--tx2)';
       const isOpen    = _openLotId === lot.id;
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F7F7F6':''}">
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:var(--bg)':''}">
           <td style="padding:11px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
@@ -292,7 +292,7 @@ Pages.Progress = (() => {
           <td style="padding:11px 14px;font-size:15px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
           <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
           <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${rem>0?'#BA7517':'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px;color:${rem>0?'var(--tx3)':'var(--tx3)'}">${formatNumber(rem)}</td>
           <td style="padding:11px 14px">
             ${st==='upcoming'
               ? `<span style="font-size:15px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
@@ -301,13 +301,13 @@ Pages.Progress = (() => {
                   <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:11px 14px;font-size:15px;color:${st==='upcoming'?'#0C447C':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
+          <td style="padding:11px 14px;font-size:15px;color:${st==='upcoming'?'var(--tx2)':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
           <td style="padding:11px 14px;font-size:15px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D':'color:var(--tx3)'}">
             ${st==='done'
               ? (lot.actualDone || lot.targetDate || '—')
               : st==='upcoming'
                 ? (lot.targetDate || '—')
-                : `${lot.targetDate||'—'}${dd!==null?`<span style="font-size:13px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#BA7517':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}`}
+                : `${lot.targetDate||'—'}${dd!==null?`<span style="font-size:13px;margin-left:3px;color:${dd<0?'#dc2626':dd<=3?'var(--tx3)':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}`}
           </td>
           <td style="padding:11px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td style="padding:6px 8px;white-space:nowrap">
@@ -317,7 +317,7 @@ Pages.Progress = (() => {
         </tr>`;
 
       const expandRow = isOpen ? `
-        <tr><td colspan="13" style="padding:0;border-bottom:0.5px solid var(--bd)">
+        <tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--bd)">
           ${_renderExpand(lot, dailies)}
         </td></tr>` : '';
 
@@ -325,7 +325,7 @@ Pages.Progress = (() => {
     }).join('');
 
     el.innerHTML = `
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:auto">
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);overflow:auto">
         <table style="width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed">
           <colgroup>
             <col style="width:36px">
@@ -368,12 +368,12 @@ Pages.Progress = (() => {
       ? `<div style="font-size:14px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal)+parseNumber(r.noBoot)+parseNumber(r.abnormal))||parseNumber(r.proc) : parseNumber(r.proc);
-          return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:0.5px solid var(--bd);font-size:14px;align-items:center">
+          return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
             <span style="font-family:var(--font-mono)">${r.date}</span>
-            ${isDram?`<span style="font-family:var(--font-mono);color:#085041;text-align:right">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:#633806;text-align:right">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:#791F1F;text-align:right">${formatNumber(parseNumber(r.abnormal))}</span>`:''}
+            ${isDram?`<span style="font-family:var(--font-mono);color:var(--tx);text-align:right">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.abnormal))}</span>`:''}
             <span style="font-family:var(--font-mono);font-weight:500;text-align:right">${formatNumber(tot)}</span>
             <span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.cumul))}</span>
-            <span style="font-family:var(--font-mono);color:${parseNumber(r.remain)>0?'#BA7517':'#085041'};text-align:right">${formatNumber(parseNumber(r.remain))}</span>
+            <span style="font-family:var(--font-mono);color:${parseNumber(r.remain)>0?'var(--tx3)':'var(--tx)'};text-align:right">${formatNumber(parseNumber(r.remain))}</span>
             <span style="font-size:15px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
             <button class="btn del sm" style="padding:2px 6px;font-size:14px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
           </div>`;
@@ -389,12 +389,12 @@ Pages.Progress = (() => {
 
     return `
       <div style="padding:14px 16px;background:var(--bg)">
-        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
+        <div style="font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
         ${histHeader}${histRows}
 
-        <div style="margin-top:14px;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);overflow:hidden">
+        <div style="margin-top:14px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden">
           <!-- 탭 헤더 -->
-          <div style="display:flex;border-bottom:0.5px solid var(--bd);background:var(--bg)">
+          <div style="display:flex;border-bottom:1px solid var(--bd);background:var(--bg)">
             <button id="dp-tab-manual-${lot.id}" onclick="Pages.Progress.switchTab(${lot.id},'manual')"
               style="padding:9px 18px;font-size:13px;font-weight:500;border:none;background:var(--card);color:var(--tx);cursor:pointer;border-bottom:2px solid var(--navy)">
               직접 입력
@@ -417,11 +417,11 @@ Pages.Progress = (() => {
             </div>
             ${isDram?`
             <div style="margin-bottom:10px">
-              <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
+              <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div class="fld"><label style="color:#085041">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
-                <div class="fld"><label style="color:#633806">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
-                <div class="fld"><label style="color:#791F1F">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:#fca5a5;background:#fef2f2"></div>
+                <div class="fld"><label style="color:var(--tx2)">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
+                <div class="fld"><label style="color:var(--tx2)">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
+                <div class="fld"><label style="color:var(--tx2)">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
               </div>
             </div>`:''}
             <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
@@ -638,9 +638,9 @@ Pages.Progress = (() => {
       const panel = document.getElementById(`dp-panel-${t}-${lotId}`);
       if (!btn || !panel) return;
       const active = t === tab;
-      btn.style.background    = active ? 'var(--card)' : 'none';
+      btn.style.background    = active ? 'var(--card)' : 'transparent';
       btn.style.color         = active ? 'var(--tx)'   : 'var(--tx3)';
-      btn.style.borderBottom  = active ? '2px solid var(--navy)' : '2px solid transparent';
+      btn.style.borderBottom  = active ? '2px solid var(--tx)' : '2px solid transparent';
       panel.style.display     = active ? 'block' : 'none';
     });
   }
@@ -713,14 +713,14 @@ Pages.Progress = (() => {
         <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:#633806">${formatNumber(r.noBoot)}</td>
         <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:#791F1F">${formatNumber(r.abnormal)}</td>
         ` : ''}
-        <td style="padding:6px 10px;font-size:12px">${dup ? '<span style="background:#FAEEDA;color:#633806;padding:1px 6px;border-radius:3px;font-size:12px">중복 (덮어씀)</span>' : ''}</td>
+        <td style="padding:6px 10px;font-size:12px">${dup ? '<span style="border:1px solid var(--bd);color:var(--tx2);background:transparent;padding:1px 6px;border-radius:3px;font-size:12px">중복 (덮어씀)</span>' : ''}</td>
       </tr>`;
     }).join('');
 
-    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:#E6F1FB;text-transform:uppercase;background:#1B4F8A;border-bottom:0.5px solid #2563a8';
+    const thStyle = 'padding:7px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--bd)';
     previewEl.innerHTML = `
       <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:6px">${parsed.length}건 인식됨 ${existing.size > 0 && parsed.some(r => existing.has(r.date)) ? '· <span style="color:#BA7517">노란색: 날짜 중복 (덮어쓰기)</span>' : ''}</div>
-      <div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--rs);overflow:auto">
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);overflow:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr>
             <th style="${thStyle}">날짜</th>
