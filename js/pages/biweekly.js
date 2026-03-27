@@ -85,9 +85,9 @@ Pages.Biweekly = (() => {
       const TH = (t, extra='') =>
         `<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
 
-      // 데이터 헤더 (월/지역) — 동일
-      const THM = (t, bg=HBG, extra='') =>
-        `<th style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
+      // 데이터 헤더 (월/지역) — colspan 지원
+      const THM = (t, bg=HBG, extra='', colspan=1) =>
+        `<th colspan="${colspan}" style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
 
       // 데이터 셀 — 모든 방향 보더
       const TD = (t, bg='#FFFFFF', color=VTX, fw='400', extra='') =>
@@ -102,10 +102,10 @@ Pages.Biweekly = (() => {
         const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
         const unit  = type === 'proc' ? 'ea'          : 'USD';
 
-        // 월 헤더 행 (colspan=2: HK+SG)
+        // 월 헤더 행 — colspan으로 HK+SG 열 병합
         const monthHeaders = MONTHS.map(m => {
           const isCur = m === curMonth;
-          return THM(`${m}월`, isCur ? HBG2 : HBG, `font-weight:${isCur?700:600}`);
+          return THM(`${m}월`, isCur ? HBG2 : HBG, `font-weight:${isCur?700:600}`, CO.length);
         }).join('') + THM('연간합계', SBG, `background:${SBG}`);
 
         // 지역 소헤더 행
@@ -178,14 +178,14 @@ Pages.Biweekly = (() => {
         const invoices = Store.getInvoices();
 
         // 셀 스타일 — 모든 방향 보더 통일
-        const S_TH  = (t) =>
-          `<th style="padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap">${t}</th>`;
+        const S_TH  = (t, w='auto') =>
+          `<th style="padding:9px 14px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;width:${w}">${t}</th>`;
         const S_TD1 = (t) =>   // 사업명 셀
-          `<td style="padding:9px 12px;text-align:left;font-size:12px;font-weight:600;color:${BTX};background:${HBG};border:1px solid ${BD};white-space:nowrap">${t}</td>`;
+          `<td style="padding:9px 14px;text-align:left;font-size:12px;font-weight:600;color:${BTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;width:100px">${t}</td>`;
         const S_TDV = (t, color=VTX) =>   // 값 셀
-          `<td style="padding:9px 14px;text-align:right;font-size:12px;font-family:var(--font-mono);color:${color};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap">${t}</td>`;
+          `<td style="padding:9px 14px;text-align:right;font-size:12px;font-family:var(--font-mono);color:${color};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap;width:110px">${t}</td>`;
         const S_TDE = (t) =>   // 빈값 셀
-          `<td style="padding:9px 14px;text-align:right;font-size:12px;color:${ETX};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap">${t}</td>`;
+          `<td style="padding:9px 14px;text-align:right;font-size:12px;color:${ETX};background:#FFFFFF;border:1px solid ${BD};white-space:nowrap;width:110px">${t}</td>`;
 
         // 처리완료 표
         const doneRows = BIZ.map(biz => {
@@ -226,11 +226,11 @@ Pages.Biweekly = (() => {
           <div style="overflow-x:auto;margin-bottom:16px">
             <table style="border-collapse:collapse;table-layout:auto">
               <thead><tr>
-                ${S_TH('구분')}
-                ${S_TH('싱가포르')}
-                ${S_TH('홍콩')}
-                ${S_TH('발행금액')}
-                ${S_TH('평균단가')}
+                ${S_TH('구분','100px')}
+                ${S_TH('싱가포르','110px')}
+                ${S_TH('홍콩','110px')}
+                ${S_TH('발행금액','110px')}
+                ${S_TH('평균단가','110px')}
               </tr></thead>
               <tbody>${doneRows}</tbody>
             </table>
@@ -240,9 +240,9 @@ Pages.Biweekly = (() => {
           <div style="overflow-x:auto;margin-bottom:8px">
             <table style="border-collapse:collapse;table-layout:auto">
               <thead><tr>
-                ${S_TH('구분')}
-                ${S_TH('싱가포르')}
-                ${S_TH('홍콩')}
+                ${S_TH('구분','100px')}
+                ${S_TH('싱가포르','110px')}
+                ${S_TH('홍콩','110px')}
               </tr></thead>
               <tbody>${inProgRows}</tbody>
             </table>
@@ -266,10 +266,10 @@ Pages.Biweekly = (() => {
           <div style="height:1px;background:#D2D2D7;margin:4px 0 24px"></div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
-            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:20px 22px">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:20px 22px">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>
