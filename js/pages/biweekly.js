@@ -222,7 +222,7 @@ Pages.Biweekly = (() => {
           <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:2px">${label}</div>
           <div style="font-size:12px;color:#86868B;margin-bottom:14px">인보이스 발행 완료 기준</div>
 
-          <div style="font-size:11px;font-weight:600;color:#6E6E73;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">처리 완료</div>
+          <div style="font-size:13px;font-weight:600;color:#3A3A3C;margin-bottom:6px">처리 완료</div>
           <div style="overflow-x:auto;margin-bottom:16px">
             <table style="border-collapse:collapse;table-layout:auto">
               <thead><tr>
@@ -236,7 +236,7 @@ Pages.Biweekly = (() => {
             </table>
           </div>
 
-          <div style="font-size:11px;font-weight:600;color:#6E6E73;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">진행중</div>
+          <div style="font-size:13px;font-weight:600;color:#3A3A3C;margin-bottom:6px">진행중</div>
           <div style="overflow-x:auto;margin-bottom:8px">
             <table style="border-collapse:collapse;table-layout:auto">
               <thead><tr>
@@ -265,11 +265,11 @@ Pages.Biweekly = (() => {
 
           <div style="height:1px;background:#D2D2D7;margin:4px 0 24px"></div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
-            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px;flex:0 0 auto">
               ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
             </div>
-            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px">
+            <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px;flex:0 0 auto">
               ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
             </div>
           </div>
