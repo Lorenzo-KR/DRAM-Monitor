@@ -151,7 +151,7 @@ Pages.Biweekly = (() => {
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-            <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
+            <div style="font-size:12px;color:#86868B">${unit} · ${type==='proc' ? '일별 처리량 입력 기록 기준' : '인보이스 발행 완료 기준'}</div>
           </div>
           <div style="overflow-x:auto;margin-bottom:24px">
             <table style="border-collapse:collapse;table-layout:fixed;min-width:100%">
