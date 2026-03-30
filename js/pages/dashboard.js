@@ -125,9 +125,9 @@ Pages.Dashboard = (() => {
     const fxInputHtml = `<input type="number" id="fx-rate-input"
       value="${fxRate}" min="1" step="1"
       style="width:70px;padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;font-family:var(--font-mono);background:var(--card);color:var(--tx);text-align:right"
-      onkeydown="if(event.key==='Enter'){Store.saveSetting('usd_krw',this.value);Pages.Dashboard.render();}"
+      onkeydown="if(event.key==='Enter'){Store.setSetting('usd_krw',this.value);Pages.Dashboard.render();}"
     ><button
-      onclick="Store.saveSetting('usd_krw',document.getElementById('fx-rate-input').value);Pages.Dashboard.render();"
+      onclick="Store.setSetting('usd_krw',document.getElementById('fx-rate-input').value);Pages.Dashboard.render();"
       style="padding:3px 8px;font-size:11px;font-weight:500;border:1px solid var(--bd2);border-radius:5px;background:var(--tx);color:#fff;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif">적용</button>`;
 
     return `
