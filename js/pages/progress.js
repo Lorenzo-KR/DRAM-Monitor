@@ -550,16 +550,74 @@ Pages.Progress = (() => {
   // ── 엑셀 내보내기 ──────────────────────────────────────────
   function exportExcel() {
     const dailies = Store.getDailies();
-    const data = Store.getLots().map(l => ({
-      'LOT번호': l.lotNo||l.id, '사업': CONFIG.BIZ_LABELS[l.biz]||l.biz,
-      '국가': CONFIG.COUNTRY_LABELS[l.country]||l.country, '고객사': l.customerName||'',
-      '입고일': l.inDate, '목표완료일': l.targetDate, '실완료일': l.actualDone||'',
-      '총수량': parseNumber(l.qty), '누적처리': getLotCumulative(l.id,dailies),
-      '잔량': getLotRemaining(l,dailies), '진행률(%)': getLotProgress(l,dailies),
-      '상태': _status(l)==='upcoming'?'입고예정':getLotStatus(l)==='done'?'완료':getLotStatus(l)==='overdue'?'지연':'진행중',
-      '단가': parseNumber(l.price), '통화': l.currency||'',
+    const lots    = Store.getLots();
+
+    // ── 시트 ①: LOT 요약 ─────────────────────────────────
+    const lotData = lots.map(l => ({
+      'LOT번호':    l.lotNo || l.id,
+      '사업':       CONFIG.BIZ_LABELS[l.biz] || l.biz,
+      '국가':       CONFIG.COUNTRY_LABELS[l.country] || l.country,
+      '고객사':     l.customerName || '',
+      '입고일':     l.inDate || '',
+      '목표완료일': l.targetDate || '',
+      '실완료일':   l.actualDone || '',
+      '총수량':     parseNumber(l.qty),
+      '누적처리':   getLotCumulative(l.id, dailies),
+      '잔량':       getLotRemaining(l, dailies),
+      '진행률(%)':  getLotProgress(l, dailies),
+      '상태':       _status(l)==='upcoming' ? '입고예정' : getLotStatus(l)==='done' ? '완료' : getLotStatus(l)==='overdue' ? '지연' : '진행중',
+      '단가(USD)':  parseNumber(l.price),
+      '통화':       l.currency || '',
     }));
-    _xlsxExport(data, 'LOT현황_'+today()+'.xlsx', 'LOT현황');
+
+    // ── 시트 ②: 일별 처리 이력 ───────────────────────────
+    // LOT번호 기준 그룹화 → 날짜 오름차순
+    const lotMap = {};
+    lots.forEach(l => { lotMap[String(l.id)] = l; });
+
+    const dailyData = [...dailies]
+      .sort((a, b) => {
+        const la = lotMap[String(a.lotId)]?.lotNo || a.lotNo || a.lotId || '';
+        const lb = lotMap[String(b.lotId)]?.lotNo || b.lotNo || b.lotId || '';
+        if (la !== lb) return String(la).localeCompare(String(lb));
+        return String(a.date || '').localeCompare(String(b.date || ''));
+      })
+      .map(d => {
+        const lot = lotMap[String(d.lotId)];
+        return {
+          'LOT번호':   lot?.lotNo || d.lotNo || d.lotId || '',
+          '사업':      CONFIG.BIZ_LABELS[d.biz] || d.biz || '',
+          '국가':      CONFIG.COUNTRY_LABELS[d.country] || d.country || '',
+          '고객사':    d.customerName || lot?.customerName || '',
+          '날짜':      d.date || '',
+          '처리량':    parseNumber(d.proc),
+          'Normal':    parseNumber(d.normal),
+          'No Boot':   parseNumber(d.noBoot),
+          'Abnormal':  parseNumber(d.abnormal),
+          '누적':      parseNumber(d.cumul),
+          '잔량':      parseNumber(d.remain),
+          '비고':      d.note || '',
+        };
+      });
+
+    if (!lotData.length && !dailyData.length) {
+      UI.toast('데이터 없음', true);
+      return;
+    }
+
+    // ── 멀티 시트 엑셀 생성 ──────────────────────────────
+    const wb = XLSX.utils.book_new();
+
+    const ws1 = XLSX.utils.json_to_sheet(lotData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'LOT 요약');
+
+    if (dailyData.length) {
+      const ws2 = XLSX.utils.json_to_sheet(dailyData);
+      XLSX.utils.book_append_sheet(wb, ws2, '일별 처리 이력');
+    }
+
+    XLSX.writeFile(wb, 'LOT현황_' + today() + '.xlsx');
+    UI.toast('다운로드 완료 — 시트 ' + (dailyData.length ? 2 : 1) + '개');
   }
 
   function currentMonth() { return new Date().toISOString().slice(0,7); }
