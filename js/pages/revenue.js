@@ -14,8 +14,9 @@ Pages.Revenue = (() => {
     _mode = m;
     ['month','year','all'].forEach(x => {
       const btn = document.getElementById('rv-mode-' + x); if (!btn) return;
-      btn.style.background = x === m ? 'var(--navy)' : 'var(--card)';
+      btn.style.background = x === m ? '#1D1D1F' : 'var(--card)';
       btn.style.color      = x === m ? '#fff' : 'var(--tx)';
+      btn.style.fontWeight = x === m ? '500' : '400';
     });
     document.getElementById('rv-mo').style.display = m === 'month' ? '' : 'none';
     document.getElementById('rv-yr').style.display = m === 'year'  ? '' : 'none';
