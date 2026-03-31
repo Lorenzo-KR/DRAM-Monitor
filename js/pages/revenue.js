@@ -128,76 +128,104 @@ Pages.Revenue = (() => {
           : 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
         const stLabel = st === 'upcoming' ? '입고예정' : st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행중';
 
-        // 입력 상태 (수금완료 → 입력완료)
-        const paidStyle = inv
-          ? inv.status === 'paid'    ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
-          : inv.status === 'partial' ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
-          :                            'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2'
-          : 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
-        const paidLabel = inv
-          ? inv.status === 'paid' ? '입력완료' : inv.status === 'partial' ? '부분입력' : '미입력'
-          : '입력 대기';
+        // ── 인보이스 청구 상태 결정 ─────────────────────────────
+        const isDone    = st === 'done';
+        const isWorking = !isDone && st !== 'upcoming';
+        // 청구 상태 라벨 & 스타일
+        let claimLabel, claimStyle, rowBg;
+        if (!isDone && st !== 'upcoming') {
+          // 작업 진행중
+          claimLabel = '작업 진행중';
+          claimStyle = 'border:1px solid var(--bd2);color:var(--tx3);background:#F5F5F7';
+          rowBg      = 'background:#F5F5F7';
+        } else if (isDone && !hasInv) {
+          // 완료 + 미입력 → 입력 대기
+          claimLabel = '입력 대기';
+          claimStyle = 'border:1px solid #F59E0B;color:#92400E;background:#FFFBEB';
+          rowBg      = 'background:#FFFBEE';
+        } else if (isDone && hasInv) {
+          // 완료 + 입력 완료 → 청구 완료
+          claimLabel = '청구 완료';
+          claimStyle = 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
+          rowBg      = '';
+        } else {
+          claimLabel = '—'; claimStyle = 'color:var(--tx3)'; rowBg = '';
+        }
+
+        // 청구일 (인보이스 date)
+        const invDate = inv?.date || '';
 
         // 작업 완료일
-        const doneDate = st === 'done'
-          ? (lot.actualDone || lot.targetDate || '—')
-          : st === 'upcoming' ? '—' : '진행중';
-        const doneDateColor = st === 'done' ? '#085041' : 'var(--tx3)';
+        const doneDate      = isDone ? (lot.actualDone || lot.targetDate || '—') : st === 'upcoming' ? '—' : '진행중';
+        const doneDateColor = isDone ? '#1D1D1F' : 'var(--tx3)';
 
         totalAmt += amt;
-        const rowBg = !hasInv && st !== 'upcoming' ? 'background:#FFFBEE' : st === 'upcoming' ? 'background:#F0F8FF' : '';
 
         return `
           <tr style="${rowBg}">
-            <td style="padding:11px 14px;color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
-            <td style="padding:11px 14px;font-size:12px;color:var(--tbl-tx-body)">${lot.inDate || '—'}</td>
-            <td style="padding:11px 14px;font-size:12px;color:${doneDateColor};font-weight:${st==='done'?'500':'400'}">${doneDate}</td>
-            <td style="padding:11px 14px;font-family:var(--font-mono);font-size:12px;font-weight:500">${lot.lotNo || lot.id}</td>
-            <td style="padding:11px 14px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-            <td style="padding:11px 14px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="padding:11px 14px;font-size:12px;color:var(--tx2)">${lot.customerName || '—'}</td>
-            <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(qty)}</td>
-            <td style="padding:11px 14px;text-align:center;min-width:140px">
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body)">${lot.inDate || '—'}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-family:var(--font-mono);font-size:12px;font-weight:500">${lot.lotNo || lot.id}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body)">${lot.customerName || '—'}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(qty)}</td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:center;min-width:130px">
               ${st === 'upcoming'
-                ? `<span style="font-size:12px;color:#185FA5;font-weight:500">D-${diffDays(today(), lot.inDate)}</span>`
-                : `<div style="display:flex;align-items:center;gap:7px">
-                    <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden;min-width:55px">
-                      <div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div>
+                ? `<span style="font-size:12px;color:var(--tx3)">D-${diffDays(today(), lot.inDate)}</span>`
+                : `<div style="display:flex;align-items:center;gap:6px">
+                    <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:50px">
+                      <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
                     </div>
-                    <span style="font-size:12px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                    <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
-            <td style="padding:11px 18px;text-align:left">
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:left;min-width:160px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;gap:6px">
-                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(amt))}</span>
+                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
                     <input type="number" id="rv-amt-${lot.id}" value="${amt}"
-                      style="display:none;width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:var(--tx2)">
+                      style="display:none;width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
+                    <input type="date" id="rv-date-edit-${lot.id}" value="${invDate}"
+                      style="display:none;padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
                   </div>`
-                : st === 'upcoming'
-                  ? `<span style="font-size:12px;color:var(--tbl-tx-body)">—</span>`
-                  : `<div style="display:flex;align-items:center;gap:6px">
-                      <input type="number" placeholder="금액 입력" id="rv-amt-${lot.id}"
-                        style="width:110px;padding:5px 9px;border:1.5px solid #B5D4F4;border-radius:6px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#EAF3FE;color:var(--tx2)">
+                : isDone
+                  ? `<div style="display:flex;align-items:center;gap:5px">
+                      <input type="number" placeholder="금액" id="rv-amt-${lot.id}"
+                        style="width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
+                      <input type="date" id="rv-date-${lot.id}"
+                        style="padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
-                        style="padding:5px 12px;background:#185FA5;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
-                    </div>`}
+                        style="padding:4px 10px;background:#1D1D1F;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
+                    </div>`
+                  : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
             </td>
-            <td style="padding:11px 14px">
-              ${bdg(paidLabel, paidStyle)}
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px;white-space:nowrap">
+              ${hasInv && qty > 0
+                ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
+                : '<span style="color:var(--tx4)">—</span>'}
             </td>
-            <td style="padding:4px 8px;white-space:nowrap">
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);white-space:nowrap">
+              ${invDate || '<span style="color:var(--tx4)">—</span>'}
+            </td>
+            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">
+              ${bdg(claimLabel, claimStyle)}
+            </td>
+            <td style="padding:4px 8px;border-top:1px solid var(--tbl-row-bd);white-space:nowrap">
               ${hasInv
-                ? `<button class="btn sm" style="font-size:12px;padding:2px 7px"
+                ? `<button class="btn sm" style="font-size:11px;padding:3px 8px"
                     onclick="(function(){
                       var d=document.getElementById('rv-amt-display-${lot.id}');
-                      var i=document.getElementById('rv-amt-${lot.id}');
+                      var ai=document.getElementById('rv-amt-${lot.id}');
+                      var di=document.getElementById('rv-date-edit-${lot.id}');
                       var b=this;
-                      if(i.style.display==='none'){
-                        d.style.display='none';i.style.display='inline-block';b.textContent='저장';b.style.background='#185FA5';b.style.color='#fff';b.style.border='none';
+                      if(ai.style.display==='none'){
+                        d.style.display='none';ai.style.display='inline-block';di.style.display='inline-block';
+                        b.textContent='저장';b.style.background='#1D1D1F';b.style.color='#fff';b.style.border='none';
                       } else {
-                        Pages.Revenue.saveInvoice(${lot.id}, i.value);
+                        Pages.Revenue.saveInvoice(${lot.id}, ai.value, di.value);
                       }
                     }).call(this)">수정</button>`
                 : ''}
@@ -208,7 +236,7 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr style="background:var(--tbl-sum-bg)">
-          <td colspan="9" style="padding:11px 14px;font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">합계 (${lots.length}건)</td>
+          <td colspan="10" style="padding:11px 14px;font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">합계 (${lots.length}건)</td>
           <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">$${formatNumber(Math.round(totalAmt))}</td>
           <td colspan="2" style="border-top:1px solid var(--tbl-sum-bd)"></td>
         </tr>`;
@@ -419,17 +447,19 @@ Pages.Revenue = (() => {
   }
 
   // ── 인라인 인보이스 저장 ─────────────────────────────────────
-  async function saveInvoice(lotId, overrideAmt) {
+  async function saveInvoice(lotId, overrideAmt, overrideDate) {
     const lot = Store.getLots().find(l => l.id === lotId || String(l.id) === String(lotId));
     if (!lot) return;
-    const amtEl   = document.getElementById('rv-amt-' + lotId);
-    const rawVal  = overrideAmt !== undefined ? String(overrideAmt) : (amtEl?.value || '');
-    const amount  = parseNumber(rawVal);
-    const isEmpty = rawVal.trim() === '' || amount === 0;
+    const amtEl     = document.getElementById('rv-amt-' + lotId);
+    const dateEl    = document.getElementById('rv-date-' + lotId);
+    const rawVal    = overrideAmt  !== undefined ? String(overrideAmt)  : (amtEl?.value  || '');
+    const rawDate   = overrideDate !== undefined ? String(overrideDate) : (dateEl?.value || '');
+    const amount    = parseNumber(rawVal);
+    const isEmpty   = rawVal.trim() === '' || amount === 0;
+    const invDate   = rawDate || lot.actualDone || today();
 
     const existing = Store.getInvoices().find(r => String(r.lotId) === String(lotId));
 
-    // 0 또는 빈값 → 기존 인보이스 삭제 (입력 대기 상태로 리셋)
     if (isEmpty) {
       if (existing) {
         Store.deleteInvoice(existing.id);
@@ -443,7 +473,7 @@ Pages.Revenue = (() => {
     const record = {
       id:           existing ? existing.id : Date.now(),
       no:           existing?.no || ('INV-' + Date.now()),
-      date:         lot.actualDone || today(),
+      date:         invDate,
       lotId:        lot.id,
       lotNo:        lot.lotNo || lot.id,
       biz:          lot.biz,
@@ -453,8 +483,8 @@ Pages.Revenue = (() => {
       vat:          existing?.vat || 0,
       total:        amount,
       currency:     lot.currency || 'USD',
-      status:       existing?.status || 'paid',
-      paidDate:     existing?.paidDate || lot.actualDone || today(),
+      status:       'paid',
+      paidDate:     invDate,
       paidAmt:      amount,
       due:          existing?.due || '',
       note:         existing?.note || '',
@@ -463,7 +493,7 @@ Pages.Revenue = (() => {
     Store.upsertInvoice(record);
     if (existing) Api.update(CONFIG.SHEETS.INVOICES, existing.id, record);
     else          Api.append(CONFIG.SHEETS.INVOICES, record);
-    UI.toast('매출액 저장됨');
+    UI.toast('청구 완료 저장됨');
     render();
   }
 
