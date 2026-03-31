@@ -25,6 +25,7 @@ const Nav = (() => {
     country:    { index: 5, render: () => Pages.Country.render() },
     verify:     { index: 6, render: () => Pages.Verify.render() },
     customers:  { index: 7, render: () => Pages.Customers.render() },
+    report:     { index: 8, render: () => Pages.Report.render() },
   };
 
   let _current = null;
