@@ -6,6 +6,18 @@
 Pages.Report = (() => {
 
   let _month = currentMonth(); // YYYY-MM
+  // 정렬 상태: { tableId: { col, asc } }
+  let _sort = {};
+
+  function _sortData(data, col, asc) {
+    return [...data].sort((a, b) => {
+      const va = a[col] || ''; const vb = b[col] || '';
+      const na = parseFloat(String(va).replace(/[^0-9.-]/g,'')); 
+      const nb = parseFloat(String(vb).replace(/[^0-9.-]/g,''));
+      let cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : String(va).localeCompare(String(vb));
+      return asc ? cmp : -cmp;
+    });
+  }
 
   // ── 헬퍼 ───────────────────────────────────────────────────
   function _bizBadge(biz) {
@@ -18,6 +30,15 @@ Pages.Report = (() => {
 
   const TH  = (t, align='left', extra='') =>
     `<th style="padding:8px 12px;background:#E8E8ED;border:1px solid #D2D2D7;color:#3A3A3C;font-size:11px;font-weight:600;white-space:nowrap;text-align:${align};${extra}">${t}</th>`;
+  // 클릭 정렬 가능한 헤더
+  const THSort = (t, col, tableId, align='left') => {
+    const s = _sort[tableId] || {};
+    const active = s.col === col;
+    const arrow = active ? (s.asc ? ' ↑' : ' ↓') : '';
+    return `<th onclick="Pages.Report.sortTable('${tableId}','${col}')"
+      style="padding:8px 12px;background:#E8E8ED;border:1px solid #D2D2D7;color:${active?'#1D1D1F':'#3A3A3C'};font-size:11px;font-weight:600;white-space:nowrap;text-align:${align};cursor:pointer;user-select:none"
+      >${t}${arrow}</th>`;
+  };
   const TD  = (t, align='left', extra='') =>
     `<td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:${align};font-size:12px;color:#6E6E73;${extra}">${t}</td>`;
   const TDM = (t, align='left', extra='') =>
@@ -28,10 +49,16 @@ Pages.Report = (() => {
   // ── 섹션 렌더 ───────────────────────────────────────────────
   function _renderCountry(co, coLabel, prefix, lots, dailies, invoices) {
 
-    // 1. 인보이스 청구 완료 — 해당 월에 인보이스 날짜가 있는 LOT
+    // 1. 인보이스 청구 완료 — 해당 월에 청구일이 있는 LOT (표시용)
     const invoicedIds = new Set(
       invoices
         .filter(r => r.country === co && String(r.date || '').startsWith(prefix))
+        .map(r => String(r.lotId))
+    );
+    // 청구예정 필터용: 월 무관하게 인보이스가 존재하는 LOT ID 전체
+    const allInvoicedIds = new Set(
+      invoices
+        .filter(r => r.country === co)
         .map(r => String(r.lotId))
     );
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
@@ -39,7 +66,7 @@ Pages.Report = (() => {
     // 2. 청구 예정 — 완료됐지만 인보이스 없는 LOT (해당 월 입고 또는 진행중인 것)
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
-      if (invoicedIds.has(String(l.id))) return false;
+      if (allInvoicedIds.has(String(l.id))) return false;
       return getLotStatus(l) === 'done';
     }).filter(l => {
       // 해당 월 기준: 완료일 or 입고일이 기준월 이전이거나 같은 경우
@@ -61,20 +88,28 @@ Pages.Report = (() => {
     if (invoicedLots.length === 0) {
       table1 = `<div style="font-size:12px;color:#C7C7CC;padding:10px 0 4px">해당 없음</div>`;
     } else {
+      const t1s = _sort[co + '-invoiced'] || { col: 'invDate', asc: false };
+      const inv1Sorted = _sortData(
+        invoicedLots.map(l => {
+          const inv = invoices.find(r => String(r.lotId) === String(l.id));
+          const qty = parseNumber(l.qty);
+          const amt = inv ? parseNumber(inv.amount) : 0;
+          return { ...l, invDate: inv?.date || '', amount: amt, qty, avg: qty > 0 ? amt/qty : 0 };
+        }), t1s.col, t1s.asc
+      );
       let totalQty = 0, totalAmt = 0;
-      const rows1 = invoicedLots.map(l => {
-        const inv = invoices.find(r => String(r.lotId) === String(l.id));
+      const rows1 = inv1Sorted.map(l => {
         const qty = parseNumber(l.qty);
-        const amt = inv ? parseNumber(inv.amount) : 0;
+        const amt = l.amount || 0;
         const avg = qty > 0 && amt > 0 ? (amt / qty).toFixed(1) : '—';
         totalQty += qty; totalAmt += amt;
         return `<tr>
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—')}
-          ${TD(l.actualDone || l.targetDate || '—')}
-          ${TD(inv?.date || '—')}
+          ${TD(l.inDate || '—', 'center')}
+          ${TD(l.actualDone || l.targetDate || '—', 'center')}
+          ${TD(l.invDate || '—', 'center')}
           ${TDM(amt > 0 ? '$' + formatNumber(Math.round(amt)) : '—', 'right', 'font-weight:600;color:#1D1D1F')}
           ${TDM(avg !== '—' ? '$' + avg : '—', 'right', 'color:#6E6E73')}
         </tr>`;
@@ -87,8 +122,18 @@ Pages.Report = (() => {
         ${TDS('$' + formatNumber(Math.round(totalAmt)), '#EFEFF4')}
         <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
       </tr>`;
+      const t1id = co + '-invoiced';
       table1 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
-        <thead><tr>${TH('LOT번호')}${TH('사업구분','center')}${TH('수량','right')}${TH('입고일')}${TH('완료일')}${TH('청구일')}${TH('청구금액','right')}${TH('평균단가','right')}</tr></thead>
+        <thead><tr>
+          ${THSort('LOT번호','lotNo',t1id)}
+          ${TH('사업구분','center')}
+          ${THSort('수량','qty',t1id,'right')}
+          ${THSort('입고일','inDate',t1id,'center')}
+          ${THSort('완료일','actualDone',t1id,'center')}
+          ${THSort('청구일','invDate',t1id,'center')}
+          ${THSort('청구금액','amount',t1id,'right')}
+          ${THSort('평균단가','avg',t1id,'right')}
+        </tr></thead>
         <tbody>${rows1}${sumRow}</tbody>
       </table></div>`;
     }
@@ -98,18 +143,30 @@ Pages.Report = (() => {
     if (pendingLots.length === 0) {
       table2 = `<div style="font-size:12px;color:#C7C7CC;padding:10px 0 4px">해당 없음</div>`;
     } else {
-      const rows2 = pendingLots.map(l => {
+      const t2id = co + '-pending';
+      const t2s  = _sort[t2id] || { col: 'actualDone', asc: true }; // 기본: 완료일 오름차순
+      const pendingSorted = _sortData(
+        pendingLots.map(l => ({ ...l, actualDone: l.actualDone || l.targetDate || '' })),
+        t2s.col, t2s.asc
+      );
+      const rows2 = pendingSorted.map(l => {
         const qty = parseNumber(l.qty);
         return `<tr style="background:#FFFBEE">
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—')}
-          ${TD(l.actualDone || l.targetDate || '—')}
+          ${TD(l.inDate || '—', 'center')}
+          ${TD(l.actualDone || l.targetDate || '—', 'center')}
         </tr>`;
       }).join('');
       table2 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
-        <thead><tr>${TH('LOT번호')}${TH('사업구분','center')}${TH('수량','right')}${TH('입고일')}${TH('완료일')}</tr></thead>
+        <thead><tr>
+          ${THSort('LOT번호','lotNo',t2id)}
+          ${TH('사업구분','center')}
+          ${THSort('qty',  'qty',  t2id,'right')}
+          ${THSort('입고일','inDate',t2id,'center')}
+          ${THSort('완료일','actualDone',t2id,'center')}
+        </tr></thead>
         <tbody>${rows2}</tbody>
       </table></div>`;
     }
@@ -186,6 +243,12 @@ Pages.Report = (() => {
 
   // ── Public ─────────────────────────────────────────────────
   return {
+    sortTable(tableId, col) {
+      const s = _sort[tableId] || {};
+      _sort[tableId] = { col, asc: s.col === col ? !s.asc : true };
+      Pages.Report.render();
+    },
+
     render() {
       const el = document.getElementById('report-root'); if (!el) return;
 

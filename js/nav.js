@@ -26,6 +26,7 @@ const Nav = (() => {
     verify:     { index: 6, render: () => Pages.Verify.render() },
     customers:  { index: 7, render: () => Pages.Customers.render() },
     report:     { index: 8, render: () => Pages.Report.render() },
+    changelog:  { index: 9, render: () => Pages.Changelog.render() },
   };
 
   let _current = null;

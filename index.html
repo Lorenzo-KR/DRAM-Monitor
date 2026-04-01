@@ -122,6 +122,10 @@
         <svg fill="none" viewBox="0 0 16 16"><rect x="2" y="1.5" width="12" height="13" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         보고서 (테스트)
       </button>
+      <button class="ni" onclick="Nav.go('changelog')">
+        <svg fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5l2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        업데이트 현황
+      </button>
     </nav>
 
     <div class="sb-bot">
@@ -600,20 +604,20 @@
       <div class="etw">
         <table id="rv-table">
           <thead><tr>
-            <th style="width:36px;text-align:center;padding:9px 8px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">#</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">입고일</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">작업완료일</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">LOT 번호</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">사업</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">지역</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">고객사</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:right;white-space:nowrap">수량</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;min-width:130px;white-space:nowrap">진행률</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:left;white-space:nowrap">매출액 (USD)</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:right;white-space:nowrap">평균단가 (USD)</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">청구일</th>
-            <th style="padding:9px 10px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">인보이스 청구 상태</th>
-            <th style="padding:9px 10px;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)"></th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap;width:40px">#</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">입고일</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">작업완료일</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">LOT 번호</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">사업</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">지역</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">고객사</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">수량</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap;min-width:130px">진행률</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">매출액 (USD)</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">평균단가 (USD)</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">청구일</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap">인보이스 청구 상태</th>
+            <th style="padding:9px 12px;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);text-align:center;white-space:nowrap;width:50px"></th>
           </tr></thead>
           <tbody id="rv-tbody"></tbody>
         </table>
@@ -623,6 +627,11 @@
     <!-- 보고서 -->
     <div class="pg" id="pg-report">
       <div id="report-root"></div>
+    </div>
+
+    <!-- 업데이트 현황 -->
+    <div class="pg" id="pg-changelog">
+      <div id="changelog-root"></div>
     </div>
 
     <!-- 국가별 현황 -->
@@ -755,6 +764,7 @@
 <script src="js/pages/customers.js"></script>
 <script src="js/pages/verify.js"></script>
 <script src="js/pages/report.js"></script>
+<script src="js/pages/changelog.js"></script>
 
 <!-- App entry point -->
 <script src="js/app.js"></script>

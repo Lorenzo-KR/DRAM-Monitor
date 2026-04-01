@@ -163,15 +163,15 @@ Pages.Revenue = (() => {
 
         return `
           <tr style="${rowBg}">
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body)">${lot.inDate || '—'}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-family:var(--font-mono);font-size:12px;font-weight:500">${lot.lotNo || lot.id}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body)">${lot.customerName || '—'}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(qty)}</td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:center;min-width:130px">
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center">${lot.inDate || '—'}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-family:var(--font-mono);font-size:12px;font-weight:500;text-align:center">${lot.lotNo || lot.id}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center">${lot.customerName || '—'}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(qty)}</td>
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:center;min-width:130px">
               ${st === 'upcoming'
                 ? `<span style="font-size:12px;color:var(--tx3)">D-${diffDays(today(), lot.inDate)}</span>`
                 : `<div style="display:flex;align-items:center;gap:6px">
@@ -182,7 +182,7 @@ Pages.Revenue = (() => {
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:left;min-width:160px">
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:left;min-width:160px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;gap:6px">
                     <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
@@ -202,15 +202,15 @@ Pages.Revenue = (() => {
                     </div>`
                   : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
             </td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px;white-space:nowrap">
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px;white-space:nowrap">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
                 : '<span style="color:var(--tx4)">—</span>'}
             </td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);white-space:nowrap">
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center;white-space:nowrap">
               ${invDate || '<span style="color:var(--tx4)">—</span>'}
             </td>
-            <td style="padding:9px 10px;border-top:1px solid var(--tbl-row-bd)">
+            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">
               ${bdg(claimLabel, claimStyle)}
             </td>
             <td style="padding:4px 8px;border-top:1px solid var(--tbl-row-bd);white-space:nowrap">
