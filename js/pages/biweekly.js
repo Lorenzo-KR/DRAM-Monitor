@@ -10,10 +10,24 @@ Pages.Biweekly = (() => {
   }
 
   function _procByBizCo(biz, co, year, month) {
-    const prefix = _getMonthPrefix(year, month);
-    return Store.getDailies()
-      .filter(d => d.biz === biz && d.country === co && String(d.date || '').startsWith(prefix))
-      .reduce((s, d) => s + parseNumber(d.proc), 0);
+    // 기준: 인보이스 청구일이 해당 월인 LOT의 총 처리량 합산
+    // 인보이스 미청구 LOT는 포함하지 않음
+    const prefix   = _getMonthPrefix(year, month);
+    const lots     = Store.getLots();
+    const dailies  = Store.getDailies();
+    const invoices = Store.getInvoices();
+
+    // 해당 월에 청구된 인보이스의 lotId 목록
+    const invoicedThisMonth = invoices.filter(r =>
+      r.biz === biz && r.country === co && String(r.date || '').startsWith(prefix)
+    );
+
+    // 각 LOT의 누적 처리량(getLotCumulative) 합산
+    return invoicedThisMonth.reduce((sum, inv) => {
+      const lot = lots.find(l => String(l.id) === String(inv.lotId));
+      if (!lot) return sum;
+      return sum + getLotCumulative(lot.id, dailies);
+    }, 0);
   }
 
   function _revByBizCo(biz, co, year, month) {
@@ -151,7 +165,7 @@ Pages.Biweekly = (() => {
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-            <div style="font-size:12px;color:#86868B">${unit} · ${type==='proc' ? '일별 처리량 입력 기록 기준' : '인보이스 발행 완료 기준'}</div>
+            <div style="font-size:12px;color:#86868B">${unit} · ${type==='proc' ? '인보이스 청구일 기준' : '인보이스 발행 완료 기준'}</div>
           </div>
           <div style="overflow-x:auto;margin-bottom:24px">
             <table style="border-collapse:collapse;table-layout:fixed;min-width:100%">
