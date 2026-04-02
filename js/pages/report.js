@@ -113,6 +113,7 @@ Pages.Report = (() => {
           ${TD(l.invDate || '—', 'center')}
           ${TDM(amt > 0 ? '$' + formatNumber(Math.round(amt)) : '—', 'right', 'font-weight:600;color:#1D1D1F')}
           ${TDM(avg !== '—' ? '$' + avg : '—', 'right', 'color:#6E6E73')}
+          <td style="border:1px solid #D2D2D7"></td>
         </tr>`;
       }).join('');
       const sumRow = `<tr style="background:#EFEFF4">
@@ -122,18 +123,20 @@ Pages.Report = (() => {
         <td colspan="3" style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
         ${TDS('$' + formatNumber(Math.round(totalAmt)), '#EFEFF4')}
         <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
+        <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
       </tr>`;
       const t1id = co + '-invoiced';
       table1 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t1id)}
-          ${TH('사업구분','center')}
+          ${TH('사업','center')}
           ${THSort('수량','qty',t1id,'right')}
           ${THSort('입고일','inDate',t1id,'center')}
           ${THSort('완료일','actualDone',t1id,'center')}
           ${THSort('청구일','invDate',t1id,'center')}
           ${THSort('청구금액','amount',t1id,'right')}
           ${THSort('평균단가','avg',t1id,'right')}
+          ${TH('비고','center')}
         </tr></thead>
         <tbody>${rows1}${sumRow}</tbody>
       </table></div>`;
@@ -162,16 +165,22 @@ Pages.Report = (() => {
           ${TDM(formatNumber(qty), 'right')}
           ${TD(l.inDate || '—', 'center')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center;font-size:12px">${doneDateLabel}</td>
+          ${TD('—', 'center')}
+          ${TD('—', 'right')}
+          ${TD('—', 'right')}
           ${TD(isThisMonth ? '이번 달' : '이월 미청구', 'center', isThisMonth ? 'color:#92400E' : 'color:#B45309;font-weight:600')}
         </tr>`;
       }).join('');
       table2 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t2id)}
-          ${TH('사업구분','center')}
+          ${TH('사업','center')}
           ${THSort('수량','qty',t2id,'right')}
           ${THSort('입고일','inDate',t2id,'center')}
           ${THSort('완료일','actualDone',t2id,'center')}
+          ${TH('청구일','center')}
+          ${TH('청구금액','right')}
+          ${TH('평균단가','right')}
           ${TH('구분','center')}
         </tr></thead>
         <tbody>${rows2}</tbody>
@@ -192,16 +201,18 @@ Pages.Report = (() => {
         return `<tr>
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
-          ${TD(l.inDate || '—', 'center')}
           ${TDM(formatNumber(qty), 'right')}
+          ${TD(l.inDate || '—', 'center')}
+          ${TD('—', 'center')}
+          ${TD('—', 'center')}
           ${TDM(formatNumber(cum), 'right')}
           ${TDM(formatNumber(rem), 'right')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;min-width:140px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;height:5px;background:#E8E8ED;border-radius:3px;overflow:hidden;min-width:70px">
+          <td style="padding:8px 12px;border:1px solid #D2D2D7;min-width:100px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="flex:1;height:5px;background:#E8E8ED;border-radius:3px;overflow:hidden">
                 <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div>
               </div>
-              <span style="font-size:11px;font-weight:500;color:${barColor};white-space:nowrap;min-width:32px;text-align:right">${pct}%</span>
+              <span style="font-size:11px;font-weight:500;color:${barColor};white-space:nowrap;min-width:28px;text-align:right">${pct}%</span>
             </div>
           </td>
         </tr>`;
@@ -209,48 +220,21 @@ Pages.Report = (() => {
       table3 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
         <thead><tr>
           ${TH('LOT번호')}
-          ${TH('사업구분','center')}
+          ${TH('사업','center')}
+          ${TH('수량','right')}
           ${TH('입고일','center')}
-          ${TH('전체수량','right')}
-          ${TH('처리수량','right')}
-          ${TH('잔여수량','right')}
-          ${TH('진행률','center','min-width:140px')}
+          ${TH('완료일','center')}
+          ${TH('청구일','center')}
+          ${TH('처리량','right')}
+          ${TH('잔여','right')}
+          ${TH('진행률','center')}
         </tr></thead>
         <tbody>${rows3}</tbody>
       </table></div>`;
     }
 
-    return `
-      <div style="margin-bottom:16px">
-        <div>
-
-        <div style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            ${_dot('#34C759')}
-            <span style="font-size:13px;font-weight:600;color:#1D1D1F">인보이스 청구 완료</span>
-            <span style="font-size:11px;color:#86868B">${invoicedLots.length}건</span>
-          </div>
-          ${table1}
-        </div>
-
-        <div style="margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            ${_dot('#F59E0B')}
-            <span style="font-size:13px;font-weight:600;color:#1D1D1F">청구 예정</span>
-            <span style="font-size:11px;color:#86868B">${pendingLots.length}건 · 작업 완료, 인보이스 미청구</span>
-          </div>
-          ${table2}
-        </div>
-
-        <div>
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
-            ${_dot('#D2D2D7')}
-            <span style="font-size:13px;font-weight:600;color:#1D1D1F">작업 진행중</span>
-            <span style="font-size:11px;color:#86868B">${inProgLots.length}건</span>
-          </div>
-          ${table3}
-        </div>
-      </div>`;
+    return { table1, table2, table3,
+      cnt1: invoicedLots.length, cnt2: pendingLots.length, cnt3: inProgLots.length };
   }
 
   // ── Public ─────────────────────────────────────────────────
@@ -285,16 +269,47 @@ Pages.Report = (() => {
       const sgPrev = _renderCountry('SG', '싱가포르 (SG)', prevMonth, lots, dailies, invoices);
       const sgCurr = _renderCountry('SG', '싱가포르 (SG)', prefix,    lots, dailies, invoices);
 
-      const colStyle = 'flex:1;min-width:0;padding:0 12px';
-      const monthHeader = (label, isCurrent) => `
-        <div style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;margin-bottom:16px;
-          background:${isCurrent?'#1D1D1F':'#F1EFE8'};color:${isCurrent?'#fff':'#5F5E5A'};display:inline-block">
-          ${label}${isCurrent?' (기준월)':' (전월)'}
+      const mhStyle = (isCurr) => `display:inline-block;padding:4px 12px;border-radius:5px;font-size:12px;font-weight:600;margin-bottom:10px;background:${isCurr?'#1D1D1F':'#F1EFE8'};color:${isCurr?'#fff':'#5F5E5A'}`;
+      const secTitle = (dot, title, cnt, sub='') => `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;margin-top:4px">
+          ${_dot(dot)}
+          <span style="font-size:13px;font-weight:600;color:#1D1D1F">${title}</span>
+          <span style="font-size:11px;color:#86868B">${cnt}건${sub}</span>
+        </div>`;
+      const half = 'width:50%;min-width:0;overflow-x:auto;padding:0 14px';
+      const divider = '<div style="height:1px;background:#E8E8ED;margin:14px 0"></div>';
+
+      const _section = (prev, curr, tableKey, dot, title, subFn) => `
+        <div style="display:flex;align-items:flex-start;margin-bottom:4px">
+          <div style="${half};border-right:1px solid #E8E8ED">
+            ${secTitle(dot, title, prev['cnt'+tableKey], subFn ? subFn(prev['cnt'+tableKey]) : '')}
+            ${prev['table'+tableKey]}
+          </div>
+          <div style="${half}">
+            ${secTitle(dot, title, curr['cnt'+tableKey], subFn ? subFn(curr['cnt'+tableKey]) : '')}
+            ${curr['table'+tableKey]}
+          </div>
+        </div>${divider}`;
+
+      const _country = (coLabel, prev, curr) => `
+        <div style="margin-bottom:32px">
+          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">${coLabel}</div>
+          <!-- 월 헤더 -->
+          <div style="display:flex;margin-bottom:12px">
+            <div style="${half};border-right:1px solid #E8E8ED">
+              <span style="${mhStyle(false)}">${prevLabel} (전월)</span>
+            </div>
+            <div style="${half}">
+              <span style="${mhStyle(true)}">${currLabel} (기준월)</span>
+            </div>
+          </div>
+          ${_section(prev, curr, '1', '#34C759', '인보이스 청구 완료')}
+          ${_section(prev, curr, '2', '#F59E0B', '청구 예정', () => ' · 작업 완료, 미청구')}
+          ${_section(prev, curr, '3', '#D2D2D7', '작업 진행중')}
         </div>`;
 
       el.innerHTML = `
         <div style="max-width:1400px">
-          <!-- 헤더 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
             <div>
               <div style="font-size:15px;font-weight:600;color:#1D1D1F">보고서</div>
@@ -309,38 +324,9 @@ Pages.Report = (() => {
                 style="padding:6px 14px;background:#1D1D1F;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer">조회</button>
             </div>
           </div>
-
-          <!-- 홍콩 구분선 -->
-          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">홍콩 (HK)</div>
-
-          <!-- 홍콩 2열 -->
-          <div style="display:flex;gap:0;margin-bottom:32px">
-            <div style="${colStyle};border-right:1px solid #D2D2D7;padding-right:24px">
-              ${monthHeader(prevLabel, false)}
-              ${hkPrev}
-            </div>
-            <div style="${colStyle};padding-left:24px">
-              ${monthHeader(currLabel, true)}
-              ${hkCurr}
-            </div>
-          </div>
-
+          ${_country('홍콩 (HK)', hkPrev, hkCurr)}
           <div style="height:1px;background:#D2D2D7;margin:0 0 28px"></div>
-
-          <!-- 싱가포르 구분선 -->
-          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">싱가포르 (SG)</div>
-
-          <!-- 싱가포르 2열 -->
-          <div style="display:flex;gap:0;margin-bottom:32px">
-            <div style="${colStyle};border-right:1px solid #D2D2D7;padding-right:24px">
-              ${monthHeader(prevLabel, false)}
-              ${sgPrev}
-            </div>
-            <div style="${colStyle};padding-left:24px">
-              ${monthHeader(currLabel, true)}
-              ${sgCurr}
-            </div>
-          </div>
+          ${_country('싱가포르 (SG)', sgPrev, sgCurr)}
         </div>`;
     },
 
