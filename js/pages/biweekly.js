@@ -165,29 +165,27 @@ Pages.Biweekly = (() => {
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-            <div style="font-size:12px;color:#86868B">${unit} · ${type==='proc' ? '인보이스 청구일 기준' : '인보이스 발행 완료 기준'}</div>
+            <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
           </div>
-          <div style="overflow-x:auto;margin-bottom:24px">
-            <table style="border-collapse:collapse;table-layout:fixed;min-width:100%">
-              <colgroup>
-                <col style="width:88px">
-                ${MONTHS.map(() => CO.map(() => `<col style="width:60px">`).join('')).join('')}
-                <col style="width:78px">
-              </colgroup>
-              <thead>
-                <tr>${TH('사업')}${monthHeaders}</tr>
-                <tr>${TH('')}${coHeaders}</tr>
-              </thead>
-              <tbody>${dataRows}</tbody>
-              <tfoot>
-                <tr>${TDL('합계', SBG, '600')}${totalCells}${TD(colDisp, SBG, STX, '600')}</tr>
-              </tfoot>
-            </table>
-          </div>`;
+          <table class="bw-monthly-table" style="border-collapse:collapse;table-layout:fixed;min-width:100%;margin-bottom:24px">
+            <colgroup>
+              <col style="width:88px">
+              ${MONTHS.map(() => CO.map(() => `<col style="width:60px">`).join('')).join('')}
+              <col style="width:78px">
+            </colgroup>
+            <thead>
+              <tr>${TH('사업')}${monthHeaders}</tr>
+              <tr>${TH('')}${coHeaders}</tr>
+            </thead>
+            <tbody>${dataRows}</tbody>
+            <tfoot>
+              <tr>${TDL('합계', SBG, '600')}${totalCells}${TD(colDisp, SBG, STX, '600')}</tr>
+            </tfoot>
+          </table>`;
       }
 
       // ── 2. 이번달/지난달 현황 카드 ───────────────────────
-      function buildStatusTable(year, month, label) {
+      function buildStatusTable(year, month, label, isPrev) {
         const status   = _calcStatus(year, month);
         const invoices = Store.getInvoices();
 
@@ -250,7 +248,8 @@ Pages.Biweekly = (() => {
             </table>
           </div>
 
-          <div style="font-size:13px;font-weight:600;color:#3A3A3C;margin-bottom:6px">진행중</div>
+          ${!isPrev ? `
+          <div style="font-size:13px;font-weight:600;color:#3A3A3C;margin-bottom:6px;margin-top:4px">진행중</div>
           <div style="overflow-x:auto;margin-bottom:8px">
             <table style="border-collapse:collapse;table-layout:auto">
               <thead><tr>
@@ -260,7 +259,7 @@ Pages.Biweekly = (() => {
               </tr></thead>
               <tbody>${inProgRows}</tbody>
             </table>
-          </div>`;
+          </div>` : '<div style="font-size:11px;color:#C7C7CC;margin-top:8px">※ 진행중 현황은 이번달 카드에서 확인</div>'}`;
       }
 
       // ── 최종 렌더 ────────────────────────────────────────
@@ -274,17 +273,19 @@ Pages.Biweekly = (() => {
             <div style="font-size:12px;color:#86868B">${curYear}년 ${curMonth}월 기준</div>
           </div>
 
-          ${buildMonthlyTable('proc')}
-          ${buildMonthlyTable('rev')}
+          <div style="overflow-x:auto;margin-bottom:0">
+            ${buildMonthlyTable('proc')}
+            ${buildMonthlyTable('rev')}
+          </div>
 
           <div style="height:1px;background:#D2D2D7;margin:4px 0 24px"></div>
 
           <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
             <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px;flex:0 0 auto">
-              ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`)}
+              ${buildStatusTable(prevYear, prevMonth, `${prevYear}년 ${prevMonth}월 현황`, true)}
             </div>
             <div style="background:#FFFFFF;border:1px solid #D2D2D7;border-radius:10px;padding:16px 18px;flex:0 0 auto">
-              ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`)}
+              ${buildStatusTable(curYear, curMonth, `${curYear}년 ${curMonth}월 현황`, false)}
             </div>
           </div>
         </div>`;
