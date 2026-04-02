@@ -328,3 +328,7 @@ select.ec {
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @keyframes spin  { to { transform: rotate(360deg); } }
+
+/* 보고서 페이지 — 좌우 공간 최대 활용 */
+#pg-report .main-inner,
+#pg-report { padding-left: 12px; padding-right: 12px; }

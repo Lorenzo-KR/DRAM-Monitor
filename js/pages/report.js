@@ -29,7 +29,7 @@ Pages.Report = (() => {
   }
 
   const TH  = (t, align='left', extra='') =>
-    `<th style="padding:8px 12px;background:#E8E8ED;border:1px solid #D2D2D7;color:#3A3A3C;font-size:11px;font-weight:600;white-space:nowrap;text-align:${align};${extra}">${t}</th>`;
+    `<th style="padding:5px 8px;background:#E8E8ED;border:1px solid #D2D2D7;color:#3A3A3C;font-size:10px;font-weight:600;white-space:nowrap;text-align:${align};${extra}">${t}</th>`;
   // 클릭 정렬 가능한 헤더
   const THSort = (t, col, tableId, align='left') => {
     const s = _sort[tableId] || {};
@@ -40,11 +40,11 @@ Pages.Report = (() => {
       >${t}${arrow}</th>`;
   };
   const TD  = (t, align='left', extra='') =>
-    `<td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:${align};font-size:12px;color:#6E6E73;${extra}">${t}</td>`;
+    `<td style="padding:5px 8px;border:1px solid #D2D2D7;text-align:${align};font-size:11px;color:#6E6E73;${extra}">${t}</td>`;
   const TDM = (t, align='left', extra='') =>
-    `<td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:${align};font-size:12px;font-family:var(--font-mono);color:#1D1D1F;${extra}">${t}</td>`;
+    `<td style="padding:5px 8px;border:1px solid #D2D2D7;text-align:${align};font-size:11px;font-family:var(--font-mono);color:#1D1D1F;${extra}">${t}</td>`;
   const TDS = (t, bg='#EFEFF4') =>
-    `<td style="padding:8px 12px;border:1px solid #D2D2D7;font-size:12px;font-weight:600;color:#1D1D1F;background:${bg}">${t}</td>`;
+    `<td style="padding:5px 8px;border:1px solid #D2D2D7;font-size:11px;font-weight:600;color:#1D1D1F;background:${bg}">${t}</td>`;
 
   // ── 섹션 렌더 ───────────────────────────────────────────────
   function _renderCountry(co, coLabel, prefix, lots, dailies, invoices) {
@@ -65,12 +65,20 @@ Pages.Report = (() => {
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
 
     // 2. 청구 예정 — 완료됐지만 인보이스 미청구인 LOT
-    // 기준: 작업 완료일이 기준월 말일 이하인 건 전부 (과거 월 미청구 포함)
+    // 기준: 완료일 기준월 말일 이하 AND 진행률 100% (실제 완료된 건만)
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
       if (allInvoicedIds.has(String(l.id))) return false;
-      const isDone = getLotStatus(l) === 'done' || !!(l.actualDone);
-      if (!isDone) return false;
+      // 진행률 100% 확인 — monthEnd 기준 처리량
+      const qty = parseNumber(l.qty);
+      if (qty <= 0) return false;
+      const cutoffDailies = dailies.filter(d =>
+        String(d.lotId) === String(l.id) && (d.date || '') <= monthEnd
+      );
+      const cum = cutoffDailies.reduce((s, d) => s + parseNumber(d.proc), 0);
+      const pct = Math.min(100, Math.round(cum / qty * 100));
+      if (pct < 100) return false;
+      // 완료일이 기준월 말일 이하인지 확인
       const doneDate = l.actualDone || l.targetDate || '';
       return doneDate >= '2000-01-01' && doneDate <= monthEnd;
     });
@@ -126,7 +134,7 @@ Pages.Report = (() => {
         <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
       </tr>`;
       const t1id = co + '-invoiced';
-      table1 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
+      table1 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t1id)}
           ${TH('사업','center')}
@@ -139,7 +147,7 @@ Pages.Report = (() => {
           ${TH('비고','center')}
         </tr></thead>
         <tbody>${rows1}${sumRow}</tbody>
-      </table></div>`;
+      </table>`;
     }
 
     // ── 표 2: 청구 예정 ──────────────────────────────────────
@@ -171,7 +179,7 @@ Pages.Report = (() => {
           ${TD(isThisMonth ? '이번 달' : '이월 미청구', 'center', isThisMonth ? 'color:#92400E' : 'color:#B45309;font-weight:600')}
         </tr>`;
       }).join('');
-      table2 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
+      table2 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t2id)}
           ${TH('사업','center')}
@@ -184,7 +192,7 @@ Pages.Report = (() => {
           ${TH('구분','center')}
         </tr></thead>
         <tbody>${rows2}</tbody>
-      </table></div>`;
+      </table>`;
     }
 
     // ── 표 3: 작업 진행중 ────────────────────────────────────
@@ -222,7 +230,7 @@ Pages.Report = (() => {
           </td>
         </tr>`;
       }).join('');
-      table3 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
+      table3 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
         <thead><tr>
           ${TH('LOT번호')}
           ${TH('사업','center')}
@@ -235,7 +243,7 @@ Pages.Report = (() => {
           ${TH('진행률','center')}
         </tr></thead>
         <tbody>${rows3}</tbody>
-      </table></div>`;
+      </table>`;
     }
 
     return { table1, table2, table3,
@@ -281,7 +289,7 @@ Pages.Report = (() => {
           <span style="font-size:13px;font-weight:600;color:#1D1D1F">${title}</span>
           <span style="font-size:11px;color:#86868B">${cnt}건${sub}</span>
         </div>`;
-      const half = 'width:50%;min-width:0;overflow-x:auto;padding:0 14px';
+      const half = 'width:50%;min-width:0;padding:0 12px';
       const divider = '<div style="height:1px;background:#E8E8ED;margin:14px 0"></div>';
 
       const _section = (prev, curr, tableKey, dot, title, subFn) => `
@@ -314,7 +322,7 @@ Pages.Report = (() => {
         </div>`;
 
       el.innerHTML = `
-        <div style="max-width:1400px">
+        <div style="width:100%">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
             <div>
               <div style="font-size:15px;font-weight:600;color:#1D1D1F">보고서</div>
