@@ -278,12 +278,18 @@ Pages.Progress = (() => {
       const rem   = Math.max(0, qty - cum);
       const pct   = (qty > 0 && st !== 'upcoming') ? Math.min(100, Math.round(cum/qty*100)) : 0;
       const dd    = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const pctColor  = st==='overdue'?'#dc2626': st==='done'?'var(--tx)': pct>=80?'var(--tx3)':'var(--tx2)';
+      const pctColor  = st==='overdue'?'#dc2626': st==='done'?'#C7C7CC': pct>=80?'#EF9F27':'var(--tx2)';
       const barColor  = BAR_COLOR[st] || 'var(--tx2)';
       const isOpen    = _openLotId === lot.id;
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${isOpen?'background:var(--bg)':st==='done'?'background:#F5F5F7':''}">
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${
+          st==='done'    ? 'background:#F9F9F9;opacity:0.55;border-left:3px solid transparent' :
+          st==='overdue' ? 'background:#FFF8F8;border-left:3px solid #dc2626' :
+          st==='inprog'  ? 'background:#FFFFFF;border-left:3px solid #34C759' :
+          isOpen         ? 'background:var(--bg);border-left:3px solid transparent' :
+                           'border-left:3px solid transparent'
+        }">
           <td style="padding:10px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
