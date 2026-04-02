@@ -65,9 +65,21 @@ Pages.Report = (() => {
 
     // 2. 청구 예정 — 완료됐지만 인보이스 미청구인 LOT
     // 기준: 작업 완료일이 기준월 내(해당 월 1일~말일)인 건만
-    // 각 월은 그 월에 완료된 건만 표시 (이전 달 건은 해당 달에서 표시)
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
+
+      // 디버그 — HK_DRAM_Batch_1 추적
+      const isTarget = (l.lotNo || '').includes('Batch_1') || (l.customerName || '').includes('Batch');
+      if (isTarget) console.log('[Report Debug] LOT:', l.lotNo, {
+        country: l.country, co,
+        done: l.done, actualDone: l.actualDone, targetDate: l.targetDate,
+        hasInvoice: allInvoicedIds.has(String(l.id)),
+        getLotStatus: getLotStatus(l),
+        prefix,
+        doneDate: l.actualDone || l.targetDate || '',
+        startsWithPrefix: (l.actualDone || l.targetDate || '').startsWith(prefix),
+      });
+
       if (allInvoicedIds.has(String(l.id))) return false;
       // 완료 판단: done='1' 이거나 actualDone 날짜가 있는 경우
       const isDone = getLotStatus(l) === 'done' || !!(l.actualDone);

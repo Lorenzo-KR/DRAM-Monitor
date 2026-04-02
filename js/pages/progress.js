@@ -18,11 +18,12 @@ Pages.Progress = (() => {
     return getLotStatus(lot); // done / overdue / inprog
   }
 
+  const ST_LABEL = { upcoming: '입고예정', inprog: '🟢 진행중', overdue: '🔴 지연', done: '완료' };
   const ST_STYLE = {
     upcoming: 'border:1px solid #B0B0B8;color:#6E6E73;background:transparent',
-    inprog:   'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3',
-    overdue:  'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2',
-    done:     'border:1px solid #B0B0B8;color:#6E6E73;background:#F5F5F7',
+    inprog:   'border:1.5px solid #34C759;color:#1A7F37;background:#F0FBF3;font-weight:700',
+    overdue:  'border:1.5px solid #dc2626;color:#dc2626;background:#FEF2F2;font-weight:700',
+    done:     'border:1px solid #D2D2D7;color:#C7C7CC;background:#F5F5F7',
   };
   const CO_STYLE  = { HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
   const BIZ_STYLE = { DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SSD: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', MID: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
