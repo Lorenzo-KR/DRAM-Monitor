@@ -575,14 +575,15 @@ Pages.Progress = (() => {
 
   async function confirmDelete() {
     if (!_deleteLotId) return;
-    const id = _deleteLotId;
+    const id  = _deleteLotId;
+    const lot = Store.getLotById(id);
     cancelDelete();
     Store.deleteLot(id);
     if (_openLotId === id) _openLotId = null;
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.LOTS, id);
-    Api.log('LOT', '삭제', lot?.lotNo || String(id), `${CONFIG.BIZ_LABELS[lot?.biz]||lot?.biz||''} LOT 삭제`);
+    Api.log('LOT', '삭제', lot?.lotNo || String(id), `${CONFIG.BIZ_LABELS[lot?.biz]||lot?.biz||''} · ${CONFIG.COUNTRY_LABELS[lot?.country]||lot?.country||''} · ${lot?.customerName||''} LOT 삭제`);
   }
 
   async function deleteLot(id) {
@@ -596,7 +597,7 @@ Pages.Progress = (() => {
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
-    Api.log('일별처리', '삭제', rec?.lotNo || String(lotId), `${rec?.date || ''} 처리량 ${Number(rec?.proc||0).toLocaleString()}개 삭제`);
+    Api.log('일별처리', '삭제', rec?.lotNo || String(lotId), `${rec?.date || ''} 처리 ${Number(rec?.proc||0).toLocaleString()}개${rec?.biz==='DRAM' ? ` (N:${Number(rec?.normal||0).toLocaleString()} / NB:${Number(rec?.noBoot||0).toLocaleString()} / AB:${Number(rec?.abnormal||0).toLocaleString()})` : ''} 삭제`);
   }
 
   // ── 엑셀 내보내기 ──────────────────────────────────────────
@@ -882,7 +883,7 @@ Pages.Progress = (() => {
       };
       Store.upsertDaily(record);
       await Api.append(CONFIG.SHEETS.DAILY, record);
-      Api.log('일별처리', '등록', record.lotNo || String(record.lotId), `${record.date} 처리량 ${Number(record.proc).toLocaleString()}개 (누적 ${Number(record.cumul).toLocaleString()} / 잔여 ${Number(record.remain).toLocaleString()})`);
+      Api.log('일별처리', '등록', record.lotNo || String(record.lotId), `${record.date} 처리 ${Number(record.proc).toLocaleString()}개${record.biz==='DRAM' ? ` (N:${Number(record.normal).toLocaleString()} / NB:${Number(record.noBoot).toLocaleString()} / AB:${Number(record.abnormal).toLocaleString()})` : ''} | 누적 ${Number(record.cumul).toLocaleString()} / 잔여 ${Number(record.remain).toLocaleString()}`);
       cnt++;
     }
 

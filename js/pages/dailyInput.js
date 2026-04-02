@@ -195,7 +195,7 @@ Pages.DailyInput = (() => {
     UI.toast('저장됨');
     render();
     Api.append(CONFIG.SHEETS.DAILY, record);
-    Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date} 처리량 ${formatNumber(proc)}개 (누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)})`);
+    Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date} 처리 ${formatNumber(proc)}개${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''} | 누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)}`);
   }
 
   async function deleteRecord(id, lotId) {
@@ -206,7 +206,7 @@ Pages.DailyInput = (() => {
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
-    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리량 ${formatNumber(parseNumber(rec?.proc))}개 삭제`);
+    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리 ${formatNumber(parseNumber(rec?.proc))}개${rec?.biz==='DRAM' ? ` (N:${formatNumber(parseNumber(rec?.normal))} / NB:${formatNumber(parseNumber(rec?.noBoot))} / AB:${formatNumber(parseNumber(rec?.abnormal))})` : ''} 삭제`);
   }
 
   // ── 엑셀 붙여넣기 팝업 ──────────────────────────────────────
