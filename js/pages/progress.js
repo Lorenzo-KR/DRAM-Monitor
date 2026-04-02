@@ -30,7 +30,7 @@ Pages.Progress = (() => {
   const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', done: 'var(--tx)' };
 
   function _badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:13px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;letter-spacing:.01em;${style}">${text}</span>`;
   }
 
   // ── 차트 ───────────────────────────────────────────────────
@@ -160,45 +160,45 @@ Pages.Progress = (() => {
   function _newRowHTML() {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-    const tdS = 'padding:5px 8px;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);vertical-align:middle';
-    const inp = 'border:1px solid var(--tbl-wrap-bd);border-radius:4px;background:#fff;font-size:14px';
+    const tdS = 'padding:3px 6px;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);vertical-align:middle';
+    const inp = 'border:1px solid var(--tbl-wrap-bd);border-radius:4px;background:#fff;font-size:12px;color:var(--tx)';
     return `
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
         <td style="${tdS}">
-          <select id="nl-co" style="${inp};width:100%;padding:4px 3px">
+          <select id="nl-co" style="${inp};width:100%;padding:2px 3px">
             <option value="HK">HK</option><option value="SG">SG</option>
           </select>
         </td>
         <td style="${tdS}">
-          <select id="nl-biz" style="${inp};width:100%;padding:4px 3px">
+          <select id="nl-biz" style="${inp};width:100%;padding:2px 3px">
             <option>DRAM</option><option>SSD</option><option>MID</option>
           </select>
         </td>
         <td style="${tdS}">
-          <input id="nl-lot" placeholder="LOT 번호" style="${inp};width:100%;padding:5px 7px;font-family:var(--font-mono)">
+          <input id="nl-lot" placeholder="LOT 번호" style="${inp};width:100%;padding:3px 6px;font-family:var(--font-mono)">
         </td>
         <td style="${tdS}">
-          <select id="nl-cust" style="${inp};width:100%;padding:4px 3px" onchange="if(this.value==='__manual__'){document.getElementById('nl-cust-manual').style.display='block'}else{document.getElementById('nl-cust-manual').style.display='none'}">
+          <select id="nl-cust" style="${inp};width:100%;padding:2px 3px" onchange="if(this.value==='__manual__'){document.getElementById('nl-cust-manual').style.display='block'}else{document.getElementById('nl-cust-manual').style.display='none'}">
             <option value="">-- 고객사 --</option>${custOpts}<option value="__manual__">직접 입력...</option>
           </select>
-          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;${inp};width:100%;padding:4px 6px;margin-top:2px">
+          <input id="nl-cust-manual" placeholder="직접 입력" style="display:none;${inp};width:100%;padding:2px 5px;margin-top:2px">
         </td>
         <td style="${tdS}">
-          <input id="nl-qty" type="number" placeholder="수량" min="0" style="${inp};width:100%;padding:5px 7px;text-align:right">
+          <input id="nl-qty" type="number" placeholder="수량" min="0" style="${inp};width:100%;padding:3px 6px;text-align:right">
         </td>
         <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
         <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
         <td style="${tdS};color:var(--tx3);font-size:14px">—</td>
         <td style="${tdS}">
-          <input id="nl-indate" type="date" style="${inp};width:100%;padding:5px 6px" onchange="Pages.Progress.calcNewTgt()">
+          <input id="nl-indate" type="date" style="${inp};width:100%;padding:3px 5px" onchange="Pages.Progress.calcNewTgt()">
         </td>
         <td style="${tdS}">
-          <input id="nl-tgt" type="date" style="${inp};width:100%;padding:5px 6px">
+          <input id="nl-tgt" type="date" style="${inp};width:100%;padding:3px 5px">
         </td>
         <td style="${tdS}"></td>
         <td style="${tdS}">
-          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:6px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer">+ 등록</button>
+          <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:4px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer">+ 등록</button>
           <span id="nl-ok" style="display:none;font-size:13px;color:#3B6D11;font-weight:500">✓</span>
         </td>
       </tr>`;
@@ -290,17 +290,17 @@ Pages.Progress = (() => {
           isOpen         ? 'background:var(--bg);border-left:4px solid transparent' :
                            'border-left:4px solid transparent'
         }">
-          <td style="padding:10px 14px;text-align:center">
+          <td style="padding:8px 8px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:10px 14px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:10px 14px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:13px;font-weight:${st==='done'?'400':'700'};color:${st==='done'?'#A0A0A8':'#1D1D1F'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:11px 14px;font-size:13px;color:${st==='done'?'#C7C7CC':'#1D1D1F'};font-weight:${st==='done'?'400':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:${st==='done'?'400':'600'};color:${st==='done'?'#C7C7CC':'#1D1D1F'}">${formatNumber(qty)}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'var(--tx3)':'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="padding:10px 14px">
+          <td style="padding:7px 8px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td style="padding:7px 8px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:12px;font-weight:${st==='done'?'400':'700'};color:${st==='done'?'#A0A0A8':'#1D1D1F'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:8px 10px;font-size:12px;color:${st==='done'?'#C7C7CC':'#1D1D1F'};font-weight:${st==='done'?'400':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${st==='done'?'400':'600'};color:${st==='done'?'#C7C7CC':'#1D1D1F'}">${formatNumber(qty)}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#92400e':'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="padding:7px 10px">
             ${st==='upcoming'
               ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
@@ -308,23 +308,20 @@ Pages.Progress = (() => {
                   <span style="font-size:12px;font-weight:${st==='done'?'400':'700'};color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:11px 14px;font-size:13px;color:${st==='done'?'#C7C7CC':st==='upcoming'?'var(--tx2)':'#1D1D1F'};font-weight:${st==='inprog'||st==='overdue'?'600':'400'}">${lot.inDate||'—'}</td>
-          <td style="padding:11px 14px;font-size:13px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D;font-weight:700':st==='inprog'?'color:#1D1D1F;font-weight:600':'color:var(--tx3)'}">
-            ${st==='done'
-              ? (lot.actualDone || lot.targetDate || '—')
-              : st==='upcoming'
-                ? (lot.targetDate || '—')
-                : `${lot.targetDate||'—'}${dd!==null?`<span style="font-size:13px;margin-left:3px;color:${dd<0?'#dc2626':dd<=3?'var(--tx3)':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}`}
+          <td style="padding:8px 10px;font-size:12px;color:${st==='done'?'#C7C7CC':st==='upcoming'?'var(--tx2)':'#1D1D1F'};font-weight:${st==='inprog'||st==='overdue'?'600':'400'}">${lot.inDate||'—'}</td>
+          <td style="padding:8px 10px;font-size:12px;${st==='overdue'?'color:#A32D2D;font-weight:700':st==='done'?'color:#C7C7CC':'color:var(--tx2)'}">
+            ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:11px;margin-left:3px;color:${dd<0?'#dc2626':dd<=3?'#92400e':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td style="padding:10px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td style="padding:6px 8px;white-space:nowrap">
+          <td style="padding:8px 10px;font-size:12px;${st==='done'?'color:#085041;font-weight:600':'color:var(--tx3)'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
+          <td style="padding:7px 8px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td style="padding:5px 6px;white-space:nowrap">
             <button class="btn sm" style="font-size:12px;padding:3px 8px;${st==='inprog'?'font-weight:700;color:#185FA5;border-color:#378ADD':st==='overdue'?'font-weight:700;color:#A32D2D;border-color:#E24B4A':''}" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
             <button class="btn del sm" style="font-size:12px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
       const expandRow = isOpen ? `
-        <tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--bd)">
+        <tr><td colspan="14" style="padding:0;border-bottom:1px solid var(--bd)">
           ${_renderExpand(lot, dailies)}
         </td></tr>` : '';
 
@@ -345,7 +342,8 @@ Pages.Progress = (() => {
             <col style="width:80px">
             <col style="width:130px">
             <col style="width:100px">
-            <col style="width:120px">
+            <col style="width:110px">
+            <col style="width:100px">
             <col style="width:80px">
             <col style="width:100px">
           </colgroup>
@@ -353,11 +351,11 @@ Pages.Progress = (() => {
             ${TH('','left')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
             ${TH('진행률','left')}
-            ${TH('입고일')}${TH('완료일')}${TH('상태')}${TH('','left')}
+            ${TH('입고일')}${TH('완료예정일')}${TH('완료일')}${TH('상태')}${TH('','left')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
-            ${rows || '<tr><td colspan="13" style="padding:24px;text-align:center;color:var(--tx3)">LOT가 없습니다</td></tr>'}
+            ${rows || '<tr><td colspan="14" style="padding:24px;text-align:center;color:var(--tx3)">LOT가 없습니다</td></tr>'}
           </tbody>
         </table>
       </div>`;
