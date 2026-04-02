@@ -70,15 +70,19 @@ Pages.Report = (() => {
 
       // 디버그 — HK_DRAM_Batch_1 추적
       const isTarget = (l.lotNo || '').includes('Batch_1') || (l.customerName || '').includes('Batch');
-      if (isTarget) console.log('[Report Debug] LOT:', l.lotNo, {
-        country: l.country, co,
-        done: l.done, actualDone: l.actualDone, targetDate: l.targetDate,
-        hasInvoice: allInvoicedIds.has(String(l.id)),
-        getLotStatus: getLotStatus(l),
-        prefix,
-        doneDate: l.actualDone || l.targetDate || '',
-        startsWithPrefix: (l.actualDone || l.targetDate || '').startsWith(prefix),
-      });
+      if (isTarget) {
+        const invMatch = invoices.filter(r => r.country === co);
+        console.log('[Report Debug] LOT:', l.lotNo, {
+          lot_id: l.id, lot_id_type: typeof l.id,
+          done: l.done, actualDone: l.actualDone,
+          hasInvoice: allInvoicedIds.has(String(l.id)),
+          allInvoicedIds_size: allInvoicedIds.size,
+          allInvoicedIds_values: [...allInvoicedIds],
+          invoices_for_co: invMatch.map(r => ({ lotId: r.lotId, lotId_type: typeof r.lotId, date: r.date })),
+          prefix,
+          startsWithPrefix: (l.actualDone || l.targetDate || '').startsWith(prefix),
+        });
+      }
 
       if (allInvoicedIds.has(String(l.id))) return false;
       // 완료 판단: done='1' 이거나 actualDone 날짜가 있는 경우
