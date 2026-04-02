@@ -239,6 +239,7 @@ Pages.Progress = (() => {
     UI.toast(lotNo + ' 등록됨');
     render();
     Api.append(CONFIG.SHEETS.LOTS, record);
+    Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
   }
 
   // ── 메인 렌더 ──────────────────────────────────────────────
@@ -533,6 +534,7 @@ Pages.Progress = (() => {
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.LOTS, id);
+    Api.log('LOT', '삭제', lot?.lotNo || String(id), `${CONFIG.BIZ_LABELS[lot?.biz]||lot?.biz||''} LOT 삭제`);
   }
 
   async function deleteLot(id) {
@@ -683,6 +685,7 @@ Pages.Progress = (() => {
     };
     Store.upsertLot(updated);
     Api.update(CONFIG.SHEETS.LOTS, _editLotId, updated);
+    Api.log('LOT', '수정', updated.lotNo || String(_editLotId), `${CONFIG.BIZ_LABELS[updated.biz]||updated.biz} 수정`);
     const ok = document.getElementById('ep-ok');
     if (ok) { ok.style.display = 'block'; setTimeout(() => { ok.style.display = 'none'; closeEditPanel(); }, 1000); }
     UI.toast('LOT 수정됨');
@@ -829,6 +832,7 @@ Pages.Progress = (() => {
       };
       Store.upsertDaily(record);
       await Api.append(CONFIG.SHEETS.DAILY, record);
+      Api.log('일별처리', '등록', record.lotNo || String(record.lotId), `${record.date} 처리량 ${Number(record.proc).toLocaleString()}개 (누적 ${Number(record.cumul).toLocaleString()} / 잔여 ${Number(record.remain).toLocaleString()})`);
       cnt++;
     }
 

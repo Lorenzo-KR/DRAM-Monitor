@@ -472,6 +472,7 @@ Pages.Revenue = (() => {
       if (existing) {
         Store.deleteInvoice(existing.id);
         Api.delete(CONFIG.SHEETS.INVOICES, existing.id);
+        Api.log('인보이스', '삭제', lot.lotNo || String(lotId), '인보이스 초기화');
         UI.toast('입력 초기화됨');
         render();
       }
@@ -499,8 +500,13 @@ Pages.Revenue = (() => {
     };
 
     Store.upsertInvoice(record);
-    if (existing) Api.update(CONFIG.SHEETS.INVOICES, existing.id, record);
-    else          Api.append(CONFIG.SHEETS.INVOICES, record);
+    if (existing) {
+      Api.update(CONFIG.SHEETS.INVOICES, existing.id, record);
+      Api.log('인보이스', '수정', lot.lotNo || String(lotId), `매출액 $${amount.toLocaleString()} · 청구일 ${invDate}`);
+    } else {
+      Api.append(CONFIG.SHEETS.INVOICES, record);
+      Api.log('인보이스', '등록', lot.lotNo || String(lotId), `매출액 $${amount.toLocaleString()} · 청구일 ${invDate}`);
+    }
     UI.toast('청구 완료 저장됨');
     render();
   }

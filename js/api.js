@@ -149,6 +149,39 @@ const Api = (() => {
       return _enqueue({ action: 'setSetting', key, value, token: Auth.getToken() });
     },
 
+    /**
+     * 데이터 변경 로그 기록
+     * @param {string} category - 'LOT' | '인보이스' | '일별처리'
+     * @param {string} action   - '등록' | '수정' | '삭제'
+     * @param {string} lotNo    - LOT 번호
+     * @param {string} summary  - 변경 내용 요약
+     */
+    log(category, action, lotNo, summary) {
+      const record = {
+        id:        Date.now(),
+        ts:        new Date().toISOString(),
+        category,
+        action,
+        lotNo:     lotNo || '',
+        summary:   summary || '',
+      };
+      return _enqueue({ action: 'append', sheet: 'logs', data: record, token: Auth.getToken() });
+    },
+
+    /**
+     * 로그 전체 가져오기
+     */
+    async getLogs() {
+      try {
+        const token = Auth.getToken();
+        const res  = await fetch(`${CONFIG.API_URL}?action=getAll&sheet=logs&token=${token}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
+      } catch (err) {
+        return [];
+      }
+    },
+
   };
 
 })();
