@@ -174,7 +174,7 @@ const Api = (() => {
     async getLogs() {
       try {
         const token = Auth.getToken();
-        const res  = await fetch(`${CONFIG.API_URL}?action=getAll&sheet=logs&token=${token}`);
+        const res  = await fetch(`${CONFIG.API_URL}?action=getLogs&token=${token}`);
         const data = await res.json();
         return Array.isArray(data) ? data : [];
       } catch (err) {
