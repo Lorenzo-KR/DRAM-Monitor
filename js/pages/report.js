@@ -64,15 +64,15 @@ Pages.Report = (() => {
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
 
     // 2. 청구 예정 — 완료됐지만 인보이스 미청구인 LOT
-    // 기준: 작업 완료일(actualDone or targetDate)이 기준월 안에 있는 건
-    // ※ getLotStatus는 done='1' 여부만 보므로, actualDone 날짜도 함께 체크
+    // 기준: 작업 완료일이 기준월 내(해당 월 1일~말일)인 건만
+    // 각 월은 그 월에 완료된 건만 표시 (이전 달 건은 해당 달에서 표시)
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
       if (allInvoicedIds.has(String(l.id))) return false;
-      // 완료 판단: done 필드가 '1' 이거나, actualDone 날짜가 있는 경우
+      // 완료 판단: done='1' 이거나 actualDone 날짜가 있는 경우
       const isDone = getLotStatus(l) === 'done' || !!(l.actualDone);
       if (!isDone) return false;
-      // 완료일이 기준월 내인 경우만
+      // 완료일이 기준월 내인 경우만 (YYYY-MM으로 시작)
       const doneDate = l.actualDone || l.targetDate || '';
       return doneDate.startsWith(prefix);
     });

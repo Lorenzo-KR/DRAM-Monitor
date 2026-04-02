@@ -139,24 +139,27 @@ Pages.Revenue = (() => {
         const isDone    = st === 'done';
         const isWorking = !isDone && st !== 'upcoming';
         // 청구 상태 라벨 & 스타일
-        let claimLabel, claimStyle, rowBg;
+        let claimLabel, claimStyle, rowBg, rowBorder;
         if (!isDone && st !== 'upcoming') {
-          // 작업 진행중
+          // 작업 진행중 — 파란 왼쪽 보더 + 연파랑 배경
           claimLabel = '작업 진행중';
-          claimStyle = 'border:1px solid var(--bd2);color:var(--tx3);background:#F5F5F7';
-          rowBg      = 'background:#F5F5F7';
+          claimStyle = 'border:1.5px solid #93C5FD;color:#1D4ED8;background:#EFF6FF;font-weight:600';
+          rowBg      = 'background:#F0F7FF';
+          rowBorder  = 'border-left:3px solid #378ADD';
         } else if (isDone && !hasInv) {
-          // 완료 + 미입력 → 입력 대기
-          claimLabel = '입력 대기';
-          claimStyle = 'border:1px solid #F59E0B;color:#92400E;background:#FFFBEB';
+          // 완료 + 미입력 → 입력 대기 — 노란 왼쪽 보더 + 연노랑 배경
+          claimLabel = '⚠ 입력 대기';
+          claimStyle = 'border:1.5px solid #F59E0B;color:#92400E;background:#FFFBEB;font-weight:600';
           rowBg      = 'background:#FFFBEE';
+          rowBorder  = 'border-left:3px solid #F59E0B';
         } else if (isDone && hasInv) {
           // 완료 + 입력 완료 → 청구 완료
           claimLabel = '청구 완료';
-          claimStyle = 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3';
+          claimStyle = 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3;font-weight:600';
           rowBg      = '';
+          rowBorder  = '';
         } else {
-          claimLabel = '—'; claimStyle = 'color:var(--tx3)'; rowBg = '';
+          claimLabel = '—'; claimStyle = 'color:var(--tx3)'; rowBg = ''; rowBorder = '';
         }
 
         // 청구일 (인보이스 date)
@@ -164,13 +167,13 @@ Pages.Revenue = (() => {
 
         // 작업 완료일
         const doneDate      = isDone ? (lot.actualDone || lot.targetDate || '—') : st === 'upcoming' ? '—' : '진행중';
-        const doneDateColor = isDone ? '#1D1D1F' : 'var(--tx3)';
+        const doneDateColor = isDone ? '#1D1D1F' : (st==='upcoming' ? 'var(--tx3)' : '#3A3A3C');
 
         totalAmt += amt;
 
         const P = 'padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px';
         return `
-          <tr style="${rowBg}">
+          <tr style="${rowBg};${rowBorder}">
             <td style="${P};color:var(--tbl-tx-body);text-align:center;width:40px">${i + 1}</td>
             <td style="${P};color:var(--tbl-tx-body);text-align:center;white-space:nowrap">${lot.inDate || '—'}</td>
             <td style="${P};color:${doneDateColor};font-weight:${isDone?'500':'400'};text-align:center;white-space:nowrap">${doneDate}</td>
@@ -203,12 +206,12 @@ Pages.Revenue = (() => {
                   ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
                       <div style="display:flex;align-items:center;gap:4px">
                         <input type="number" placeholder="금액 (USD)" id="rv-amt-${lot.id}"
-                          style="width:100px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
+                          style="width:100px;padding:4px 8px;border:1.5px solid #F59E0B;border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#FFFBF0;color:var(--tx)">
                         <input type="date" id="rv-date-${lot.id}"
-                          style="padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
+                          style="padding:4px 7px;border:1.5px solid #F59E0B;border-radius:5px;font-size:11px;color:var(--tx);background:#FFFBF0">
                       </div>
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
-                        style="padding:3px 12px;background:#1D1D1F;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
+                        style="padding:3px 12px;background:#F59E0B;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">저장</button>
                     </div>`
                   : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
             </td>
