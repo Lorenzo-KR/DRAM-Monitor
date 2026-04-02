@@ -194,7 +194,12 @@ Pages.Report = (() => {
     } else {
       const rows3 = inProgLots.map(l => {
         const qty = parseNumber(l.qty);
-        const cum = getLotCumulative(l.id, dailies);
+        // 기준월 말일까지의 처리량만 계산 (전월이면 전월 말일 기준)
+        const cutoff = monthEnd; // prefix + '-31' (이미 선언됨)
+        const filteredDailies = dailies.filter(d =>
+          String(d.lotId) === String(l.id) && (d.date || '') <= cutoff
+        );
+        const cum = filteredDailies.reduce((s, d) => s + parseNumber(d.proc), 0);
         const rem = Math.max(0, qty - cum);
         const pct = qty > 0 ? Math.min(100, Math.round(cum / qty * 100)) : 0;
         const barColor = pct >= 100 ? '#34C759' : pct >= 80 ? '#EF9F27' : '#1D1D1F';
