@@ -239,9 +239,27 @@ Pages.Changelog = (() => {
       const isDev  = _tab === 'dev';
       const isData = _tab === 'data';
 
+      const _paint = (loading) => {
+        const body = loading
+          ? '<div style="padding:40px;text-align:center;color:#C7C7CC;font-size:13px">로그 불러오는 중...</div>'
+          : (isDev ? _renderDev() : _renderData(_logs || []));
+        el.innerHTML = `
+          <div style="max-width:780px">
+            <div style="margin-bottom:20px">
+              <div style="font-size:15px;font-weight:600;color:#1D1D1F">업데이트 현황</div>
+              <div style="font-size:12px;color:#86868B;margin-top:2px">Test Ops Monitor</div>
+            </div>
+            <div style="display:flex;border-bottom:1px solid #D2D2D7;margin-bottom:24px">
+              <button onclick="Pages.Changelog.switchTab('data')" style="${_tabStyle(isData)}">데이터 변경 로그</button>
+              <button onclick="Pages.Changelog.switchTab('dev')"  style="${_tabStyle(isDev)}">앱 개발 이력</button>
+            </div>
+            ${body}
+          </div>`;
+      };
+
       if (isData && _logs === null && !_logsLoading) {
         _logsLoading = true;
-        _renderShell(el, isDev, isData, true);
+        _paint(true);
         try {
           _logs = await Api.getLogs();
         } catch(e) {
@@ -253,7 +271,7 @@ Pages.Changelog = (() => {
 
       if (_logsLoading) return;
 
-      _renderShell(el, isDev, isData, false);
+      _paint(false);
     },
   };
 
