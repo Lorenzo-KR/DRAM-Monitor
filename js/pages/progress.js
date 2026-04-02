@@ -284,11 +284,11 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${
-          st==='done'    ? 'background:#F9F9F9;opacity:0.5;border-left:3px solid transparent' :
-          st==='overdue' ? 'background:#FFF8F8;border-left:3px solid #dc2626' :
-          st==='inprog'  ? 'background:#FFFFFF;border-left:3px solid #34C759' :
-          isOpen         ? 'background:var(--bg);border-left:3px solid transparent' :
-                           'border-left:3px solid transparent'
+          st==='done'    ? 'background:#F9F9F9;opacity:0.45;border-left:4px solid transparent' :
+          st==='overdue' ? 'background:#FFF5F5;border-left:4px solid #E24B4A;box-shadow:inset 0 0 0 0.5px #FECACA' :
+          st==='inprog'  ? 'background:#F5F9FF;border-left:4px solid #378ADD;box-shadow:inset 0 0 0 0.5px #B5D4F4' :
+          isOpen         ? 'background:var(--bg);border-left:4px solid transparent' :
+                           'border-left:4px solid transparent'
         }">
           <td style="padding:10px 14px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -308,8 +308,8 @@ Pages.Progress = (() => {
                   <span style="font-size:12px;font-weight:${st==='done'?'400':'700'};color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:11px 14px;font-size:13px;color:${st==='upcoming'?'var(--tx2)':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
-          <td style="padding:11px 14px;font-size:15px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D':'color:var(--tx3)'}">
+          <td style="padding:11px 14px;font-size:13px;color:${st==='done'?'#C7C7CC':st==='upcoming'?'var(--tx2)':'#1D1D1F'};font-weight:${st==='inprog'||st==='overdue'?'600':'400'}">${lot.inDate||'—'}</td>
+          <td style="padding:11px 14px;font-size:13px;${st==='done'?'color:#085041;font-weight:500':st==='overdue'?'color:#A32D2D;font-weight:700':st==='inprog'?'color:#1D1D1F;font-weight:600':'color:var(--tx3)'}">
             ${st==='done'
               ? (lot.actualDone || lot.targetDate || '—')
               : st==='upcoming'
@@ -318,8 +318,8 @@ Pages.Progress = (() => {
           </td>
           <td style="padding:10px 14px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td style="padding:6px 8px;white-space:nowrap">
-            <button class="btn sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
-            <button class="btn del sm" style="font-size:15px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+            <button class="btn sm" style="font-size:12px;padding:3px 8px;${st==='inprog'?'font-weight:700;color:#185FA5;border-color:#378ADD':st==='overdue'?'font-weight:700;color:#A32D2D;border-color:#E24B4A':''}" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+            <button class="btn del sm" style="font-size:12px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
