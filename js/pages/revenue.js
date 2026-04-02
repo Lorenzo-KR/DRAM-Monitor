@@ -103,8 +103,15 @@ Pages.Revenue = (() => {
     const dailies  = Store.getDailies();
     const invoices = Store.getInvoices();
 
-    const CO_STYLE  = { HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
-    const BIZ_STYLE = { DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SSD: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', MID: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
+    const CO_STYLE  = {
+      HK: 'border:1px solid #93C5FD;color:#1D4ED8;background:#EFF6FF',
+      SG: 'border:1px solid #6EE7B7;color:#065F46;background:#ECFDF5',
+    };
+    const BIZ_STYLE = {
+      DRAM: 'border:1px solid #C4B5FD;color:#5B21B6;background:#F5F3FF',
+      SSD:  'border:1px solid #FCA5A5;color:#991B1B;background:#FEF2F2',
+      MID:  'border:1px solid #FCD34D;color:#92400E;background:#FFFBEB',
+    };
 
     function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
 
@@ -161,17 +168,18 @@ Pages.Revenue = (() => {
 
         totalAmt += amt;
 
+        const P = 'padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px';
         return `
           <tr style="${rowBg}">
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);font-size:12px;text-align:center">${i + 1}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center">${lot.inDate || '—'}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-family:var(--font-mono);font-size:12px;font-weight:500;text-align:center">${lot.lotNo || lot.id}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center">${lot.customerName || '—'}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px">${formatNumber(qty)}</td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:center;min-width:130px">
+            <td style="${P};color:var(--tbl-tx-body);text-align:center;width:40px">${i + 1}</td>
+            <td style="${P};color:var(--tbl-tx-body);text-align:center;white-space:nowrap">${lot.inDate || '—'}</td>
+            <td style="${P};color:${doneDateColor};font-weight:${isDone?'500':'400'};text-align:center;white-space:nowrap">${doneDate}</td>
+            <td style="${P};font-family:var(--font-mono);font-weight:500;text-align:center;white-space:nowrap">${lot.lotNo || lot.id}</td>
+            <td style="${P};text-align:center;width:80px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td style="${P};text-align:center;width:60px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td style="${P};color:var(--tbl-tx-body);text-align:left">${lot.customerName || '—'}</td>
+            <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">${formatNumber(qty)}</td>
+            <td style="${P};text-align:center;min-width:130px">
               ${st === 'upcoming'
                 ? `<span style="font-size:12px;color:var(--tx3)">D-${diffDays(today(), lot.inDate)}</span>`
                 : `<div style="display:flex;align-items:center;gap:6px">
@@ -182,17 +190,17 @@ Pages.Revenue = (() => {
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:left;min-width:160px">
+            <td style="${P};text-align:right;min-width:150px">
               ${hasInv
-                ? `<div style="display:flex;align-items:center;gap:6px">
-                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
+                ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
                     <input type="number" id="rv-amt-${lot.id}" value="${amt}"
                       style="display:none;width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
                     <input type="date" id="rv-date-edit-${lot.id}" value="${invDate}"
                       style="display:none;padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
                   </div>`
                 : isDone
-                  ? `<div style="display:flex;align-items:center;gap:5px">
+                  ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">
                       <input type="number" placeholder="금액" id="rv-amt-${lot.id}"
                         style="width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
                       <input type="date" id="rv-date-${lot.id}"
@@ -202,15 +210,15 @@ Pages.Revenue = (() => {
                     </div>`
                   : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
             </td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);text-align:right;font-family:var(--font-mono);font-size:12px;white-space:nowrap">
+            <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
                 : '<span style="color:var(--tx4)">—</span>'}
             </td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px;color:var(--tbl-tx-body);text-align:center;white-space:nowrap">
+            <td style="${P};text-align:center;white-space:nowrap;color:var(--tbl-tx-body)">
               ${invDate || '<span style="color:var(--tx4)">—</span>'}
             </td>
-            <td style="padding:9px 12px;border-top:1px solid var(--tbl-row-bd)">
+            <td style="${P};text-align:center">
               ${bdg(claimLabel, claimStyle)}
             </td>
             <td style="padding:4px 8px;border-top:1px solid var(--tbl-row-bd);white-space:nowrap">
