@@ -5,7 +5,7 @@
 
 Pages.Changelog = (() => {
 
-  let _tab    = 'dev';   // 'dev' | 'data'
+  let _tab    = 'data';  // 'dev' | 'data'
   let _filter = '';      // '' | 'LOT' | '인보이스' | '일별처리'
   let _logs   = null;    // 캐시 (null=미로드, []이상=로드됨)
   let _logsLoading = false;
@@ -250,12 +250,17 @@ Pages.Changelog = (() => {
               <div style="font-size:12px;color:#86868B;margin-top:2px">Test Ops Monitor</div>
             </div>
             <div style="display:flex;border-bottom:1px solid #D2D2D7;margin-bottom:24px">
-              <button onclick="Pages.Changelog.switchTab('dev')" style="${_tabStyle(false)}">앱 개발 이력</button>
               <button onclick="Pages.Changelog.switchTab('data')" style="${_tabStyle(true)}">데이터 변경 로그</button>
+              <button onclick="Pages.Changelog.switchTab('dev')" style="${_tabStyle(false)}">앱 개발 이력</button>
             </div>
             <div style="padding:40px;text-align:center;color:#C7C7CC;font-size:13px">로그 불러오는 중...</div>
           </div>`;
-        _logs = await Api.getLogs();
+        try {
+          _logs = await Api.getLogs();
+        } catch(e) {
+          _logs = [];
+          console.warn('[Changelog] 로그 로드 실패:', e);
+        }
         _logsLoading = false;
         Pages.Changelog.render();
         return;
@@ -271,8 +276,8 @@ Pages.Changelog = (() => {
 
           <!-- 탭 -->
           <div style="display:flex;border-bottom:1px solid #D2D2D7;margin-bottom:24px">
-            <button onclick="Pages.Changelog.switchTab('dev')"  style="${_tabStyle(isDev)}">앱 개발 이력</button>
             <button onclick="Pages.Changelog.switchTab('data')" style="${_tabStyle(isData)}">데이터 변경 로그</button>
+            <button onclick="Pages.Changelog.switchTab('dev')"  style="${_tabStyle(isDev)}">앱 개발 이력</button>
           </div>
 
           <!-- 패널 -->

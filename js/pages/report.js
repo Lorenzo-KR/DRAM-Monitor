@@ -55,10 +55,11 @@ Pages.Report = (() => {
         .filter(r => r.country === co && String(r.date || '').startsWith(prefix))
         .map(r => String(r.lotId))
     );
-    // 청구예정 필터용: 월 무관하게 인보이스가 존재하는 LOT ID 전체
+    // 청구예정 필터용: 기준월 말일 이하에 청구된 인보이스만 (기준월 이후 청구는 미청구로 처리)
+    const monthEnd = prefix + '-31';
     const allInvoicedIds = new Set(
       invoices
-        .filter(r => r.country === co)
+        .filter(r => r.country === co && String(r.date || '') <= monthEnd && String(r.date || '') >= '2000-01-01')
         .map(r => String(r.lotId))
     );
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
@@ -67,22 +68,6 @@ Pages.Report = (() => {
     // 기준: 작업 완료일이 기준월 내(해당 월 1일~말일)인 건만
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
-
-      // 디버그 — HK_DRAM_Batch_1 추적
-      const isTarget = (l.lotNo || '').includes('Batch_1') || (l.customerName || '').includes('Batch');
-      if (isTarget) {
-        const invMatch = invoices.filter(r => r.country === co);
-        console.log('[Report Debug] LOT:', l.lotNo, {
-          lot_id: l.id, lot_id_type: typeof l.id,
-          done: l.done, actualDone: l.actualDone,
-          hasInvoice: allInvoicedIds.has(String(l.id)),
-          allInvoicedIds_size: allInvoicedIds.size,
-          allInvoicedIds_values: [...allInvoicedIds],
-          invoices_for_co: invMatch.map(r => ({ lotId: r.lotId, lotId_type: typeof r.lotId, date: r.date })),
-          prefix,
-          startsWithPrefix: (l.actualDone || l.targetDate || '').startsWith(prefix),
-        });
-      }
 
       if (allInvoicedIds.has(String(l.id))) return false;
       // 완료 판단: done='1' 이거나 actualDone 날짜가 있는 경우
