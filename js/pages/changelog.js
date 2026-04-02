@@ -239,8 +239,8 @@ Pages.Changelog = (() => {
       const isDev  = _tab === 'dev';
       const isData = _tab === 'data';
 
-      // 데이터 탭이면 항상 새로 로드
-      if (isData) {
+      // 데이터 탭이면 캐시 없을 때만 로드
+      if (isData && _logs === null) {
         if (_logsLoading) return; // 중복 호출 방지
         _logsLoading = true;
         el.innerHTML = `
