@@ -18,7 +18,6 @@ Pages.Progress = (() => {
     return getLotStatus(lot); // done / overdue / inprog
   }
 
-  const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
   const ST_STYLE = {
     upcoming: 'border:1px solid #B0B0B8;color:#6E6E73;background:transparent',
     inprog:   'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3',
@@ -284,7 +283,7 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${
-          st==='done'    ? 'background:#F9F9F9;opacity:0.55;border-left:3px solid transparent' :
+          st==='done'    ? 'background:#F9F9F9;opacity:0.5;border-left:3px solid transparent' :
           st==='overdue' ? 'background:#FFF8F8;border-left:3px solid #dc2626' :
           st==='inprog'  ? 'background:#FFFFFF;border-left:3px solid #34C759' :
           isOpen         ? 'background:var(--bg);border-left:3px solid transparent' :
@@ -295,17 +294,17 @@ Pages.Progress = (() => {
           </td>
           <td style="padding:10px 14px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
           <td style="padding:10px 14px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:11px 14px;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
-          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:15px">${formatNumber(qty)}</td>
+          <td style="padding:11px 14px;font-family:var(--font-mono);font-size:13px;font-weight:${st==='done'?'400':'700'};color:${st==='done'?'#A0A0A8':'#1D1D1F'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:11px 14px;font-size:13px;color:${st==='done'?'#C7C7CC':'#1D1D1F'};font-weight:${st==='done'?'400':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
+          <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:${st==='done'?'400':'600'};color:${st==='done'?'#C7C7CC':'#1D1D1F'}">${formatNumber(qty)}</td>
           <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
           <td style="padding:11px 14px;text-align:right;font-family:var(--font-mono);font-size:13px;color:${rem>0?'var(--tx3)':'var(--tx3)'}">${formatNumber(rem)}</td>
           <td style="padding:10px 14px">
             ${st==='upcoming'
               ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
-                  <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
-                  <span style="font-size:13px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                  <div style="flex:1;height:${st==='done'?4:6}px;background:${st==='overdue'?'#FECACA':st==='inprog'?'#D1FAE5':'var(--bd)'};border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
+                  <span style="font-size:12px;font-weight:${st==='done'?'400':'700'};color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
           <td style="padding:11px 14px;font-size:13px;color:${st==='upcoming'?'var(--tx2)':'var(--tx3)'}${st==='upcoming'?';font-weight:500':''}">${lot.inDate||'—'}</td>
@@ -414,28 +413,63 @@ Pages.Progress = (() => {
 
           <!-- 직접 입력 탭 -->
           <div id="dp-panel-manual-${lot.id}" style="padding:14px">
-            <div style="display:grid;grid-template-columns:${isDram?'150px 130px 120px auto':'150px 130px auto'};gap:10px;margin-bottom:${isDram?'10px':'0'}">
-              <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}" style="min-width:140px"></div>
-              <div class="fld"><label>처리량</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcRem(${lot.id})"></div>
-              <div class="fld"><label>잔량 (자동)</label><input type="number" id="dp-rem-${lot.id}" readonly style="color:var(--tx2)" value="${remNow}"></div>
-              <div class="fld"><label>완료 여부</label>
-                <select id="dp-done-${lot.id}"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
+
+            <!-- 1행: 날짜 · 처리량 · 잔량 · 완료여부 -->
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+              <div class="fld" style="margin:0"><label style="font-size:11px">날짜</label>
+                <input type="date" id="dp-date-${lot.id}" value="${today()}" style="width:130px;padding:5px 8px">
+              </div>
+              <div class="fld" style="margin:0"><label style="font-size:11px">처리량</label>
+                <input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0"
+                  oninput="Pages.Progress.calcRem(${lot.id})"
+                  style="width:80px;padding:5px 8px;text-align:right">
+              </div>
+              <div class="fld" style="margin:0"><label style="font-size:11px">잔량 (자동)</label>
+                <input type="number" id="dp-rem-${lot.id}" readonly value="${remNow}"
+                  style="width:80px;padding:5px 8px;text-align:right;color:var(--tx2);background:var(--bg)">
+              </div>
+              <div class="fld" style="margin:0"><label style="font-size:11px">완료 여부</label>
+                <select id="dp-done-${lot.id}" style="width:90px;padding:5px 8px">
+                  <option value="0">진행 중</option><option value="1">완료 처리</option>
+                </select>
               </div>
             </div>
+
+            <!-- 2행: DRAM 분류 (DRAM만) -->
             ${isDram?`
-            <div style="margin-bottom:10px">
-              <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div class="fld"><label style="color:var(--tx2)">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
-                <div class="fld"><label style="color:var(--tx2)">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
-                <div class="fld"><label style="color:var(--tx2)">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.Progress.calcDram(${lot.id})" style="border-color:var(--bd);background:var(--bg)"></div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:6px">DRAM 분류 <span style="font-weight:400;color:var(--tx3)">(합계 자동계산)</span></div>
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <div class="fld" style="margin:0"><label style="font-size:11px;color:#1A7F37">Normal</label>
+                  <input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0"
+                    oninput="Pages.Progress.calcDram(${lot.id})"
+                    style="width:80px;padding:5px 8px;text-align:right;border-color:var(--bd);background:var(--bg)">
+                </div>
+                <div class="fld" style="margin:0"><label style="font-size:11px;color:#B45309">No Boot</label>
+                  <input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0"
+                    oninput="Pages.Progress.calcDram(${lot.id})"
+                    style="width:80px;padding:5px 8px;text-align:right;border-color:var(--bd);background:var(--bg)">
+                </div>
+                <div class="fld" style="margin:0"><label style="font-size:11px;color:#dc2626">Abnormal</label>
+                  <input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0"
+                    oninput="Pages.Progress.calcDram(${lot.id})"
+                    style="width:80px;padding:5px 8px;text-align:right;border-color:var(--bd);background:var(--bg)">
+                </div>
+                <div class="fld" style="margin:0"><label style="font-size:11px;color:var(--tx3)">합계 확인</label>
+                  <div id="dp-dram-sum-${lot.id}"
+                    style="width:80px;padding:5px 10px;border:1px solid var(--bd);border-radius:var(--rs);font-size:12px;text-align:right;background:var(--bg);color:var(--tx2);font-family:var(--font-mono)">0</div>
+                </div>
               </div>
             </div>`:''}
-            <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
-            <div class="br">
-              <button class="btn pri sm" onclick="Pages.Progress.saveDaily(${lot.id})">저장</button>
-              <span id="dp-ok-${lot.id}" style="font-size:14px;color:#085041;display:none;font-weight:500">✓ 저장됨</span>
+            <!-- 3행: 비고 + 저장 -->
+            <div style="display:flex;gap:10px;align-items:flex-end">
+              <div class="fld" style="margin:0;flex:1"><label style="font-size:11px">비고</label>
+                <input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등" style="width:100%;padding:5px 8px">
+              </div>
+              <button class="btn pri sm" onclick="Pages.Progress.saveDaily(${lot.id})" style="height:30px;white-space:nowrap">저장</button>
+              <span id="dp-ok-${lot.id}" style="font-size:13px;color:#085041;display:none;font-weight:500;align-self:center">✓ 저장됨</span>
             </div>
+
           </div>
 
           <!-- 붙여넣기 탭 -->
@@ -470,8 +504,15 @@ Pages.Progress = (() => {
     const nm = parseNumber(document.getElementById('dp-normal-'+lotId)?.value);
     const nb = parseNumber(document.getElementById('dp-noboot-'+lotId)?.value);
     const ab = parseNumber(document.getElementById('dp-abnormal-'+lotId)?.value);
+    const total = nm + nb + ab;
     const el = document.getElementById('dp-proc-'+lotId);
-    if (el) { el.value = (nm+nb+ab)||''; calcRem(lotId); }
+    if (el) { el.value = total || ''; calcRem(lotId); }
+    // 합계 확인 div 업데이트
+    const sumEl = document.getElementById('dp-dram-sum-'+lotId);
+    if (sumEl) {
+      sumEl.textContent = total > 0 ? total.toLocaleString() : '0';
+      sumEl.style.color = total > 0 ? 'var(--tx)' : 'var(--tx3)';
+    }
   }
 
   function calcRem(lotId) {

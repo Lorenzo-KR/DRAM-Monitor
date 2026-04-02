@@ -7,7 +7,8 @@ Pages.Changelog = (() => {
 
   let _tab    = 'dev';   // 'dev' | 'data'
   let _filter = '';      // '' | 'LOT' | '인보이스' | '일별처리'
-  let _logs   = null;    // 캐시
+  let _logs   = null;    // 캐시 (null=미로드, []이상=로드됨)
+  let _logsLoading = false;
 
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
@@ -198,6 +199,7 @@ Pages.Changelog = (() => {
         <span style="font-size:12px;color:#6E6E73">분류</span>
         ${filterBtns}
         <span style="flex:1"></span>
+        <button onclick="Pages.Changelog.refresh()" style="padding:4px 12px;border:1px solid #D2D2D7;border-radius:6px;font-size:11px;background:none;color:#6E6E73;cursor:pointer">↻ 새로고침</button>
         <span style="font-size:11px;color:#C7C7CC">최근 ${recent.length}건</span>
       </div>
       <div style="border:1px solid #D2D2D7;border-radius:10px;overflow:hidden">
@@ -216,6 +218,11 @@ Pages.Changelog = (() => {
 
   // ── Public ─────────────────────────────────────────────────
   return {
+    refresh() {
+      _logs = null;  // 캐시 초기화
+      Pages.Changelog.render();
+    },
+
     setFilter(f) {
       _filter = f;
       Pages.Changelog.render();
@@ -232,11 +239,24 @@ Pages.Changelog = (() => {
       const isDev  = _tab === 'dev';
       const isData = _tab === 'data';
 
-      // 데이터 탭이면 로그 로드
-      if (isData && _logs === null) {
-        el.innerHTML = `<div style="padding:40px;text-align:center;color:#C7C7CC;font-size:13px">로그 불러오는 중...</div>`;
+      // 데이터 탭이면 항상 새로 로드
+      if (isData) {
+        if (_logsLoading) return; // 중복 호출 방지
+        _logsLoading = true;
+        el.innerHTML = `
+          <div style="max-width:780px">
+            <div style="margin-bottom:20px">
+              <div style="font-size:15px;font-weight:600;color:#1D1D1F">업데이트 현황</div>
+              <div style="font-size:12px;color:#86868B;margin-top:2px">Test Ops Monitor</div>
+            </div>
+            <div style="display:flex;border-bottom:1px solid #D2D2D7;margin-bottom:24px">
+              <button onclick="Pages.Changelog.switchTab('dev')" style="${_tabStyle(false)}">앱 개발 이력</button>
+              <button onclick="Pages.Changelog.switchTab('data')" style="${_tabStyle(true)}">데이터 변경 로그</button>
+            </div>
+            <div style="padding:40px;text-align:center;color:#C7C7CC;font-size:13px">로그 불러오는 중...</div>
+          </div>`;
         _logs = await Api.getLogs();
-        // 렌더 다시 호출
+        _logsLoading = false;
         Pages.Changelog.render();
         return;
       }
