@@ -13,10 +13,39 @@ Pages.Changelog = (() => {
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
     {
+      version: 'v52',
+      date:    '2026-04-02',
+      title:   '보고서 강화 · LOT UI 개선 · 로그 완성',
+      latest:  true,
+      items: [
+        { type: 'improve', text: '보고서 전월/기준월 섹션별 좌우 나란히 비교 레이아웃' },
+        { type: 'improve', text: '보고서 청구예정 조건 강화 — 진행률 100% AND 완료일 기준월 이하' },
+        { type: 'improve', text: '보고서 청구예정 이월 미청구 누적 표시 및 구분 배지' },
+        { type: 'improve', text: '보고서 전월 작업진행중 진행률 — 전월 말일 기준 처리량으로 계산' },
+        { type: 'improve', text: '보고서 좌우 스크롤 제거 — max-width 해제, 패딩 최소화' },
+        { type: 'improve', text: 'LOT 진행현황 입고일·완료예정일·완료일 3열 분리 표시' },
+        { type: 'improve', text: 'LOT 진행현황 진행중·지연 행 강조 — 파란/빨간 라인, 배경, 볼드' },
+        { type: 'improve', text: 'LOT 진행현황 테이블 가독성 개선 및 입력행 컴팩트화' },
+      ],
+    },
+    {
+      version: 'v51',
+      date:    '2026-04-02',
+      title:   'GitHub 자동배포 · 데이터 변경 로그 전면 완성',
+      items: [
+        { type: 'new',     text: 'GitHub Actions 자동배포 — main push 시 GitHub Pages 자동 배포' },
+        { type: 'new',     text: '데이터 변경 로그 전면 완성 — LOT/일별처리/인보이스 등록·수정·삭제 전체 기록' },
+        { type: 'new',     text: '일별처리 로그 상세화 — DRAM N/NB/AB 분류, 누적/잔량 포함' },
+        { type: 'fix',     text: '업데이트 현황 데이터 로그 무한로딩 완전 수정' },
+        { type: 'fix',     text: 'LOT 삭제 로그 누락 수정 — confirmDelete lot 변수 미선언 버그' },
+        { type: 'fix',     text: 'lotRegister/invoice/progress/dailyInput Api.log 전체 누락 추가' },
+      ],
+    },
+    {
       version: 'v0.9',
       date:    '2026-04-02',
       title:   '매출현황 개선 · 보고서 · 업데이트 현황',
-      latest:  true,
+      latest:  false,
       items: [
         { type: 'new',     text: '업데이트 현황 페이지 — 개발 이력 + 데이터 변경 로그 탭' },
         { type: 'new',     text: '보고서(테스트) 페이지 — 기준월별 국가별 LOT 현황 요약' },
