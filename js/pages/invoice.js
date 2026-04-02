@@ -240,8 +240,13 @@ Pages.Invoice = (() => {
       note: document.getElementById('ip-note').value.trim(),
     };
     Store.upsertInvoice(record);
-    if (_editId) Api.update(CONFIG.SHEETS.INVOICES, _editId, record);
-    else         Api.append(CONFIG.SHEETS.INVOICES, record);
+    if (_editId) {
+      Api.update(CONFIG.SHEETS.INVOICES, _editId, record);
+      Api.log('인보이스', '수정', record.lotNo || String(_editId), `$${record.amount.toLocaleString()} · ${record.date}`);
+    } else {
+      Api.append(CONFIG.SHEETS.INVOICES, record);
+      Api.log('인보이스', '등록', record.lotNo || String(record.id), `$${record.amount.toLocaleString()} · ${record.date}`);
+    }
     const ok = document.getElementById('ip-ok');
     ok.style.display = 'block';
     setTimeout(() => { ok.style.display = 'none'; closePanel(); }, 1000);
@@ -253,13 +258,16 @@ Pages.Invoice = (() => {
     const updated = { ...r, status: 'paid', paidDate: today(), paidAmt: r.amount };
     Store.upsertInvoice(updated);
     Api.update(CONFIG.SHEETS.INVOICES, id, updated);
+    Api.log('인보이스', '수정', r.lotNo || String(id), `수금 완료 처리 · $${r.amount.toLocaleString()}`);
     render(); Pages.Revenue.render(); UI.toast('수금 완료 처리됨');
   }
 
   async function deleteInvoice(id) {
     if (!confirm('삭제하시겠습니까?')) return;
+    const r = Store.getInvoiceById(id);
     Store.deleteInvoice(id);
     Api.delete(CONFIG.SHEETS.INVOICES, id);
+    Api.log('인보이스', '삭제', r?.lotNo || String(id), `$${r?.amount?.toLocaleString() || 0} 인보이스 삭제`);
     render(); UI.toast('삭제됨');
   }
 
