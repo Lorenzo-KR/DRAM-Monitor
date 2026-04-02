@@ -200,13 +200,15 @@ Pages.Revenue = (() => {
                       style="display:none;padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
                   </div>`
                 : isDone
-                  ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">
-                      <input type="number" placeholder="금액" id="rv-amt-${lot.id}"
-                        style="width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
-                      <input type="date" id="rv-date-${lot.id}"
-                        style="padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
+                  ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                      <div style="display:flex;align-items:center;gap:4px">
+                        <input type="number" placeholder="금액 (USD)" id="rv-amt-${lot.id}"
+                          style="width:100px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
+                        <input type="date" id="rv-date-${lot.id}"
+                          style="padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
+                      </div>
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
-                        style="padding:4px 10px;background:#1D1D1F;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
+                        style="padding:3px 12px;background:#1D1D1F;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap">저장</button>
                     </div>`
                   : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
             </td>
