@@ -139,6 +139,7 @@ Pages.LotRegister = (() => {
     setTimeout(() => ok.style.display = 'none', 1500);
     UI.toast(CONFIG.BIZ_LABELS[_biz] + ' LOT 등록');
     Api.append(CONFIG.SHEETS.LOTS, record);
+    Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
   }
 
   function clearForm() {
@@ -151,9 +152,11 @@ Pages.LotRegister = (() => {
 
   async function saveCell(el, field, id) {
     const lot = Store.getLotById(id); if (!lot) return;
-    const updated = { ...lot, [field]: el.tagName === 'SELECT' ? el.value : el.type === 'number' ? parseNumber(el.value) : el.value };
+    const val = el.tagName === 'SELECT' ? el.value : el.type === 'number' ? parseNumber(el.value) : el.value;
+    const updated = { ...lot, [field]: val };
     Store.upsertLot(updated);
     Api.update(CONFIG.SHEETS.LOTS, id, updated);
+    Api.log('LOT', '수정', lot.lotNo || String(id), `${field} → ${val}`);
     UI.toast('저장됨');
   }
 
@@ -162,16 +165,19 @@ Pages.LotRegister = (() => {
     const updated = { ...lot, inDate: el.value, targetDate: el.value ? addDays(el.value, CONFIG.LOT_DEFAULT_TARGET_DAYS) : lot.targetDate };
     Store.upsertLot(updated);
     Api.update(CONFIG.SHEETS.LOTS, id, updated);
+    Api.log('LOT', '수정', lot.lotNo || String(id), `입고일 → ${el.value} (목표일 자동 변경)`);
     _renderTable();
     UI.toast('저장됨');
   }
 
   async function deleteLot(id) {
     if (!confirm('삭제하시겠습니까?')) return;
+    const lot = Store.getLotById(id);
     Store.deleteLot(id);
     _renderTable();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.LOTS, id);
+    Api.log('LOT', '삭제', lot?.lotNo || String(id), `${CONFIG.BIZ_LABELS[lot?.biz]||lot?.biz||''} LOT 삭제`);
   }
 
   function updateBulkBar() {
@@ -202,6 +208,7 @@ Pages.LotRegister = (() => {
     if (!ids.length) return;
     if (!confirm(`선택한 LOT ${ids.length}건을 삭제하시겠습니까?`)) return;
     ids.forEach(id => { Store.deleteLot(id); Api.delete(CONFIG.SHEETS.LOTS, id); });
+    ids.forEach(id => Api.log('LOT', '삭제', String(id), '일괄 삭제'));
     _renderTable();
     UI.toast(ids.length + '건 삭제 완료');
   }

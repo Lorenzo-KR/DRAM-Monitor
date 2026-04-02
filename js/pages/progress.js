@@ -591,10 +591,12 @@ Pages.Progress = (() => {
 
   async function deleteDaily(id, lotId) {
     if (!confirm('삭제하시겠습니까?')) return;
+    const rec = Store.getDailies().find(d => String(d.id) === String(id));
     Store.deleteDaily(id);
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
+    Api.log('일별처리', '삭제', rec?.lotNo || String(lotId), `${rec?.date || ''} 처리량 ${Number(rec?.proc||0).toLocaleString()}개 삭제`);
   }
 
   // ── 엑셀 내보내기 ──────────────────────────────────────────
