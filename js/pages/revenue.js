@@ -182,18 +182,18 @@ Pages.Revenue = (() => {
             <td style="${P};text-align:center;width:60px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
             <td style="${P};color:var(--tbl-tx-body);text-align:left">${lot.customerName || '—'}</td>
             <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">${formatNumber(qty)}</td>
-            <td style="${P};text-align:center;min-width:130px">
+            <td style="${P};text-align:center;width:160px;min-width:160px;max-width:160px;overflow:hidden">
               ${st === 'upcoming'
                 ? `<span style="font-size:12px;color:var(--tx3)">D-${diffDays(today(), lot.inDate)}</span>`
-                : `<div style="display:flex;align-items:center;gap:6px">
-                    <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:50px">
+                : `<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap">
+                    <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:40px;max-width:60px">
                       <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
                     </div>
-                    <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+                    <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:28px;text-align:right;flex-shrink:0">${pct}%</span>
                     ${bdg(stLabel, stStyle)}
                   </div>`}
             </td>
-            <td style="${P};text-align:right;min-width:150px">
+            <td style="${P};text-align:right;min-width:280px;width:280px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
                     <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
