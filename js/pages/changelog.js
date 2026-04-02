@@ -233,7 +233,7 @@ Pages.Changelog = (() => {
       Pages.Changelog.render();
     },
 
-async render() {
+    async render() {
       const el = document.getElementById('changelog-root'); if (!el) return;
 
       const isDev  = _tab === 'dev';
