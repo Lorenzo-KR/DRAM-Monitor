@@ -195,14 +195,18 @@ Pages.DailyInput = (() => {
     UI.toast('저장됨');
     render();
     Api.append(CONFIG.SHEETS.DAILY, record);
+    Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date} 처리량 ${formatNumber(proc)}개 (누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)})`);
   }
 
   async function deleteRecord(id, lotId) {
     if (!confirm('삭제하시겠습니까?')) return;
+    const lot = Store.getLotById(lotId);
+    const rec = Store.getDailies().find(d => String(d.id) === String(id));
     Store.deleteDaily(id);
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
+    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리량 ${formatNumber(parseNumber(rec?.proc))}개 삭제`);
   }
 
   // ── 엑셀 붙여넣기 팝업 ──────────────────────────────────────
