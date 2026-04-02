@@ -65,17 +65,14 @@ Pages.Report = (() => {
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
 
     // 2. 청구 예정 — 완료됐지만 인보이스 미청구인 LOT
-    // 기준: 작업 완료일이 기준월 내(해당 월 1일~말일)인 건만
+    // 기준: 작업 완료일이 기준월 말일 이하인 건 전부 (과거 월 미청구 포함)
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
-
       if (allInvoicedIds.has(String(l.id))) return false;
-      // 완료 판단: done='1' 이거나 actualDone 날짜가 있는 경우
       const isDone = getLotStatus(l) === 'done' || !!(l.actualDone);
       if (!isDone) return false;
-      // 완료일이 기준월 내인 경우만 (YYYY-MM으로 시작)
       const doneDate = l.actualDone || l.targetDate || '';
-      return doneDate.startsWith(prefix);
+      return doneDate >= '2000-01-01' && doneDate <= monthEnd;
     });
 
     // 3. 작업 진행중 — 완료 안 된 LOT (입고됐고 아직 진행중)
@@ -155,21 +152,27 @@ Pages.Report = (() => {
       );
       const rows2 = pendingSorted.map(l => {
         const qty = parseNumber(l.qty);
-        return `<tr style="background:#FFFBEE">
+        const doneDate = l.actualDone || l.targetDate || '';
+        const isThisMonth = doneDate.startsWith(prefix);
+        const rowBg = isThisMonth ? '#FFFBEE' : '#FFF8F0';
+        const doneDateLabel = isThisMonth ? doneDate : `<span style="color:#B45309;font-weight:600">${doneDate}</span>`;
+        return `<tr style="background:${rowBg}">
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
           ${TD(l.inDate || '—', 'center')}
-          ${TD(l.actualDone || l.targetDate || '—', 'center')}
+          <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center;font-size:12px">${doneDateLabel}</td>
+          ${TD(isThisMonth ? '이번 달' : '이월 미청구', 'center', isThisMonth ? 'color:#92400E' : 'color:#B45309;font-weight:600')}
         </tr>`;
       }).join('');
       table2 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t2id)}
           ${TH('사업구분','center')}
-          ${THSort('qty',  'qty',  t2id,'right')}
+          ${THSort('수량','qty',t2id,'right')}
           ${THSort('입고일','inDate',t2id,'center')}
           ${THSort('완료일','actualDone',t2id,'center')}
+          ${TH('구분','center')}
         </tr></thead>
         <tbody>${rows2}</tbody>
       </table></div>`;
@@ -217,15 +220,9 @@ Pages.Report = (() => {
       </table></div>`;
     }
 
-    const [y, m] = prefix.split('-');
-    const monthLabel = `${y}년 ${parseInt(m)}월`;
-
     return `
-      <div style="margin-bottom:32px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-          <span style="font-size:15px;font-weight:600;color:#1D1D1F">${coLabel}</span>
-          <span style="font-size:11px;color:#86868B;padding:2px 8px;border:1px solid #D2D2D7;border-radius:4px">${monthLabel}</span>
-        </div>
+      <div style="margin-bottom:16px">
+        <div>
 
         <div style="margin-bottom:14px">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
@@ -274,11 +271,29 @@ Pages.Report = (() => {
       const [y, m]   = prefix.split('-');
       const monthLabel = `${y}년 ${parseInt(m)}월`;
 
-      const hkSection = _renderCountry('HK', '홍콩 (HK)', prefix, lots, dailies, invoices);
-      const sgSection = _renderCountry('SG', '싱가포르 (SG)', prefix, lots, dailies, invoices);
+      // 전월 계산
+      const [cy, cm] = prefix.split('-').map(Number);
+      const prevMonth = cm === 1
+        ? `${cy-1}-12`
+        : `${cy}-${String(cm-1).padStart(2,'0')}`;
+      const [py, pm] = prevMonth.split('-').map(Number);
+      const prevLabel = `${py}년 ${pm}월`;
+      const currLabel = `${cy}년 ${cm}월`;
+
+      const hkPrev = _renderCountry('HK', '홍콩 (HK)', prevMonth, lots, dailies, invoices);
+      const hkCurr = _renderCountry('HK', '홍콩 (HK)', prefix,    lots, dailies, invoices);
+      const sgPrev = _renderCountry('SG', '싱가포르 (SG)', prevMonth, lots, dailies, invoices);
+      const sgCurr = _renderCountry('SG', '싱가포르 (SG)', prefix,    lots, dailies, invoices);
+
+      const colStyle = 'flex:1;min-width:0;padding:0 12px';
+      const monthHeader = (label, isCurrent) => `
+        <div style="padding:6px 14px;border-radius:6px;font-size:13px;font-weight:600;margin-bottom:16px;
+          background:${isCurrent?'#1D1D1F':'#F1EFE8'};color:${isCurrent?'#fff':'#5F5E5A'};display:inline-block">
+          ${label}${isCurrent?' (기준월)':' (전월)'}
+        </div>`;
 
       el.innerHTML = `
-        <div style="max-width:1200px">
+        <div style="max-width:1400px">
           <!-- 헤더 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
             <div>
@@ -295,13 +310,37 @@ Pages.Report = (() => {
             </div>
           </div>
 
-          <!-- 홍콩 -->
-          ${hkSection}
+          <!-- 홍콩 구분선 -->
+          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">홍콩 (HK)</div>
+
+          <!-- 홍콩 2열 -->
+          <div style="display:flex;gap:0;margin-bottom:32px">
+            <div style="${colStyle};border-right:1px solid #D2D2D7;padding-right:24px">
+              ${monthHeader(prevLabel, false)}
+              ${hkPrev}
+            </div>
+            <div style="${colStyle};padding-left:24px">
+              ${monthHeader(currLabel, true)}
+              ${hkCurr}
+            </div>
+          </div>
 
           <div style="height:1px;background:#D2D2D7;margin:0 0 28px"></div>
 
-          <!-- 싱가포르 -->
-          ${sgSection}
+          <!-- 싱가포르 구분선 -->
+          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">싱가포르 (SG)</div>
+
+          <!-- 싱가포르 2열 -->
+          <div style="display:flex;gap:0;margin-bottom:32px">
+            <div style="${colStyle};border-right:1px solid #D2D2D7;padding-right:24px">
+              ${monthHeader(prevLabel, false)}
+              ${sgPrev}
+            </div>
+            <div style="${colStyle};padding-left:24px">
+              ${monthHeader(currLabel, true)}
+              ${sgCurr}
+            </div>
+          </div>
         </div>`;
     },
 
