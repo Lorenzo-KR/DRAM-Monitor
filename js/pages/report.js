@@ -63,15 +63,18 @@ Pages.Report = (() => {
     );
     const invoicedLots = lots.filter(l => l.country === co && invoicedIds.has(String(l.id)));
 
-    // 2. 청구 예정 — 완료됐지만 인보이스 없는 LOT (해당 월 입고 또는 진행중인 것)
+    // 2. 청구 예정 — 완료됐지만 인보이스 미청구인 LOT
+    // 기준: 작업 완료일(actualDone or targetDate)이 기준월 안에 있는 건
+    // ※ getLotStatus는 done='1' 여부만 보므로, actualDone 날짜도 함께 체크
     const pendingLots = lots.filter(l => {
       if (l.country !== co) return false;
       if (allInvoicedIds.has(String(l.id))) return false;
-      return getLotStatus(l) === 'done';
-    }).filter(l => {
-      // 해당 월 기준: 완료일 or 입고일이 기준월 이전이거나 같은 경우
-      const done = l.actualDone || l.targetDate || '';
-      return done <= (prefix + '-31');
+      // 완료 판단: done 필드가 '1' 이거나, actualDone 날짜가 있는 경우
+      const isDone = getLotStatus(l) === 'done' || !!(l.actualDone);
+      if (!isDone) return false;
+      // 완료일이 기준월 내인 경우만
+      const doneDate = l.actualDone || l.targetDate || '';
+      return doneDate.startsWith(prefix);
     });
 
     // 3. 작업 진행중 — 완료 안 된 LOT (입고됐고 아직 진행중)
@@ -181,23 +184,34 @@ Pages.Report = (() => {
         const cum = getLotCumulative(l.id, dailies);
         const rem = Math.max(0, qty - cum);
         const pct = qty > 0 ? Math.min(100, Math.round(cum / qty * 100)) : 0;
+        const barColor = pct >= 100 ? '#34C759' : pct >= 80 ? '#EF9F27' : '#1D1D1F';
         return `<tr>
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
           <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
+          ${TD(l.inDate || '—', 'center')}
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;min-width:180px">
+          ${TDM(formatNumber(cum), 'right')}
+          ${TDM(formatNumber(rem), 'right')}
+          <td style="padding:8px 12px;border:1px solid #D2D2D7;min-width:140px">
             <div style="display:flex;align-items:center;gap:8px">
-              <div style="flex:1;height:5px;background:#E8E8ED;border-radius:3px;overflow:hidden;min-width:60px">
-                <div style="width:${pct}%;height:100%;background:#1D1D1F;border-radius:3px"></div>
+              <div style="flex:1;height:5px;background:#E8E8ED;border-radius:3px;overflow:hidden;min-width:70px">
+                <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div>
               </div>
-              <span style="font-size:11px;color:#3A3A3C;white-space:nowrap;font-family:var(--font-mono)">${formatNumber(cum)} / ${formatNumber(rem)}</span>
+              <span style="font-size:11px;font-weight:500;color:${barColor};white-space:nowrap;min-width:32px;text-align:right">${pct}%</span>
             </div>
           </td>
         </tr>`;
       }).join('');
       table3 = `<div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;width:100%">
-        <thead><tr>${TH('LOT번호')}${TH('사업구분','center')}${TH('수량','right')}${TH('입고일')}${TH('진행현황 (처리 / 잔여)','left','min-width:200px')}</tr></thead>
+        <thead><tr>
+          ${TH('LOT번호')}
+          ${TH('사업구분','center')}
+          ${TH('입고일','center')}
+          ${TH('전체수량','right')}
+          ${TH('처리수량','right')}
+          ${TH('잔여수량','right')}
+          ${TH('진행률','center','min-width:140px')}
+        </tr></thead>
         <tbody>${rows3}</tbody>
       </table></div>`;
     }
