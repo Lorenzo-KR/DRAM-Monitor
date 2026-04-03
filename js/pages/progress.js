@@ -161,7 +161,7 @@ Pages.Progress = (() => {
     const custs = Store.getCustomers();
     const custOpts = custs.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     const tdS = 'padding:3px 6px;background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);vertical-align:middle';
-    const inp = 'border:1px solid var(--tbl-wrap-bd);border-radius:4px;background:#fff;font-size:12px;color:var(--tx)';
+    const inp = 'border:1px solid var(--tbl-wrap-bd);border-radius:4px;background:#fff;font-size:12px;color:var(--tx);font-family:Pretendard,-apple-system,sans-serif';
     return `
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
@@ -268,7 +268,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='left', extra='') =>
-      `<th style="padding:10px 14px;text-align:${align};font-size:12px;font-weight:600;color:var(--tx2);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap;${extra}">${label}</th>`;
+      `<th style="padding:8px 10px;text-align:${align};font-size:11px;font-weight:600;color:var(--tx2);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;letter-spacing:.02em;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -284,11 +284,11 @@ Pages.Progress = (() => {
 
       const lotRow = `
         <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${
-          st==='done'    ? 'background:#F9F9F9;opacity:0.45;border-left:4px solid transparent' :
-          st==='overdue' ? 'background:#FFF5F5;border-left:4px solid #E24B4A;box-shadow:inset 0 0 0 0.5px #FECACA' :
-          st==='inprog'  ? 'background:#F5F9FF;border-left:4px solid #378ADD;box-shadow:inset 0 0 0 0.5px #B5D4F4' :
-          isOpen         ? 'background:var(--bg);border-left:4px solid transparent' :
-                           'border-left:4px solid transparent'
+          st==='done'    ? 'opacity:0.5;border-left:3px solid transparent' :
+          st==='overdue' ? 'background:#FFF5F5;border-left:3px solid #E24B4A' :
+          st==='inprog'  ? 'background:#F5F9FF;border-left:3px solid #378ADD' :
+          isOpen         ? 'background:var(--bg);border-left:3px solid transparent' :
+                           'border-left:3px solid transparent'
         }">
           <td style="padding:8px 8px;text-align:center">
             <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -330,13 +330,13 @@ Pages.Progress = (() => {
 
     el.innerHTML = `
       <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
           <colgroup>
             <col style="width:36px">
-            <col style="width:56px">
-            <col style="width:66px">
-            <col style="width:150px">
-            <col style="width:120px">
+            <col style="width:50px">
+            <col style="width:58px">
+            <col style="width:110px">
+            <col style="width:70px">
             <col style="width:80px">
             <col style="width:80px">
             <col style="width:80px">

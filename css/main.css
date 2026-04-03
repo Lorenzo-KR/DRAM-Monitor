@@ -43,7 +43,7 @@
 /* 2. Reset & Base */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Pretendard', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--tx);
   min-height: 100vh;
@@ -180,7 +180,7 @@ body {
 .ec {
   width: 100%; height: 100%; padding: 10px 14px;
   border: none; background: transparent;
-  font-size: 13px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-family: 'Pretendard', -apple-system, sans-serif;
   color: var(--tx); outline: none; display: block;
 }
 .ec:focus { background: #F7F7F5; }
@@ -193,11 +193,11 @@ select.ec {
 }
 .row-actions           { display: flex; gap: 4px; padding: 4px 10px; opacity: 0; transition: opacity 0.12s; }
 .etw tr:hover .row-actions { opacity: 1; }
-.ra-btn                { padding: 3px 9px; border-radius: var(--rs); font-size: 11px; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx2); transition: all 0.12s; font-family: 'DM Sans', sans-serif; }
+.ra-btn                { padding: 3px 9px; border-radius: var(--rs); font-size: 11px; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx2); transition: all 0.12s; font-family: 'Pretendard', -apple-system, sans-serif; }
 .ra-btn:hover          { background: #F0EEE9; }
 .ra-btn.del            { color: #dc2626; border-color: #FECACA; }
 .ra-btn.del:hover      { background: #FEF2F2; }
-.add-row-btn { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 12px; color: var(--tx3); cursor: pointer; border-top: 1px solid var(--bd); border-left: none; border-right: none; border-bottom: none; background: none; width: 100%; font-family: 'DM Sans', sans-serif; transition: 0.12s; }
+.add-row-btn { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 12px; color: var(--tx3); cursor: pointer; border-top: 1px solid var(--bd); border-left: none; border-right: none; border-bottom: none; background: none; width: 100%; font-family: 'Pretendard', -apple-system, sans-serif; transition: 0.12s; }
 .add-row-btn:hover { background: var(--bg); color: var(--tx2); }
 
 /* 8. Forms */
@@ -209,7 +209,7 @@ select.ec {
 .fg4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .fld { display: flex; flex-direction: column; gap: 5px; }
 .fld label { font-size: 11px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.06em; }
-.fld input, .fld select, .fld textarea { padding: 8px 11px; border: 1px solid var(--bd); border-radius: var(--rs); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--tx); width: 100%; transition: border-color 0.12s; outline: none; }
+.fld input, .fld select, .fld textarea { padding: 8px 11px; border: 1px solid var(--bd); border-radius: var(--rs); font-size: 13px; font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--tx); width: 100%; transition: border-color 0.12s; outline: none; }
 .fld input:focus, .fld select:focus { border-color: var(--tx3); background: #fff; }
 .fld textarea { resize: vertical; min-height: 56px; }
 .fld input[readonly] { color: var(--tx2); background: var(--bg); }
@@ -218,7 +218,7 @@ select.ec {
 .br { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
 
 /* 9. Buttons */
-.btn { padding: 8px 16px; border-radius: var(--rs); font-size: 13px; font-weight: 400; font-family: 'DM Sans', sans-serif; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx); transition: background 0.12s; white-space: nowrap; }
+.btn { padding: 8px 16px; border-radius: var(--rs); font-size: 13px; font-weight: 400; font-family: 'Pretendard', -apple-system, sans-serif; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx); transition: background 0.12s; white-space: nowrap; }
 .btn:hover    { background: #F0EEE9; }
 .btn:active   { transform: scale(0.98); }
 .btn.pri      { background: var(--tx); color: #fff; border-color: var(--tx); }
@@ -246,7 +246,7 @@ select.ec {
 
 /* 11. Filter Pills */
 .fb   { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
-.pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx2); transition: 0.12s; font-family: 'DM Sans', sans-serif; }
+.pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx2); transition: 0.12s; font-family: 'Pretendard', -apple-system, sans-serif; }
 .pill:hover { background: #F0EEE9; }
 .pill.on    { background: var(--tx); color: #fff; border-color: var(--tx); }
 .pa, .pd, .ps, .pm, .phk, .psg { border-color: var(--bd); color: var(--tx2); background: transparent; }
