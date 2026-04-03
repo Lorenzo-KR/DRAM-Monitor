@@ -268,7 +268,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='center', extra='') =>
-      `<th style="padding:7px 10px;text-align:${align};font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${label}</th>`;
+      `<th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
