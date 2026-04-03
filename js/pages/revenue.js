@@ -104,19 +104,19 @@ Pages.Revenue = (() => {
     const invoices = Store.getInvoices();
 
     const CO_STYLE  = {
-      HK: 'border:1px solid #93C5FD;color:#1D4ED8;background:#EFF6FF',
-      SG: 'border:1px solid #6EE7B7;color:#065F46;background:#ECFDF5',
+      HK: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB',
+      SG: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0',
     };
     const BIZ_STYLE = {
-      DRAM: 'border:1px solid #C4B5FD;color:#5B21B6;background:#F5F3FF',
-      SSD:  'border:1px solid #FCA5A5;color:#991B1B;background:#FEF2F2',
-      MID:  'border:1px solid #FCD34D;color:#92400E;background:#FFFBEB',
+      DRAM: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB',
+      SSD:  'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0',
+      MID:  'border:1px solid #C4A8DC;color:#6A3D7C;background:#F3EEF8',
     };
 
-    function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;white-space:nowrap;${style}">${txt}</span>`; }
+    function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap;border:1px solid;${style}">${txt}</span>`; }
 
     if (!lots.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:var(--tbl-tx-body)">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:#000">데이터 없음</td></tr>`;
     } else {
       let totalAmt = 0;
       const rows = lots.map((lot, i) => {
@@ -141,25 +141,22 @@ Pages.Revenue = (() => {
         // 청구 상태 라벨 & 스타일
         let claimLabel, claimStyle, rowBg, rowBorder;
         if (!isDone && st !== 'upcoming') {
-          // 작업 진행중 — 파란 왼쪽 보더 + 연파랑 배경
           claimLabel = '작업 진행중';
-          claimStyle = 'border:1.5px solid #93C5FD;color:#1D4ED8;background:#EFF6FF;font-weight:600';
-          rowBg      = 'background:#F0F7FF';
-          rowBorder  = 'border-left:3px solid #378ADD';
+          claimStyle = 'color:#888';
+          rowBg      = '';
+          rowBorder  = '';
         } else if (isDone && !hasInv) {
-          // 완료 + 미입력 → 입력 대기 — 노란 왼쪽 보더 + 연노랑 배경
-          claimLabel = '⚠ 입력 대기';
-          claimStyle = 'border:1.5px solid #F59E0B;color:#92400E;background:#FFFBEB;font-weight:600';
-          rowBg      = 'background:#FFFBEE';
-          rowBorder  = 'border-left:3px solid #F59E0B';
+          claimLabel = '입력 대기';
+          claimStyle = 'color:#B45309;font-weight:600';
+          rowBg      = 'background:#FFFBF0';
+          rowBorder  = '';
         } else if (isDone && hasInv) {
-          // 완료 + 입력 완료 → 청구 완료
           claimLabel = '청구 완료';
-          claimStyle = 'border:1px solid #34C759;color:#1A7F37;background:#F0FBF3;font-weight:600';
+          claimStyle = 'color:#1A6B3A;font-weight:600';
           rowBg      = '';
           rowBorder  = '';
         } else {
-          claimLabel = '—'; claimStyle = 'color:var(--tx3)'; rowBg = ''; rowBorder = '';
+          claimLabel = '—'; claimStyle = 'color:#999'; rowBg = ''; rowBorder = '';
         }
 
         // 청구일 (인보이스 date)
@@ -171,26 +168,27 @@ Pages.Revenue = (() => {
 
         totalAmt += amt;
 
-        const P = 'padding:9px 12px;border-top:1px solid var(--tbl-row-bd);font-size:12px';
+        const rowEven = i % 2 === 1 ? 'background:#F2F2F2' : 'background:#fff';
+        const finalRowBg = rowBg || rowEven;
+        const P = 'padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:#000;font-family:Pretendard,-apple-system,sans-serif';
         return `
-          <tr style="${rowBg};${rowBorder}">
-            <td style="${P};color:var(--tbl-tx-body);text-align:center;width:40px">${i + 1}</td>
-            <td style="${P};color:var(--tbl-tx-body);text-align:center;white-space:nowrap">${lot.inDate || '—'}</td>
+          <tr style="${finalRowBg}">
+            <td style="${P};color:#000;text-align:center;width:40px">${i + 1}</td>
+            <td style="${P};color:#000;text-align:center;white-space:nowrap">${lot.inDate || '—'}</td>
             <td style="${P};color:${doneDateColor};font-weight:${isDone?'500':'400'};text-align:center;white-space:nowrap">${doneDate}</td>
             <td style="${P};font-family:var(--font-mono);font-weight:500;text-align:center;white-space:nowrap">${lot.lotNo || lot.id}</td>
             <td style="${P};text-align:center;width:80px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
             <td style="${P};text-align:center;width:60px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="${P};color:var(--tbl-tx-body);text-align:left">${lot.customerName || '—'}</td>
+            <td style="${P};color:#000;text-align:left">${lot.customerName || '—'}</td>
             <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">${formatNumber(qty)}</td>
-            <td style="${P};text-align:center;width:160px;min-width:160px;max-width:160px;overflow:hidden">
+            <td style="${P};text-align:left;width:80px;min-width:80px;max-width:80px">
               ${st === 'upcoming'
-                ? `<span style="font-size:12px;color:var(--tx3)">D-${diffDays(today(), lot.inDate)}</span>`
-                : `<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;white-space:nowrap">
-                    <div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden;min-width:40px;max-width:60px">
-                      <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
+                ? `<span style="font-size:11px;color:#888">입고예정</span>`
+                : `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
+                    <div style="width:48px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0">
+                      <div style="height:100%;background:${barColor};width:${pct}%"></div>
                     </div>
-                    <span style="font-size:11px;font-weight:500;color:${pctColor};min-width:28px;text-align:right;flex-shrink:0">${pct}%</span>
-                    ${bdg(stLabel, stStyle)}
+                    <span style="font-size:11px;color:#000">${pct}%</span>
                   </div>`}
             </td>
             <td style="${P};text-align:right;min-width:280px;width:280px">
@@ -213,19 +211,17 @@ Pages.Revenue = (() => {
                       <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
                         style="padding:3px 12px;background:#F59E0B;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">저장</button>
                     </div>`
-                  : `<span style="font-size:12px;color:var(--tx4)">—</span>`}
+                  : `<span style="font-size:12px;color:#999">—</span>`}
             </td>
             <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
-                : '<span style="color:var(--tx4)">—</span>'}
+                : '<span style="color:#999">—</span>'}
             </td>
-            <td style="${P};text-align:center;white-space:nowrap;color:var(--tbl-tx-body)">
-              ${invDate || '<span style="color:var(--tx4)">—</span>'}
+            <td style="${P};text-align:center;white-space:nowrap;color:#000">
+              ${invDate || '<span style="color:#999">—</span>'}
             </td>
-            <td style="${P};text-align:center">
-              ${bdg(claimLabel, claimStyle)}
-            </td>
+            <td style="${P};text-align:center;font-size:12px;${claimStyle}">${claimLabel}</td>
             <td style="padding:4px 8px;border-top:1px solid var(--tbl-row-bd);white-space:nowrap">
               ${hasInv
                 ? `<button class="btn sm" style="font-size:11px;padding:3px 8px"
@@ -248,10 +244,10 @@ Pages.Revenue = (() => {
 
       // 합계 행
       const totalRow = `
-        <tr style="background:var(--tbl-sum-bg)">
-          <td colspan="10" style="padding:11px 14px;font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">합계 (${lots.length}건)</td>
-          <td style="padding:11px 18px;text-align:left;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tbl-tx-sum);border-top:1px solid var(--tbl-sum-bd)">$${formatNumber(Math.round(totalAmt))}</td>
-          <td colspan="2" style="border-top:1px solid var(--tbl-sum-bd)"></td>
+        <tr style="background:#D9D9D9">
+          <td colspan="10" style="padding:6px 10px;font-size:12px;font-weight:700;color:#000;border:1px solid #999">합계 (${lots.length}건)</td>
+          <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#000;border:1px solid #999">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="2" style="border:1px solid #999"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
@@ -298,7 +294,7 @@ Pages.Revenue = (() => {
 
       const summaryCards = [
         `<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+          <div style="font-size:12px;color:#000;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `
@@ -387,7 +383,7 @@ Pages.Revenue = (() => {
 
       const summaryCards = [
         `<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px;text-align:center">
-          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
+          <div style="font-size:12px;color:#000;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">전체</div>
           <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(grandTotal))}</div>
         </div>`,
         ...bizList.map(b => `

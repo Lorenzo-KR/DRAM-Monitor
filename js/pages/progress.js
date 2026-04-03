@@ -18,19 +18,19 @@ Pages.Progress = (() => {
     return getLotStatus(lot); // done / overdue / inprog
   }
 
-  const ST_LABEL = { upcoming: '입고예정', inprog: '🟢 진행중', overdue: '🔴 지연', done: '완료' };
+  const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
   const ST_STYLE = {
-    upcoming: 'border:1px solid #B0B0B8;color:#6E6E73;background:transparent',
-    inprog:   'border:1.5px solid #34C759;color:#1A7F37;background:#F0FBF3;font-weight:700',
-    overdue:  'border:1.5px solid #dc2626;color:#dc2626;background:#FEF2F2;font-weight:700',
-    done:     'border:1px solid #D2D2D7;color:#C7C7CC;background:#F5F5F7',
+    upcoming: 'border:1px solid #999;color:#555;background:#F5F5F5',
+    inprog:   'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0;font-weight:700',
+    overdue:  'border:1px solid #F09595;color:#A32D2D;background:#FCEBEB;font-weight:700',
+    done:     'border:1px solid #BFBFBF;color:#999;background:#F5F5F5',
   };
-  const CO_STYLE  = { HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
-  const BIZ_STYLE = { DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', SSD: 'border:1px solid var(--bd);color:var(--tx2);background:transparent', MID: 'border:1px solid var(--bd);color:var(--tx2);background:transparent' };
+  const CO_STYLE  = { HK: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB', SG: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0' };
+  const BIZ_STYLE = { DRAM: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB', SSD: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0', MID: 'border:1px solid #C4A8DC;color:#6A3D7C;background:#F3EEF8' };
   const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', done: 'var(--tx)' };
 
   function _badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;letter-spacing:.01em;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap;border:1px solid;${style}">${text}</span>`;
   }
 
   // ── 차트 ───────────────────────────────────────────────────
@@ -267,8 +267,8 @@ Pages.Progress = (() => {
 
     const el = document.getElementById('pr-cards'); if (!el) return;
 
-    const TH = (label, align='left', extra='') =>
-      `<th style="padding:8px 10px;text-align:${align};font-size:11px;font-weight:600;color:var(--tx2);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;letter-spacing:.02em;${extra}">${label}</th>`;
+    const TH = (label, align='center', extra='') =>
+      `<th style="padding:7px 10px;text-align:${align};font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -282,41 +282,46 @@ Pages.Progress = (() => {
       const barColor  = BAR_COLOR[st] || 'var(--tx2)';
       const isOpen    = _openLotId === lot.id;
 
+      const rowIdx = lots.indexOf(lot);
+      const evenBg = rowIdx % 2 === 1 ? '#F2F2F2' : '#fff';
+      const rowBg =
+        st==='done'    ? '#F5F5F5' :
+        st==='overdue' ? '#FFF5F5' :
+        st==='inprog'  ? '#F5F9FF' : evenBg;
+      const rowBold = st==='inprog' || st==='overdue';
+
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="border-bottom:${isOpen?'0':'0.5px'} solid var(--bd);cursor:pointer;${
-          st==='done'    ? 'opacity:0.5;border-left:3px solid transparent' :
-          st==='overdue' ? 'background:#FFF5F5;border-left:3px solid #E24B4A' :
-          st==='inprog'  ? 'background:#F5F9FF;border-left:3px solid #378ADD' :
-          isOpen         ? 'background:var(--bg);border-left:3px solid transparent' :
-                           'border-left:3px solid transparent'
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="background:${rowBg};cursor:pointer;${
+          st==='overdue' ? 'border-left:3px solid #E24B4A' :
+          st==='inprog'  ? 'border-left:3px solid #378ADD' : ''
         }">
-          <td style="padding:8px 8px;text-align:center">
-            <svg width="11" height="11" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center;color:#888">
+            <svg width="10" height="10" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:7px 8px">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:7px 8px">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:12px;font-weight:${st==='done'?'400':'700'};color:${st==='done'?'#A0A0A8':'#1D1D1F'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:8px 10px;font-size:12px;color:${st==='done'?'#C7C7CC':'#1D1D1F'};font-weight:${st==='done'?'400':'500'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${st==='done'?'400':'600'};color:${st==='done'?'#C7C7CC':'#1D1D1F'}">${formatNumber(qty)}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${CONFIG.BIZ_COLORS[lot.biz]||'var(--tx)'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#92400e':'var(--tx3)'}">${formatNumber(rem)}</td>
-          <td style="padding:7px 10px">
+          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-family:var(--font-mono);font-size:12px;font-weight:${rowBold?'700':'400'};color:${st==='done'?'#999':'#000'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${formatNumber(qty)}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;color:${st==='done'?'#999':'#000'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;color:${st==='done'?'#999':rem>0?'#92400e':'#000'};font-weight:${rem>0&&!st==='done'?'600':'400'}">${formatNumber(rem)}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF">
             ${st==='upcoming'
-              ? `<span style="font-size:13px;color:#0C447C">D-${diffDays(today(),lot.inDate)}</span>`
-              : `<div style="display:flex;align-items:center;gap:6px">
-                  <div style="flex:1;height:${st==='done'?4:6}px;background:${st==='overdue'?'#FECACA':st==='inprog'?'#D1FAE5':'var(--bd)'};border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%"></div></div>
-                  <span style="font-size:12px;font-weight:${st==='done'?'400':'700'};color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
+              ? `<span style="font-size:11px;color:#888">입고예정</span>`
+              : `<div style="display:flex;align-items:center;gap:4px">
+                  <div style="width:48px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0"><div style="height:100%;background:${barColor};width:${pct}%"></div></div>
+                  <span style="font-size:11px;color:#000">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:8px 10px;font-size:12px;color:${st==='done'?'#C7C7CC':st==='upcoming'?'var(--tx2)':'#1D1D1F'};font-weight:${st==='inprog'||st==='overdue'?'600':'400'}">${lot.inDate||'—'}</td>
-          <td style="padding:8px 10px;font-size:12px;${st==='overdue'?'color:#A32D2D;font-weight:700':st==='done'?'color:#C7C7CC':'color:var(--tx2)'}">
-            ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:11px;margin-left:3px;color:${dd<0?'#dc2626':dd<=3?'#92400e':'var(--tx3)'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='overdue'?'#A32D2D':st==='done'?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
+            ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#92400e':'#888'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td style="padding:8px 10px;font-size:12px;${st==='done'?'color:#085041;font-weight:600':'color:var(--tx3)'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
-          <td style="padding:7px 8px">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td style="padding:5px 6px;white-space:nowrap">
-            <button class="btn sm" style="font-size:12px;padding:3px 8px;${st==='inprog'?'font-weight:700;color:#185FA5;border-color:#378ADD':st==='overdue'?'font-weight:700;color:#A32D2D;border-color:#E24B4A':''}" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
-            <button class="btn del sm" style="font-size:12px;padding:3px 8px" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#1A6B3A':'#999'};font-weight:${st==='done'?'600':'400'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
+          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td style="padding:5px 6px;border:1px solid #BFBFBF;white-space:nowrap">
+            <button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;font-weight:${rowBold?'600':'400'}" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+            <button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;color:#A32D2D" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
@@ -329,7 +334,7 @@ Pages.Progress = (() => {
     }).join('');
 
     el.innerHTML = `
-      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden">
+      <div style="border:1px solid #999;overflow:hidden">
         <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
           <colgroup>
             <col style="width:36px">
