@@ -116,7 +116,7 @@ Pages.Revenue = (() => {
     function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap;border:1px solid;${style}">${txt}</span>`; }
 
     if (!lots.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="padding:20px;text-align:center;color:#000">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="padding:20px;text-align:center;color:#000">데이터 없음</td></tr>`;
     } else {
       let totalAmt = 0;
       const rows = lots.map((lot, i) => {
