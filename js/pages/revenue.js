@@ -181,63 +181,68 @@ Pages.Revenue = (() => {
             <td style="${P};text-align:center;width:60px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
             <td style="${P};color:#000;text-align:left">${lot.customerName || '—'}</td>
             <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">${formatNumber(qty)}</td>
-            <td style="${P};text-align:left;width:80px;min-width:80px;max-width:80px">
+            <td style="${P};text-align:left;width:100px;min-width:100px;overflow:hidden">
               ${st === 'upcoming'
                 ? `<span style="font-size:11px;color:#888">입고예정</span>`
-                : `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap">
-                    <div style="width:48px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0">
+                : `<div style="display:flex;align-items:center;gap:5px">
+                    <div style="width:44px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0">
                       <div style="height:100%;background:${barColor};width:${pct}%"></div>
                     </div>
-                    <span style="font-size:11px;color:#000">${pct}%</span>
+                    <span style="font-size:11px;color:#000;white-space:nowrap">${pct}%</span>
                   </div>`}
             </td>
-            <td style="${P};text-align:right;min-width:280px;width:280px">
+            <td style="${P};text-align:right;width:120px;min-width:120px">
               ${hasInv
-                ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
-                    <span id="rv-amt-display-${lot.id}" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:#1D1D1F">$${formatNumber(Math.round(amt))}</span>
+                ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                    <span id="rv-amt-display-${lot.id}" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:#000">$${formatNumber(Math.round(amt))}</span>
                     <input type="number" id="rv-amt-${lot.id}" value="${amt}"
-                      style="display:none;width:90px;padding:4px 8px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#fff;color:var(--tx)">
-                    <input type="date" id="rv-date-edit-${lot.id}" value="${invDate}"
-                      style="display:none;padding:4px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:11px;color:var(--tx);background:#fff">
+                      style="display:none;width:80px;padding:3px 6px;border:1px solid #999;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#fff;color:#000">
                   </div>`
                 : isDone
-                  ? `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-                      <div style="display:flex;align-items:center;gap:4px">
-                        <input type="number" placeholder="금액 (USD)" id="rv-amt-${lot.id}"
-                          style="width:100px;padding:4px 8px;border:1.5px solid #F59E0B;border-radius:5px;font-size:12px;text-align:right;font-family:var(--font-mono);background:#FFFBF0;color:var(--tx)">
-                        <input type="date" id="rv-date-${lot.id}"
-                          style="padding:4px 7px;border:1.5px solid #F59E0B;border-radius:5px;font-size:11px;color:var(--tx);background:#FFFBF0">
-                      </div>
-                      <button onclick="Pages.Revenue.saveInvoice(${lot.id})"
-                        style="padding:3px 12px;background:#F59E0B;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">저장</button>
-                    </div>`
+                  ? `<input type="number" placeholder="금액" id="rv-amt-${lot.id}"
+                      style="width:80px;padding:3px 6px;border:1px solid #F59E0B;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#FFFBF0;color:#000">`
                   : `<span style="font-size:12px;color:#999">—</span>`}
+            </td>
+            <td style="${P};text-align:center;width:100px;min-width:100px">
+              ${hasInv
+                ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px">
+                    <span id="rv-date-display-${lot.id}" style="font-size:12px;color:#000">${invDate||'—'}</span>
+                    <input type="date" id="rv-date-edit-${lot.id}" value="${invDate}"
+                      style="display:none;padding:3px 5px;border:1px solid #999;font-size:11px;color:#000;background:#fff">
+                  </div>`
+                : isDone
+                  ? `<input type="date" id="rv-date-${lot.id}"
+                      style="padding:3px 5px;border:1px solid #F59E0B;font-size:11px;background:#FFFBF0;color:#000">`
+                  : `<span style="color:#999">—</span>`}
             </td>
             <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
                 : '<span style="color:#999">—</span>'}
             </td>
-            <td style="${P};text-align:center;white-space:nowrap;color:#000">
-              ${invDate || '<span style="color:#999">—</span>'}
-            </td>
+
             <td style="${P};text-align:center;font-size:12px;${claimStyle}">${claimLabel}</td>
-            <td style="padding:4px 8px;border-top:1px solid var(--tbl-row-bd);white-space:nowrap">
+            <td style="${P};text-align:center;width:50px">
               ${hasInv
-                ? `<button class="btn sm" style="font-size:11px;padding:3px 8px"
+                ? `<button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;color:#000"
                     onclick="(function(){
                       var d=document.getElementById('rv-amt-display-${lot.id}');
+                      var dd=document.getElementById('rv-date-display-${lot.id}');
                       var ai=document.getElementById('rv-amt-${lot.id}');
                       var di=document.getElementById('rv-date-edit-${lot.id}');
                       var b=this;
                       if(ai.style.display==='none'){
-                        d.style.display='none';ai.style.display='inline-block';di.style.display='inline-block';
-                        b.textContent='저장';b.style.background='#1D1D1F';b.style.color='#fff';b.style.border='none';
+                        if(d)d.style.display='none';if(dd)dd.style.display='none';
+                        ai.style.display='inline-block';if(di)di.style.display='inline-block';
+                        b.textContent='저장';b.style.background='#1D1D1F';b.style.color='#fff';
                       } else {
-                        Pages.Revenue.saveInvoice(${lot.id}, ai.value, di.value);
+                        Pages.Revenue.saveInvoice(${lot.id}, ai.value, di?di.value:'');
                       }
                     }).call(this)">수정</button>`
-                : ''}
+                : isDone
+                  ? `<button style="font-size:11px;padding:2px 8px;border:1px solid #F59E0B;border-radius:2px;background:#FFFBF0;cursor:pointer;font-family:Pretendard,sans-serif;color:#B45309"
+                      onclick="Pages.Revenue.saveInvoice(${lot.id}, document.getElementById('rv-amt-${lot.id}')?.value, document.getElementById('rv-date-${lot.id}')?.value)">저장</button>`
+                  : ''}
             </td>
           </tr>`;
       }).join('');
@@ -245,9 +250,9 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr style="background:#D9D9D9">
-          <td colspan="10" style="padding:6px 10px;font-size:12px;font-weight:700;color:#000;border:1px solid #999">합계 (${lots.length}건)</td>
+          <td colspan="9" style="padding:6px 10px;font-size:12px;font-weight:700;color:#000;border:1px solid #999">합계 (${lots.length}건)</td>
           <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#000;border:1px solid #999">$${formatNumber(Math.round(totalAmt))}</td>
-          <td colspan="2" style="border:1px solid #999"></td>
+          <td colspan="3" style="border:1px solid #999"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
