@@ -13,10 +13,26 @@ Pages.Changelog = (() => {
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
     {
+      version: 'v53',
+      date:    '2026-04-05',
+      title:   'Pretendard 폰트 · 엑셀 표 스타일 · 셀 너비 최적화',
+      latest:  true,
+      items: [
+        { type: 'improve', text: 'Pretendard 폰트 전체 적용 (LOT진행현황, 매출현황)' },
+        { type: 'improve', text: 'LOT 진행현황 엑셀 기본 표 스타일 적용 — 헤더 #D9D9D9, 테두리 #999, 짝수행 #F2F2F2' },
+        { type: 'improve', text: 'LOT 진행현황 헤더 텍스트 가운데 정렬' },
+        { type: 'improve', text: 'LOT 진행현황 고객사 열 70px, LOT번호 열 110px으로 축소' },
+        { type: 'improve', text: '매출현황 엑셀 기본 표 스타일 적용 — 진행중/지연 볼드만 유지' },
+        { type: 'improve', text: '매출현황 진행률 칸 너비 최적화, 오버랩 제거' },
+        { type: 'improve', text: '매출현황 매출액 셀 280px → 120px 축소, 청구일 분리 열로 독립' },
+        { type: 'improve', text: '매출현황 수정 버튼 표 테두리 안으로 통합 (헤더 "수정" 표시)' },
+        { type: 'improve', text: '앱 개발 이력 버전 체계 v51/v52/v53으로 날짜별 관리 시작' },
+      ],
+    },
+    {
       version: 'v52',
       date:    '2026-04-02',
-      title:   '보고서 강화 · LOT UI 개선 · 로그 완성',
-      latest:  true,
+      title:   '보고서 강화 · LOT UI 개선',
       items: [
         { type: 'improve', text: '보고서 전월/기준월 섹션별 좌우 나란히 비교 레이아웃' },
         { type: 'improve', text: '보고서 청구예정 조건 강화 — 진행률 100% AND 완료일 기준월 이하' },
