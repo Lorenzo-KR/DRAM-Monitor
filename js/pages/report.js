@@ -28,23 +28,22 @@ Pages.Report = (() => {
     return `<span style="width:7px;height:7px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>`;
   }
 
-  const TH  = (t, align='left', extra='') =>
-    `<th style="padding:5px 8px;background:#E8E8ED;border:1px solid #D2D2D7;color:#3A3A3C;font-size:10px;font-weight:600;white-space:nowrap;text-align:${align};${extra}">${t}</th>`;
-  // 클릭 정렬 가능한 헤더
-  const THSort = (t, col, tableId, align='left') => {
+  const TH  = (t, align='center', extra='') =>
+    `<th style="padding:10px 14px;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;color:#222;font-size:13px;font-weight:700;white-space:nowrap;text-align:center;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${t}</th>`;
+  const THSort = (t, col, tableId, align='center') => {
     const s = _sort[tableId] || {};
     const active = s.col === col;
     const arrow = active ? (s.asc ? ' ↑' : ' ↓') : '';
     return `<th onclick="Pages.Report.sortTable('${tableId}','${col}')"
-      style="padding:8px 12px;background:#E8E8ED;border:1px solid #D2D2D7;color:${active?'#1D1D1F':'#3A3A3C'};font-size:11px;font-weight:600;white-space:nowrap;text-align:${align};cursor:pointer;user-select:none"
+      style="padding:10px 14px;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;color:${active?'#000':'#222'};font-size:13px;font-weight:700;white-space:nowrap;text-align:center;cursor:pointer;user-select:none;font-family:'Pretendard',-apple-system,sans-serif"
       >${t}${arrow}</th>`;
   };
   const TD  = (t, align='left', extra='') =>
-    `<td style="padding:5px 8px;border:1px solid #D2D2D7;text-align:${align};font-size:11px;color:#6E6E73;${extra}">${t}</td>`;
+    `<td style="padding:9px 14px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:${align};font-size:13px;color:#333;line-height:1.5;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${t}</td>`;
   const TDM = (t, align='left', extra='') =>
-    `<td style="padding:5px 8px;border:1px solid #D2D2D7;text-align:${align};font-size:11px;font-family:var(--font-mono);color:#1D1D1F;${extra}">${t}</td>`;
-  const TDS = (t, bg='#EFEFF4') =>
-    `<td style="padding:5px 8px;border:1px solid #D2D2D7;font-size:11px;font-weight:600;color:#1D1D1F;background:${bg}">${t}</td>`;
+    `<td style="padding:9px 14px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:${align};font-size:13px;font-family:'DM Mono',monospace;color:#111;line-height:1.5;${extra}">${t}</td>`;
+  const TDS = (t, bg='#F0F0F0') =>
+    `<td style="padding:9px 14px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:13px;font-weight:700;color:#111;background:${bg};font-family:'Pretendard',-apple-system,sans-serif">${t}</td>`;
 
   // ── 섹션 렌더 ───────────────────────────────────────────────
   function _renderCountry(co, coLabel, prefix, lots, dailies, invoices) {
@@ -112,39 +111,37 @@ Pages.Report = (() => {
         const amt = l.amount || 0;
         const avg = qty > 0 && amt > 0 ? (amt / qty).toFixed(1) : '—';
         totalQty += qty; totalAmt += amt;
-        return `<tr>
-          ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
+        const rowBg1 = inv1Sorted.indexOf(l) % 2 === 1 ? 'background:#FAFAFA' : '';
+        return `<tr style="${rowBg1}">
+          ${TDM(l.lotNo || l.id, 'left', 'font-weight:600')}
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—', 'center')}
-          ${TD(l.actualDone || l.targetDate || '—', 'center')}
-          ${TD(l.invDate || '—', 'center')}
-          ${TDM(amt > 0 ? '$' + formatNumber(Math.round(amt)) : '—', 'right', 'font-weight:600;color:#1D1D1F')}
-          ${TDM(avg !== '—' ? '$' + avg : '—', 'right', 'color:#6E6E73')}
-          <td style="border:1px solid #D2D2D7"></td>
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#444;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;white-space:nowrap">
+            <div>${l.inDate || '—'}</div>
+            <div>${l.actualDone || l.targetDate || '—'}</div>
+            <div style="color:#1A6B3A;font-weight:500">${l.invDate || '—'}</div>
+          </td>
+          ${TDM(amt > 0 ? '$' + formatNumber(Math.round(amt)) : '—', 'right', 'font-weight:600;color:#111')}
+          ${TDM(avg !== '—' ? '$' + avg : '—', 'right', 'color:#555')}
         </tr>`;
       }).join('');
-      const sumRow = `<tr style="background:#EFEFF4">
-        ${TDS('합계', '#EFEFF4')}
-        <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
-        ${TDS(formatNumber(totalQty), '#EFEFF4')}
-        <td colspan="3" style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
-        ${TDS('$' + formatNumber(Math.round(totalAmt)), '#EFEFF4')}
-        <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
-        <td style="border:1px solid #D2D2D7;background:#EFEFF4"></td>
+      const sumRow = `<tr style="background:#F0F0F0">
+        ${TDS('합계')}
+        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+        ${TDS(formatNumber(totalQty))}
+        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+        ${TDS('$' + formatNumber(Math.round(totalAmt)))}
+        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
       </tr>`;
       const t1id = co + '-invoiced';
-      table1 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
+      table1 = `<table style="border-collapse:collapse;width:100%;max-width:900px;font-family:'Pretendard',-apple-system,sans-serif">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t1id)}
-          ${TH('사업','center')}
+          ${TH('사업')}
           ${THSort('수량','qty',t1id,'right')}
-          ${THSort('입고일','inDate',t1id,'center')}
-          ${THSort('완료일','actualDone',t1id,'center')}
-          ${THSort('청구일','invDate',t1id,'center')}
+          ${TH('입고일 / 완료일 / 청구일')}
           ${THSort('청구금액','amount',t1id,'right')}
           ${THSort('평균단가','avg',t1id,'right')}
-          ${TH('비고','center')}
         </tr></thead>
         <tbody>${rows1}${sumRow}</tbody>
       </table>`;
@@ -167,29 +164,26 @@ Pages.Report = (() => {
         const isThisMonth = doneDate.startsWith(prefix);
         const rowBg = isThisMonth ? '#FFFBEE' : '#FFF8F0';
         const doneDateLabel = isThisMonth ? doneDate : `<span style="color:#B45309;font-weight:600">${doneDate}</span>`;
-        return `<tr style="background:${rowBg}">
-          ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
+        const rowBg2 = pendingSorted.indexOf(l) % 2 === 1 ? '#FAFAFA' : '#fff';
+        return `<tr style="background:${isThisMonth ? rowBg2 : '#FFF8F0'}">
+          ${TDM(l.lotNo || l.id, 'left', 'font-weight:600')}
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—', 'center')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center;font-size:12px">${doneDateLabel}</td>
-          ${TD('—', 'center')}
-          ${TD('—', 'right')}
-          ${TD('—', 'right')}
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#444;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;white-space:nowrap">
+            <div>${l.inDate || '—'}</div>
+            <div style="color:${isThisMonth?'#333':'#B45309'};font-weight:${isThisMonth?'400':'600'}">${doneDate}</div>
+            <div style="color:#999">—</div>
+          </td>
           ${TD(isThisMonth ? '이번 달' : '이월 미청구', 'center', isThisMonth ? 'color:#92400E' : 'color:#B45309;font-weight:600')}
         </tr>`;
       }).join('');
-      table2 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
+      table2 = `<table style="border-collapse:collapse;width:100%;max-width:900px;font-family:'Pretendard',-apple-system,sans-serif">
         <thead><tr>
           ${THSort('LOT번호','lotNo',t2id)}
-          ${TH('사업','center')}
+          ${TH('사업')}
           ${THSort('수량','qty',t2id,'right')}
-          ${THSort('입고일','inDate',t2id,'center')}
-          ${THSort('완료일','actualDone',t2id,'center')}
-          ${TH('청구일','center')}
-          ${TH('청구금액','right')}
-          ${TH('평균단가','right')}
-          ${TH('구분','center')}
+          ${TH('입고일 / 완료일 / 청구일')}
+          ${TH('구분')}
         </tr></thead>
         <tbody>${rows2}</tbody>
       </table>`;
@@ -211,33 +205,34 @@ Pages.Report = (() => {
         const rem = Math.max(0, qty - cum);
         const pct = qty > 0 ? Math.min(100, Math.round(cum / qty * 100)) : 0;
         const barColor = pct >= 100 ? '#34C759' : pct >= 80 ? '#EF9F27' : '#1D1D1F';
-        return `<tr>
-          ${TDM(l.lotNo || l.id, 'left', 'font-weight:500')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;text-align:center">${_bizBadge(l.biz)}</td>
+        const rowBg3 = inProgLots.indexOf(l) % 2 === 1 ? '#FAFAFA' : '#fff';
+        return `<tr style="background:${rowBg3}">
+          ${TDM(l.lotNo || l.id, 'left', 'font-weight:600')}
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right')}
-          ${TD(l.inDate || '—', 'center')}
-          ${TD('—', 'center')}
-          ${TD('—', 'center')}
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#444;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;white-space:nowrap">
+            <div>${l.inDate || '—'}</div>
+            <div style="color:#999">—</div>
+            <div style="color:#999">—</div>
+          </td>
           ${TDM(formatNumber(cum), 'right')}
           ${TDM(formatNumber(rem), 'right')}
-          <td style="padding:8px 12px;border:1px solid #D2D2D7;min-width:100px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div style="flex:1;height:5px;background:#E8E8ED;border-radius:3px;overflow:hidden">
-                <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div>
+          <td style="padding:9px 12px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;white-space:nowrap">
+            <div style="display:flex;align-items:center;gap:5px">
+              <div style="width:36px;height:4px;background:#E0E0E0;border-radius:2px;overflow:hidden;flex-shrink:0">
+                <div style="width:${pct}%;height:100%;background:${barColor};border-radius:2px"></div>
               </div>
-              <span style="font-size:11px;font-weight:500;color:${barColor};white-space:nowrap;min-width:28px;text-align:right">${pct}%</span>
+              <span style="font-size:12px;color:${barColor};font-weight:600">${pct}%</span>
             </div>
           </td>
         </tr>`;
       }).join('');
-      table3 = `<table style="border-collapse:collapse;font-size:11px;width:100%">
+      table3 = `<table style="border-collapse:collapse;width:100%;max-width:900px;font-family:'Pretendard',-apple-system,sans-serif">
         <thead><tr>
           ${TH('LOT번호')}
-          ${TH('사업','center')}
+          ${TH('사업')}
           ${TH('수량','right')}
-          ${TH('입고일','center')}
-          ${TH('완료일','center')}
-          ${TH('청구일','center')}
+          ${TH('입고일 / 완료일 / 청구일')}
           ${TH('처리량','right')}
           ${TH('잔여','right')}
           ${TH('진행률','center')}
@@ -293,20 +288,26 @@ Pages.Report = (() => {
       const divider = '<div style="height:1px;background:#E8E8ED;margin:14px 0"></div>';
 
       const _section = (prev, curr, tableKey, dot, title, subFn) => `
-        <div style="display:flex;align-items:flex-start;margin-bottom:4px">
-          <div style="${half};border-right:1px solid #E8E8ED">
-            ${secTitle(dot, title, prev['cnt'+tableKey], subFn ? subFn(prev['cnt'+tableKey]) : '')}
-            ${prev['table'+tableKey]}
+        <div style="background:#fff;border:1px solid #E0E0E0;border-radius:8px;padding:16px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+            ${_dot(dot)}
+            <span style="font-size:14px;font-weight:700;color:#111;font-family:'Pretendard',-apple-system,sans-serif">${title}</span>
           </div>
-          <div style="${half}">
-            ${secTitle(dot, title, curr['cnt'+tableKey], subFn ? subFn(curr['cnt'+tableKey]) : '')}
-            ${curr['table'+tableKey]}
+          <div style="display:flex;align-items:flex-start;gap:0">
+            <div style="${half};border-right:1px solid #E0E0E0;padding-right:16px">
+              <div style="font-size:11px;color:#888;margin-bottom:8px;font-family:'Pretendard',-apple-system,sans-serif">${subFn?subFn(prev['cnt'+tableKey]):''}${prev['cnt'+tableKey]}건</div>
+              ${prev['table'+tableKey]}
+            </div>
+            <div style="${half};padding-left:16px">
+              <div style="font-size:11px;color:#888;margin-bottom:8px;font-family:'Pretendard',-apple-system,sans-serif">${subFn?subFn(curr['cnt'+tableKey]):''}${curr['cnt'+tableKey]}건</div>
+              ${curr['table'+tableKey]}
+            </div>
           </div>
-        </div>${divider}`;
+        </div>`;
 
       const _country = (coLabel, prev, curr) => `
-        <div style="margin-bottom:32px">
-          <div style="font-size:14px;font-weight:600;color:#1D1D1F;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #1D1D1F">${coLabel}</div>
+        <div style="margin-bottom:28px;background:#F7F7F5;border-radius:10px;padding:16px">
+          <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #222;font-family:'Pretendard',-apple-system,sans-serif">${coLabel}</div>
           <!-- 월 헤더 -->
           <div style="display:flex;margin-bottom:12px">
             <div style="${half};border-right:1px solid #E8E8ED">
@@ -322,7 +323,7 @@ Pages.Report = (() => {
         </div>`;
 
       el.innerHTML = `
-        <div style="width:100%">
+        <div style="max-width:1200px;margin:0 auto">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
             <div>
               <div style="font-size:15px;font-weight:600;color:#1D1D1F">보고서</div>
