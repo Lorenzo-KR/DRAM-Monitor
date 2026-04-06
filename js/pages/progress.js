@@ -301,11 +301,11 @@ Pages.Progress = (() => {
           </td>
           <td class="td-c">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
           <td class="td-c">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td class="td-l td-ellipsis" style="font-family:'DM Mono',monospace;font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${lot.lotNo||lot.id}</td>
-          <td class="td-l td-ellipsis" style="color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.customerName||'—'}</td>
-          <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${formatNumber(qty)}</td>
-          <td class="td-num" style="color:${st==='done'?'#999':'#000'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td class="td-num" style="color:${st==='done'?'#999':rem>0?'#92400e':'#000'};font-weight:${rem>0?'600':'400'}">${formatNumber(rem)}</td>
+          <td class="td-l td-ellipsis" style="font-family:'DM Mono',monospace;font-weight:${rowBold?'600':'400'};color:#000">${lot.lotNo||lot.id}</td>
+          <td class="td-l td-ellipsis" style="color:#000;font-weight:${rowBold?'600':'400'}">${lot.customerName||'—'}</td>
+          <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:#000">${formatNumber(qty)}</td>
+          <td class="td-num" style="color:#000">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td class="td-num" style="color:${rem>0?'#92400e':'#000'};font-weight:${rem>0?'600':'400'}">${formatNumber(rem)}</td>
           <td class="td-c">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#888">입고예정</span>`
@@ -314,7 +314,7 @@ Pages.Progress = (() => {
                   <span style="font-size:11px;color:#000">${pct}%</span>
                 </div>`}
           </td>
-          <td class="td-c" style="color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
+          <td class="td-c" style="color:#000;font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
           <td class="td-c" style="color:${st==='overdue'?'#A32D2D':st==='done'?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
             ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#92400e':'#888'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
@@ -339,7 +339,7 @@ Pages.Progress = (() => {
     el.innerHTML = `
       <div class="page-wrap">
       <div class="page-card" style="padding:0;overflow:hidden">
-        <table class="std-table">
+        <table class="std-table" style="font-family:'Pretendard',-apple-system,sans-serif">
           <colgroup>
             <col style="width:30px">
             <col style="width:46px">
