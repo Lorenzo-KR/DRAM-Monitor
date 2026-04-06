@@ -168,30 +168,22 @@ Pages.Revenue = (() => {
 
         totalAmt += amt;
 
-        const rowEven = i % 2 === 1 ? 'background:#F2F2F2' : 'background:#fff';
-        const finalRowBg = rowBg || rowEven;
-        const P = 'padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:#000;font-family:Pretendard,-apple-system,sans-serif';
+        const finalRowBg = rowBg || '';
+        const P = '';
         return `
-          <tr style="${finalRowBg}">
-            <td style="${P};color:#000;text-align:center;width:40px">${i + 1}</td>
-            <td style="${P};color:#000;text-align:center;white-space:nowrap">${lot.inDate || '—'}</td>
-            <td style="${P};color:${doneDateColor};font-weight:${isDone?'500':'400'};text-align:center;white-space:nowrap">${doneDate}</td>
-            <td style="${P};font-family:var(--font-mono);font-weight:500;text-align:center;white-space:nowrap">${lot.lotNo || lot.id}</td>
-            <td style="${P};text-align:center;width:80px">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-            <td style="${P};text-align:center;width:60px">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td style="${P};color:#000;text-align:left">${lot.customerName || '—'}</td>
-            <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">${formatNumber(qty)}</td>
-            <td style="${P};text-align:left;width:100px;min-width:100px;overflow:hidden">
-              ${st === 'upcoming'
-                ? `<span style="font-size:11px;color:#888">입고예정</span>`
-                : `<div style="display:flex;align-items:center;gap:5px">
-                    <div style="width:44px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0">
-                      <div style="height:100%;background:${barColor};width:${pct}%"></div>
-                    </div>
-                    <span style="font-size:11px;color:#000;white-space:nowrap">${pct}%</span>
-                  </div>`}
+          <tr>
+            <td class="td-c">${i + 1}</td>
+            <td class="td-c td-ellipsis">${lot.inDate || '—'}</td>
+            <td class="td-c td-ellipsis" style="color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
+            <td class="td-c td-ellipsis" style="font-family:'DM Mono',monospace">${lot.lotNo || lot.id}</td>
+            <td class="td-c">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
+            <td class="td-c">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
+            <td class="td-l td-ellipsis">${lot.customerName || '—'}</td>
+            <td class="td-num">${formatNumber(qty)}</td>
+            <td class="td-r" style="color:${barColor};font-weight:600">
+              ${st === 'upcoming' ? '입고예정' : pct + '%'}
             </td>
-            <td style="${P};text-align:right;width:120px;min-width:120px">
+            <td class="td-num" style="width:120px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
                     <span id="rv-amt-display-${lot.id}" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:#000">$${formatNumber(Math.round(amt))}</span>
@@ -203,7 +195,7 @@ Pages.Revenue = (() => {
                       style="width:80px;padding:3px 6px;border:1px solid #F59E0B;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#FFFBF0;color:#000">`
                   : `<span style="font-size:12px;color:#999">—</span>`}
             </td>
-            <td style="${P};text-align:center;width:100px;min-width:100px">
+            <td class="td-c" style="width:100px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px">
                     <span id="rv-date-display-${lot.id}" style="font-size:12px;color:#000">${invDate||'—'}</span>
@@ -215,14 +207,14 @@ Pages.Revenue = (() => {
                       style="padding:3px 5px;border:1px solid #F59E0B;font-size:11px;background:#FFFBF0;color:#000">`
                   : `<span style="color:#999">—</span>`}
             </td>
-            <td style="${P};text-align:right;font-family:var(--font-mono);white-space:nowrap">
+            <td class="td-num">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
                 : '<span style="color:#999">—</span>'}
             </td>
 
-            <td style="${P};text-align:center;font-size:12px;${claimStyle}">${claimLabel}</td>
-            <td style="${P};text-align:center;width:50px">
+            <td class="td-c" style="${claimStyle}">${claimLabel}</td>
+            <td class="td-c" style="width:50px">
               ${hasInv
                 ? `<button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;color:#000"
                     onclick="(function(){
@@ -249,10 +241,10 @@ Pages.Revenue = (() => {
 
       // 합계 행
       const totalRow = `
-        <tr style="background:#D9D9D9">
-          <td colspan="9" style="padding:6px 10px;font-size:12px;font-weight:700;color:#000;border:1px solid #999">합계 (${lots.length}건)</td>
-          <td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:#000;border:1px solid #999">$${formatNumber(Math.round(totalAmt))}</td>
-          <td colspan="3" style="border:1px solid #999"></td>
+        <tr>
+          <td colspan="9" class="td-sum td-l">합계 (${lots.length}건)</td>
+          <td class="td-sum td-num">$${formatNumber(Math.round(totalAmt))}</td>
+          <td colspan="3" class="td-sum"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
