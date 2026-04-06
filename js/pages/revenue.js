@@ -98,7 +98,7 @@ Pages.Revenue = (() => {
     let lots = Store.getLots();
     if (biz) lots = lots.filter(l => l.biz === biz);
     if (co)  lots = lots.filter(l => l.country === co);
-    lots = [...lots].sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')));
+    lots = [...lots].sort((a, b) => String(a.inDate || '').localeCompare(String(b.inDate || '')));
 
     const dailies  = Store.getDailies();
     const invoices = Store.getInvoices();
@@ -241,10 +241,10 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr>
-          <td class="td-sum td-c">${lots.length}</td>
-          <td class="td-sum td-l" colspan="6">합계</td>
+          <td class="td-sum"></td>
+          <td class="td-sum td-c" colspan="9">합계</td>
           <td class="td-sum td-num">$${formatNumber(Math.round(totalAmt))}</td>
-          <td class="td-sum" colspan="6"></td>
+          <td class="td-sum" colspan="3"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
