@@ -173,10 +173,10 @@ Pages.Revenue = (() => {
         return `
           <tr>
             <td class="td-c">${lots.length - i}</td>
-            <td class="td-c td-ellipsis" style="font-family:'DM Mono',monospace">${lot.lotNo || lot.id}</td>
+            <td class="td-l td-ellipsis" style="font-family:'DM Mono',monospace">${lot.lotNo || lot.id}</td>
             <td class="td-c">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
             <td class="td-c">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
-            <td class="td-l td-ellipsis">${lot.customerName || '—'}</td>
+            <td class="td-c td-ellipsis">${lot.customerName || '—'}</td>
             <td class="td-num">${formatNumber(qty)}</td>
             <td class="td-r" style="color:${barColor};font-weight:600">
               ${st === 'upcoming' ? '입고예정' : pct + '%'}

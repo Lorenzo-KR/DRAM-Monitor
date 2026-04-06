@@ -366,9 +366,9 @@ Pages.Dashboard = (() => {
             ${rows}
             <tr style="background:#F0F0F0">
               <td colspan="4" style="padding:10px 14px;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
-              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;background:#F0F0F0;color:#111">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
               <td colspan="3" style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
-              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;text-align:right;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;background:#F0F0F0;color:#1A6B3A">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
             </tr>
           </tbody>
         </table>
