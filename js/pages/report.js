@@ -341,7 +341,7 @@ Pages.Report = (() => {
         </div>`;
 
       el.innerHTML = `
-        <div style="max-width:1200px;margin:0 auto">
+        <div style="max-width:1200px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
             <div>
               <div style="font-size:15px;font-weight:600;color:#1D1D1F">보고서</div>
