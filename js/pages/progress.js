@@ -268,7 +268,7 @@ Pages.Progress = (() => {
     const el = document.getElementById('pr-cards'); if (!el) return;
 
     const TH = (label, align='center', extra='') =>
-      `<th style="padding:7px 10px;text-align:center;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;${extra}">${label}</th>`;
+      `<th style="${extra}">${label}</th>`;
 
     const rows = lots.map(lot => {
       if (!lot?.id) return '';
@@ -284,28 +284,28 @@ Pages.Progress = (() => {
 
       const rowIdx = lots.indexOf(lot);
       const evenBg = rowIdx % 2 === 1 ? '#F2F2F2' : '#fff';
-      const rowBg =
-        st==='done'    ? '#F5F5F5' :
-        st==='overdue' ? '#FFF5F5' :
-        st==='inprog'  ? '#F5F9FF' : evenBg;
+      const statusBg =
+        st==='done'    ? 'opacity:0.6' :
+        st==='overdue' ? 'background:#FFF5F5 !important' :
+        st==='inprog'  ? 'background:#F5F9FF !important' : '';
       const rowBold = st==='inprog' || st==='overdue';
 
       const lotRow = `
-        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="background:${rowBg};cursor:pointer;${
+        <tr class="lot-data-row" onclick="Pages.Progress.toggleCard(${lot.id})" style="cursor:pointer;${statusBg};${
           st==='overdue' ? 'border-left:3px solid #E24B4A' :
           st==='inprog'  ? 'border-left:3px solid #378ADD' : ''
         }">
-          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center;color:#888">
+          <td class="td-c" style="color:#888;width:30px">
             <svg width="10" height="10" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen?'rotate(180deg)':'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </td>
-          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
-          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-family:var(--font-mono);font-size:12px;font-weight:${rowBold?'700':'400'};color:${st==='done'?'#999':'#000'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.lotNo||lot.id}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lot.customerName||'—'}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${formatNumber(qty)}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;color:${st==='done'?'#999':'#000'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;text-align:right;font-family:var(--font-mono);font-size:12px;color:${st==='done'?'#999':rem>0?'#92400e':'#000'};font-weight:${rem>0&&!st==='done'?'600':'400'}">${formatNumber(rem)}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF">
+          <td class="td-c">${_badge(lot.country, CO_STYLE[lot.country]||'')}</td>
+          <td class="td-c">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
+          <td class="td-l td-ellipsis" style="font-family:'DM Mono',monospace;font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${lot.lotNo||lot.id}</td>
+          <td class="td-l td-ellipsis" style="color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.customerName||'—'}</td>
+          <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:${st==='done'?'#999':'#000'}">${formatNumber(qty)}</td>
+          <td class="td-num" style="color:${st==='done'?'#999':'#000'}">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td class="td-num" style="color:${st==='done'?'#999':rem>0?'#92400e':'#000'};font-weight:${rem>0?'600':'400'}">${formatNumber(rem)}</td>
+          <td class="td-c">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#888">입고예정</span>`
               : `<div style="display:flex;align-items:center;gap:4px">
@@ -313,15 +313,14 @@ Pages.Progress = (() => {
                   <span style="font-size:11px;color:#000">${pct}%</span>
                 </div>`}
           </td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='overdue'?'#A32D2D':st==='done'?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
+          <td class="td-c" style="color:${st==='done'?'#999':'#000'};font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
+          <td class="td-c" style="color:${st==='overdue'?'#A32D2D':st==='done'?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
             ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#92400e':'#888'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td style="padding:6px 10px;border:1px solid #BFBFBF;font-size:12px;color:${st==='done'?'#1A6B3A':'#999'};font-weight:${st==='done'?'600':'400'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
-          <td style="padding:6px 8px;border:1px solid #BFBFBF;text-align:center">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td style="padding:5px 6px;border:1px solid #BFBFBF;white-space:nowrap">
-            <button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;font-weight:${rowBold?'600':'400'}" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
-            <button style="font-size:11px;padding:2px 8px;border:1px solid #999;border-radius:2px;background:#fff;cursor:pointer;font-family:Pretendard,sans-serif;color:#A32D2D" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+          <td class="td-c" style="color:${st==='done'?'#1A6B3A':'#999'};font-weight:${st==='done'?'600':'400'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
+          <td class="td-c">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
+          <td class="td-c" style="white-space:nowrap">
+            <button style="font-size:11px;padding:2px 7px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button> <button style="font-size:11px;padding:2px 7px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif;color:#A32D2D" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
           </td>
         </tr>`;
 
@@ -334,8 +333,9 @@ Pages.Progress = (() => {
     }).join('');
 
     el.innerHTML = `
-      <div style="border:1px solid #999;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
+      <div class="page-wrap">
+      <div class="page-card" style="padding:0;overflow:hidden">
+        <table class="std-table">
           <colgroup>
             <col style="width:36px">
             <col style="width:50px">
@@ -360,10 +360,10 @@ Pages.Progress = (() => {
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
-            ${rows || '<tr><td colspan="14" style="padding:24px;text-align:center;color:var(--tx3)">LOT가 없습니다</td></tr>'}
+            ${rows || '<tr><td colspan="14" class="td-c">LOT가 없습니다</td></tr>'}
           </tbody>
         </table>
-      </div>`;
+      </div></div>`;
   }
 
   // ── 펼침 영역 (처리 이력 + 입력) ───────────────────────────

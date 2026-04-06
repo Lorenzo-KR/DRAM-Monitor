@@ -162,6 +162,7 @@
 
     <!-- LOT 진행 현황 (LOT 등록 + 일별 처리 + 입고예정 통합) -->
     <div class="pg" id="pg-progress">
+      <div class="page-wrap">
       <div class="ph-row">
         <div class="ph"><h1>LOT 진행 현황</h1></div>
         <button class="btn xl sm" onclick="Pages.Progress.exportExcel()">↓ 엑셀</button>
@@ -206,6 +207,7 @@
         <span style="margin-left:auto;font-size:13px;color:var(--tx3)" id="pr-cnt"></span>
       </div>
       <div id="pr-cards"></div>
+      </div><!-- /page-wrap -->
 
       <!-- 삭제 확인 모달 -->
       <div id="lot-delete-modal" style="display:none;position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center">
@@ -569,6 +571,7 @@
 
     <!-- 매출 현황 -->
     <div class="pg" id="pg-revenue">
+      <div class="page-wrap">
       <div class="ph-row">
         <div class="ph"><h1>매출 현황</h1></div>
         <button class="btn xl sm" onclick="Pages.Revenue.exportExcel()" style="margin-top:4px">↓ 엑셀</button>
@@ -601,26 +604,27 @@
           </div>
         </div>
       </div>
-      <div style="overflow-x:auto;margin-bottom:14px">
-        <table id="rv-table" style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;font-family:Pretendard,-apple-system,sans-serif">
+      <div class="page-card" style="padding:0;overflow:hidden;margin-bottom:16px">
+        <table id="rv-table" class="std-table">
           <thead><tr>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:32px">#</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:90px">입고일</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:90px">작업완료일</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:110px">LOT 번호</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:58px">사업</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:48px">지역</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:68px">고객사</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:68px">수량</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:100px">진행률</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:110px">매출액 (USD)</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:95px">청구일</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:68px">평균단가</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:80px">청구 상태</th>
-            <th style="padding:7px 10px;font-size:11px;font-weight:600;color:#000;background:#D9D9D9;border:1px solid #999;text-align:center;white-space:nowrap;font-family:'Pretendard',-apple-system,sans-serif;width:48px">수정</th>
+            <th>#</th>
+            <th>입고일</th>
+            <th>작업완료일</th>
+            <th>LOT 번호</th>
+            <th>사업</th>
+            <th>지역</th>
+            <th>고객사</th>
+            <th>수량</th>
+            <th>진행률</th>
+            <th>매출액 (USD)</th>
+            <th>청구일</th>
+            <th>평균단가</th>
+            <th>청구 상태</th>
+            <th>수정</th>
           </tr></thead>
           <tbody id="rv-tbody"></tbody>
         </table>
+      </div>
       </div>
     </div>
 

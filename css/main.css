@@ -332,3 +332,57 @@ select.ec {
 /* 보고서 페이지 — 좌우 공간 최대 활용 */
 #pg-report .main-inner,
 #pg-report { padding-left: 12px; padding-right: 12px; }
+
+/* ═══════════════════════════════════════════════════════════
+   공통 표 스타일 — .std-table
+   보고서/매출현황/LOT진행현황 공통 적용
+   ═══════════════════════════════════════════════════════════ */
+.std-table {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-size: 12px;
+}
+.std-table th {
+  padding: 8px 10px;
+  background: #F0F0F0;
+  border-bottom: 2px solid #CCC;
+  border-right: 1px solid #DDD;
+  color: #222;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  line-height: 1.5;
+}
+.std-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #E8E8E8;
+  border-right: 1px solid #E8E8E8;
+  font-size: 12px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  color: #333;
+  line-height: 1.5;
+}
+.std-table tbody tr:nth-child(even) td { background: #FAFAFA; }
+.std-table tbody tr:hover td { background: #F0F5FF; }
+.std-table .td-r  { text-align: right;  white-space: nowrap; }
+.std-table .td-c  { text-align: center; }
+.std-table .td-l  { text-align: left;   }
+.std-table .td-num { text-align: right; white-space: nowrap; font-family: 'DM Mono', monospace; }
+.std-table .td-sum { background: #F0F0F0 !important; font-weight: 700; color: #111; }
+.std-table .td-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 페이지 콘텐츠 래퍼 */
+.page-wrap {
+  max-width: 1200px;
+}
+.page-card {
+  background: #fff;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
