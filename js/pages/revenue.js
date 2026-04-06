@@ -181,19 +181,9 @@ Pages.Revenue = (() => {
             <td class="td-r" style="color:${barColor};font-weight:600">
               ${st === 'upcoming' ? '입고예정' : pct + '%'}
             </td>
-            <td class="td-num" style="width:120px">
-              ${hasInv
-                ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
-                    <span id="rv-amt-display-${lot.id}" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:#000">$${formatNumber(Math.round(amt))}</span>
-                    <input type="number" id="rv-amt-${lot.id}" value="${amt}"
-                      style="display:none;width:80px;padding:3px 6px;border:1px solid #999;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#fff;color:#000">
-                  </div>`
-                : isDone
-                  ? `<input type="number" placeholder="금액" id="rv-amt-${lot.id}"
-                      style="width:80px;padding:3px 6px;border:1px solid #F59E0B;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#FFFBF0;color:#000">`
-                  : `<span style="font-size:12px;color:#999">—</span>`}
-            </td>
-            <td class="td-c" style="width:100px">
+            <td class="td-c td-ellipsis">${lot.inDate || '—'}</td>
+            <td class="td-c td-ellipsis" style="color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
+            <td class="td-c" style="width:90px">
               ${hasInv
                 ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px">
                     <span id="rv-date-display-${lot.id}" style="font-size:12px;color:#000">${invDate||'—'}</span>
@@ -205,14 +195,23 @@ Pages.Revenue = (() => {
                       style="padding:3px 5px;border:1px solid #F59E0B;font-size:11px;background:#FFFBF0;color:#000">`
                   : `<span style="color:#999">—</span>`}
             </td>
+            <td class="td-num" style="width:110px">
+              ${hasInv
+                ? `<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                    <span id="rv-amt-display-${lot.id}" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:#000">$${formatNumber(Math.round(amt))}</span>
+                    <input type="number" id="rv-amt-${lot.id}" value="${amt}"
+                      style="display:none;width:80px;padding:3px 6px;border:1px solid #999;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#fff;color:#000">
+                  </div>`
+                : isDone
+                  ? `<input type="number" placeholder="금액" id="rv-amt-${lot.id}"
+                      style="width:80px;padding:3px 6px;border:1px solid #F59E0B;font-size:12px;text-align:right;font-family:'DM Mono',monospace;background:#FFFBF0;color:#000">`
+                  : `<span style="font-size:12px;color:#999">—</span>`}
+            </td>
             <td class="td-num">
               ${hasInv && qty > 0
                 ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
                 : '<span style="color:#999">—</span>'}
             </td>
-
-            <td class="td-c td-ellipsis">${lot.inDate || '—'}</td>
-            <td class="td-c td-ellipsis" style="color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
             <td class="td-c" style="${claimStyle}">${claimLabel}</td>
             <td class="td-c" style="width:50px">
               ${hasInv

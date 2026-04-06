@@ -308,8 +308,8 @@ Pages.Progress = (() => {
           <td class="td-c">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#888">입고예정</span>`
-              : `<div style="display:flex;align-items:center;gap:4px">
-                  <div style="width:48px;height:6px;background:#E0E0E0;border:1px solid #BFBFBF;flex-shrink:0"><div style="height:100%;background:${barColor};width:${pct}%"></div></div>
+              : `<div style="display:flex;align-items:center;gap:3px;justify-content:center">
+                  <div style="width:34px;height:5px;background:#E0E0E0;flex-shrink:0"><div style="height:100%;background:${barColor};width:${pct}%"></div></div>
                   <span style="font-size:11px;color:#000">${pct}%</span>
                 </div>`}
           </td>
@@ -319,8 +319,11 @@ Pages.Progress = (() => {
           </td>
           <td class="td-c" style="color:${st==='done'?'#1A6B3A':'#999'};font-weight:${st==='done'?'600':'400'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
           <td class="td-c">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
-          <td class="td-c" style="white-space:nowrap">
-            <button style="font-size:11px;padding:2px 7px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button> <button style="font-size:11px;padding:2px 7px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif;color:#A32D2D" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+          <td class="td-c">
+            <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+              <button style="font-size:11px;padding:2px 10px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif;width:100%" onclick="event.stopPropagation();Pages.Progress.openEditPanel(${lot.id})">수정</button>
+              <button style="font-size:11px;padding:2px 10px;border:1px solid #CCC;border-radius:2px;background:#fff;cursor:pointer;font-family:'Pretendard',sans-serif;color:#A32D2D;width:100%" onclick="event.stopPropagation();Pages.Progress.deleteLot(${lot.id})">삭제</button>
+            </div>
           </td>
         </tr>`;
 
@@ -337,26 +340,26 @@ Pages.Progress = (() => {
       <div class="page-card" style="padding:0;overflow:hidden">
         <table class="std-table">
           <colgroup>
-            <col style="width:36px">
+            <col style="width:30px">
+            <col style="width:46px">
             <col style="width:50px">
-            <col style="width:58px">
-            <col style="width:110px">
+            <col style="width:140px">
+            <col style="width:60px">
+            <col style="width:70px">
+            <col style="width:70px">
             <col style="width:70px">
             <col style="width:80px">
-            <col style="width:80px">
-            <col style="width:80px">
-            <col style="width:130px">
-            <col style="width:100px">
-            <col style="width:110px">
-            <col style="width:100px">
-            <col style="width:80px">
-            <col style="width:100px">
+            <col style="width:92px">
+            <col style="width:92px">
+            <col style="width:92px">
+            <col style="width:72px">
+            <col style="width:60px">
           </colgroup>
           <thead><tr>
-            ${TH('','left')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
+            ${TH('')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
-            ${TH('진행률','left')}
-            ${TH('입고일')}${TH('완료예정일')}${TH('완료일')}${TH('상태')}${TH('','left')}
+            ${TH('진행률')}
+            ${TH('입고일')}${TH('완료예정일')}${TH('완료일')}${TH('상태')}${TH('수정/삭제')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
