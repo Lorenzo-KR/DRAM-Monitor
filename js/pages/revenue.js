@@ -98,7 +98,7 @@ Pages.Revenue = (() => {
     let lots = Store.getLots();
     if (biz) lots = lots.filter(l => l.biz === biz);
     if (co)  lots = lots.filter(l => l.country === co);
-    lots = [...lots].sort((a, b) => String(a.inDate || '').localeCompare(String(b.inDate || '')));
+    lots = [...lots].sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')));
 
     const dailies  = Store.getDailies();
     const invoices = Store.getInvoices();
@@ -172,7 +172,7 @@ Pages.Revenue = (() => {
         const P = '';
         return `
           <tr>
-            <td class="td-c">${i + 1}</td>
+            <td class="td-c">${lots.length - i}</td>
             <td class="td-c td-ellipsis" style="font-family:'DM Mono',monospace">${lot.lotNo || lot.id}</td>
             <td class="td-c">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
             <td class="td-c">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
