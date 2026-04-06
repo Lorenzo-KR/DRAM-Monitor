@@ -378,6 +378,7 @@ select.ec {
 /* 페이지 콘텐츠 래퍼 */
 .page-wrap {
   max-width: 1200px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
 }
 .page-card {
   background: #fff;
