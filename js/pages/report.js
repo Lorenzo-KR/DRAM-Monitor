@@ -117,7 +117,7 @@ Pages.Report = (() => {
           ${TDM(l.lotNo || l.id, 'left', '')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
-          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif">
+          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div>${l.actualDone || l.targetDate || '—'}</div>
             <div style="color:#1A6B3A;font-weight:500">${l.invDate || '—'}</div>
@@ -127,12 +127,12 @@ Pages.Report = (() => {
         </tr>`;
       }).join('');
       const sumRow = `<tr style="background:#F0F0F0">
-        ${TDS('합계')}
-        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
-        ${TDS(formatNumber(totalQty))}
-        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
-        ${TDS('$' + formatNumber(Math.round(totalAmt)))}
-        <td style="padding:9px 12px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:left">합계</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:right;white-space:nowrap">${formatNumber(totalQty)}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:right;white-space:nowrap">$${formatNumber(Math.round(totalAmt))}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
       </tr>`;
       const t1id = co + '-invoiced';
       table1 = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
@@ -148,7 +148,7 @@ Pages.Report = (() => {
           ${THSort('LOT번호','lotNo',t1id)}
           ${TH('사업')}
           ${THSort('수량','qty',t1id,'right')}
-          ${TH('입고일 / 완료일 / 청구일')}
+          ${TH('입고/완료/청구일')}
           ${THSort('청구금액','amount',t1id,'right')}
           ${THSort('평균단가','avg',t1id,'right')}
         </tr></thead>
@@ -178,12 +178,12 @@ Pages.Report = (() => {
           ${TDM(l.lotNo || l.id, 'left', '')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
-          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif">
+          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div style="color:${isThisMonth?'#333':'#B45309'};font-weight:${isThisMonth?'400':'600'}">${doneDate}</div>
             <div style="color:#999">—</div>
           </td>
-          ${TD(isThisMonth ? '이번 달' : '이월 미청구', 'center', isThisMonth ? 'color:#92400E' : 'color:#B45309;font-weight:600')}
+          ${TD(isThisMonth ? '' : '이월 미청구', 'center', 'color:#B45309;font-weight:600')}
         </tr>`;
       }).join('');
       table2 = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
@@ -198,7 +198,7 @@ Pages.Report = (() => {
           ${THSort('LOT번호','lotNo',t2id)}
           ${TH('사업')}
           ${THSort('수량','qty',t2id,'right')}
-          ${TH('입고일 / 완료일 / 청구일')}
+          ${TH('입고/완료/청구일')}
           ${TH('구분')}
         </tr></thead>
         <tbody>${rows2}</tbody>
@@ -226,7 +226,7 @@ Pages.Report = (() => {
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:600')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
-          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif">
+          <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div style="color:#999">—</div>
             <div style="color:#999">—</div>
@@ -250,7 +250,7 @@ Pages.Report = (() => {
           ${TH('LOT번호')}
           ${TH('사업')}
           ${TH('수량','right')}
-          ${TH('입고일 / 완료일 / 청구일')}
+          ${TH('입고/완료/청구일')}
           ${TH('처리','right')}
           ${TH('잔량','right')}
           ${TH('진행률','right')}
