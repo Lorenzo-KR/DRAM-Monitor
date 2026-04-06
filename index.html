@@ -596,7 +596,7 @@
       </div>
       <div class="mg mg4" id="rv-top"></div>
       <div id="rv-year-breakdown" style="display:none;margin-bottom:14px"></div>
-      <div class="two">
+      <div style="max-width:1200px;margin-bottom:14px">
         <div id="rv-chart-wrap">
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
             <div class="cw"><div class="ct" id="rv-chart-title">매출 추이</div><div style="position:relative;height:190px"><canvas id="cv-rev"></canvas></div></div>
@@ -606,10 +606,24 @@
       </div>
       <div class="page-card" style="padding:0;overflow:hidden;margin-bottom:16px">
         <table id="rv-table" class="std-table">
+          <colgroup>
+            <col style="width:32px">
+            <col style="width:120px">
+            <col style="width:52px">
+            <col style="width:44px">
+            <col style="width:60px">
+            <col style="width:60px">
+            <col style="width:50px">
+            <col style="width:110px">
+            <col style="width:90px">
+            <col style="width:68px">
+            <col style="width:90px">
+            <col style="width:90px">
+            <col style="width:72px">
+            <col style="width:44px">
+          </colgroup>
           <thead><tr>
             <th>#</th>
-            <th>입고일</th>
-            <th>작업완료일</th>
             <th>LOT 번호</th>
             <th>사업</th>
             <th>지역</th>
@@ -619,6 +633,8 @@
             <th>매출액 (USD)</th>
             <th>청구일</th>
             <th>평균단가</th>
+            <th>입고일</th>
+            <th>작업완료일</th>
             <th>청구 상태</th>
             <th>수정</th>
           </tr></thead>

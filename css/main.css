@@ -386,3 +386,6 @@ select.ec {
   padding: 16px 20px;
   margin-bottom: 16px;
 }
+
+/* td-sum 마지막 셀 스타일 통일 */
+.std-table .td-sum { border-bottom: 1px solid #CCC !important; border-right: 1px solid #DDD !important; }
