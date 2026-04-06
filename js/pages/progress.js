@@ -201,6 +201,7 @@ Pages.Progress = (() => {
           <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:4px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer">+ 등록</button>
           <span id="nl-ok" style="display:none;font-size:13px;color:#3B6D11;font-weight:500">✓</span>
         </td>
+        <td style="${tdS}"></td>
       </tr>`;
   }
 
