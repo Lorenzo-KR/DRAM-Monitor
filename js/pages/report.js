@@ -239,12 +239,12 @@ Pages.Report = (() => {
       table3 = `<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-family:'Pretendard',-apple-system,sans-serif">
         <colgroup>
           <col style="width:22%">
-          <col style="width:8%">
-          <col style="width:12%">
-          <col style="width:26%">
           <col style="width:12%">
           <col style="width:12%">
-          <col style="width:8%">
+          <col style="width:20%">
+          <col style="width:12%">
+          <col style="width:12%">
+          <col style="width:10%">
         </colgroup>
         <thead><tr>
           ${TH('LOT번호')}
