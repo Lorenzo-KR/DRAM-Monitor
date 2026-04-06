@@ -116,7 +116,7 @@ Pages.Revenue = (() => {
     function bdg(txt, style) { return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap;border:1px solid;${style}">${txt}</span>`; }
 
     if (!lots.length) {
-      tbody.innerHTML = `<tr><td colspan="14" style="padding:20px;text-align:center;color:#000">데이터 없음</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" class="td-c" style="padding:20px;color:#999">데이터 없음</td></tr>`;
     } else {
       let totalAmt = 0;
       const rows = lots.map((lot, i) => {
@@ -173,8 +173,6 @@ Pages.Revenue = (() => {
         return `
           <tr>
             <td class="td-c">${i + 1}</td>
-            <td class="td-c td-ellipsis">${lot.inDate || '—'}</td>
-            <td class="td-c td-ellipsis" style="color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
             <td class="td-c td-ellipsis" style="font-family:'DM Mono',monospace">${lot.lotNo || lot.id}</td>
             <td class="td-c">${bdg(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
             <td class="td-c">${bdg(lot.country, CO_STYLE[lot.country] || '')}</td>
@@ -213,6 +211,8 @@ Pages.Revenue = (() => {
                 : '<span style="color:#999">—</span>'}
             </td>
 
+            <td class="td-c td-ellipsis">${lot.inDate || '—'}</td>
+            <td class="td-c td-ellipsis" style="color:${doneDateColor};font-weight:${isDone?'500':'400'}">${doneDate}</td>
             <td class="td-c" style="${claimStyle}">${claimLabel}</td>
             <td class="td-c" style="width:50px">
               ${hasInv
@@ -242,9 +242,10 @@ Pages.Revenue = (() => {
       // 합계 행
       const totalRow = `
         <tr>
-          <td colspan="9" class="td-sum td-l">합계 (${lots.length}건)</td>
+          <td class="td-sum td-c">${lots.length}</td>
+          <td class="td-sum td-l" colspan="6">합계</td>
           <td class="td-sum td-num">$${formatNumber(Math.round(totalAmt))}</td>
-          <td colspan="3" class="td-sum"></td>
+          <td class="td-sum" colspan="6"></td>
         </tr>`;
 
       tbody.innerHTML = rows + totalRow;
