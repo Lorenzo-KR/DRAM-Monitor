@@ -15,23 +15,24 @@
 Pages.Dashboard = (() => {
 
   // ── 공통 스타일 상수 ────────────────────────────────────────
+    const FS = "font-size:12px;font-family:'Pretendard',-apple-system,sans-serif";
     const S = {
-    th:  'padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap',
-    thr: 'padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap',
-    td:  'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;font-size:12px',
-    tdr: 'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;text-align:right;font-family:var(--font-mono);font-size:12px',
-    tdm: 'padding:10px 14px;border-top:1px solid var(--tbl-row-bd);color:var(--tbl-tx-body);vertical-align:middle;font-size:12px',
+    th:  `padding:7px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`,
+    thr: `padding:7px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`,
+    td:  `padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;color:#333;vertical-align:middle;${FS}`,
+    tdr: `padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;color:#333;vertical-align:middle;text-align:right;font-family:'DM Mono',monospace;font-size:12px`,
+    tdm: `padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;color:#333;vertical-align:middle;${FS}`,
   };
 
   // ── 배지 헬퍼 ───────────────────────────────────────────────
   const CO_STYLE = {
-    HK: 'border:1px solid var(--bd);color:var(--tx2);background:transparent',
-    SG: 'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    HK: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB',
+    SG: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0',
   };
   const BIZ_STYLE = {
-    DRAM: 'border:1px solid var(--bd);color:var(--tx2);background:transparent',
-    SSD:  'border:1px solid var(--bd);color:var(--tx2);background:transparent',
-    MID:  'border:1px solid var(--bd);color:var(--tx2);background:transparent',
+    DRAM: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB',
+    SSD:  'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0',
+    MID:  'border:1px solid #C4A8DC;color:#6A3D7C;background:#F3EEF8',
   };
   const ST_STYLE = {
     done:    'border:1px solid var(--bd);color:var(--tx2);background:transparent',
@@ -41,7 +42,7 @@ Pages.Dashboard = (() => {
   const ST_LABEL = { done: '완료', inprog: '진행중', overdue: '지연' };
 
   function badge(text, style) {
-    return `<span style="display:inline-flex;align-items:center;font-size:14px;font-weight:500;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
+    return `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
   }
 
   // ── 1. KPI 계산 ─────────────────────────────────────────────
@@ -268,32 +269,34 @@ Pages.Dashboard = (() => {
       const barColor = st === 'overdue' ? '#dc2626' : st === 'upcoming' ? 'var(--tx3)' : st === 'done' ? 'var(--tx)' : pct >= 80 ? 'var(--tx3)' : 'var(--tx2)';
       const stStyle  = st === 'upcoming' ? 'border:1px solid #5AC8FA;color:#0077A8;background:#F0F8FF' : ST_STYLE[st] || '';
       const stLabel  = st === 'upcoming' ? '입고예정' : ST_LABEL[st] || st;
-      const rowBg    = isUpcoming ? 'background:var(--bg)' : isUnpaid ? 'background:#FAFAF9' : '';
+      const rowIdx   = allLots.indexOf(lot);
+      const evenBg  = rowIdx % 2 === 1 ? 'background:#FAFAFA' : 'background:#fff';
+      const rowBg   = isUpcoming ? 'background:#F8F8F8' : isUnpaid ? 'background:#FFF8F0' : evenBg;
       const unpaidBadge = isUnpaid
         ? badge(inv?.status === 'partial' ? '부분수금' : '미수금', inv?.status === 'partial' ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent' : 'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2')
         : '';
 
       return `
         <tr style="${rowBg}">
-          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
+          <td style="${S.td};font-family:var(--font-mono)">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
-          <td style="${S.tdm};font-size:15px">${lot.customerName || '—'}</td>
-          <td style="${S.tdr};font-size:15px">${formatNumber(qty)}</td>
-          <td style="${S.tdr};font-size:15px;color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${isUpcoming ? '—' : formatNumber(cum)}</td>
-          <td style="${S.tdr};font-size:15px;color:${rem > 0 ? 'var(--tx3)' : 'var(--tx3)'}">${formatNumber(rem)}</td>
+          <td style="${S.tdm}">${lot.customerName || '—'}</td>
+          <td style="${S.tdr}">${formatNumber(qty)}</td>
+          <td style="${S.tdr};color:${CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)'}">${isUpcoming ? '—' : formatNumber(cum)}</td>
+          <td style="${S.tdr};color:${rem > 0 ? 'var(--tx3)' : 'var(--tx3)'}">${formatNumber(rem)}</td>
           <td style="${S.td};min-width:120px">
             ${isUpcoming
               ? `<span style="font-size:15px;color:#0C447C;font-weight:500">D-${ddIn}</span>`
               : `<div style="display:flex;align-items:center;gap:6px">
-                  <div style="flex:1;height:5px;background:var(--bd);border-radius:2px;overflow:hidden">
+                  <div style="flex:1;height:4px;background:#E0E0E0;border-radius:2px;overflow:hidden">
                     <div style="height:100%;border-radius:2px;background:${barColor};width:${pct}%"></div>
                   </div>
                   <span style="font-size:14px;font-weight:500;color:${pctColor};min-width:28px;text-align:right">${pct}%</span>
                 </div>`}
           </td>
-          <td style="${S.tdm};font-size:15px;color:${isUpcoming ? 'var(--tx2)' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};font-size:15px;color:${st === 'overdue' ? '#dc2626' : isDone ? 'var(--tx)' : 'var(--tx3)'}">
+          <td style="${S.tdm};color:${isUpcoming ? 'var(--tx2)' : 'var(--tx3)'};font-weight:${isUpcoming ? '500' : '400'}">${lot.inDate || '—'}</td>
+          <td style="${S.tdm};color:${st === 'overdue' ? '#dc2626' : isDone ? 'var(--tx)' : 'var(--tx3)'}">
             ${isDone
               ? (lot.actualDone || lot.targetDate || '—')
               : `${lot.targetDate || '—'}${dd !== null && !isUpcoming ? `<span style="font-size:13px;margin-left:4px;color:${dd < 0 ? '#dc2626' : dd <= 3 ? 'var(--tx3)' : 'var(--tx3)'}">(${dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd})</span>` : ''}`}
@@ -304,8 +307,8 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정 · 미수금)</span></div>
-      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
-        <table style="width:100%;border-collapse:collapse">
+      <div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">
+        <table style="width:100%;border-collapse:collapse;font-family:'Pretendard',-apple-system,sans-serif">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
             <th style="${S.thr}">입고량</th><th style="${S.thr}">처리</th><th style="${S.thr}">잔량</th>
@@ -326,21 +329,22 @@ Pages.Dashboard = (() => {
     });
     if (!paidLots.length) return '';
     const sorted = [...paidLots].sort((a, b) => String(b.actualDone || b.inDate || '').localeCompare(String(a.actualDone || a.inDate || '')));
-    const rows = sorted.map(lot => {
+    const rows = sorted.map((lot, ci) => {
       const inv = invoices.find(r => String(r.lotId) === String(lot.id));
       const rev = inv ? parseNumber(inv.total || inv.amount) : parseNumber(lot.price) * parseNumber(lot.qty);
       const tat = (lot.inDate && lot.actualDone) ? diffDays(lot.inDate, lot.actualDone) + 'd' : '—';
+      const cEven = ci % 2 === 1 ? 'background:#FAFAFA' : 'background:#fff';
       return `
-        <tr>
-          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${lot.lotNo || lot.id}</td>
+        <tr style="${cEven}">
+          <td style="${S.td};font-family:var(--font-mono)">${lot.lotNo || lot.id}</td>
           <td style="${S.td}">${badge(lot.country, CO_STYLE[lot.country] || '')}</td>
           <td style="${S.td}">${badge(lot.biz, BIZ_STYLE[lot.biz] || '')}</td>
           <td style="${S.tdm}">${lot.customerName || '—'}</td>
           <td style="${S.tdr}">${formatNumber(parseNumber(lot.qty))}</td>
-          <td style="${S.tdm};font-size:15px">${lot.inDate || '—'}</td>
-          <td style="${S.tdm};font-size:15px">${lot.actualDone || '—'}</td>
-          <td style="${S.tdm};font-size:15px">${tat}</td>
-          <td style="${S.tdr};font-size:15px;color:${rev > 0 ? 'var(--tx)' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—'}</td>
+          <td style="${S.tdm}">${lot.inDate || '—'}</td>
+          <td style="${S.tdm}">${lot.actualDone || '—'}</td>
+          <td style="${S.tdm}">${tat}</td>
+          <td style="${S.tdr};color:${rev > 0 ? 'var(--tx)' : 'var(--tx3)'}">${rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—'}</td>
         </tr>`;
     }).join('');
 
@@ -351,8 +355,8 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Completed job orders</div>
-      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
-        <table style="width:100%;border-collapse:collapse">
+      <div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">
+        <table style="width:100%;border-collapse:collapse;font-family:'Pretendard',-apple-system,sans-serif">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th><th style="${S.th}">고객사</th>
             <th style="${S.thr}">수량</th><th style="${S.th}">입고일</th><th style="${S.th}">완료일</th>
@@ -360,11 +364,11 @@ Pages.Dashboard = (() => {
           </tr></thead>
           <tbody>
             ${rows}
-            <tr style="background:var(--bg)">
-              <td colspan="4" style="padding:10px 14px;font-size:15px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
-              <td style="${S.tdr};font-size:15px;border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
-              <td colspan="3" style="border-top:0.5px solid var(--bd)"></td>
-              <td style="${S.tdr};font-size:15px;border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
+            <tr style="background:#F0F0F0">
+              <td colspan="4" style="padding:10px 14px;color:var(--tx2);border-top:0.5px solid var(--bd)">Total</td>
+              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600">${formatNumber(sorted.reduce((s,l) => s + parseNumber(l.qty), 0))}</td>
+              <td colspan="3" style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
+              <td style="${S.tdr};border-top:0.5px solid var(--bd);font-weight:600;color:#085041">${totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—'}</td>
             </tr>
           </tbody>
         </table>
@@ -380,7 +384,7 @@ Pages.Dashboard = (() => {
       const ddColor = dd === null ? 'var(--tx3)' : dd <= 3 ? 'var(--tx3)' : 'var(--tx2)';
       return `
         <tr>
-          <td style="${S.td};font-family:var(--font-mono);font-size:15px;font-weight:500">${s.lotNo || '—'}</td>
+          <td style="${S.td};font-family:var(--font-mono)">${s.lotNo || '—'}</td>
           <td style="${S.td}">${badge(s.country, CO_STYLE[s.country] || '')}</td>
           <td style="${S.td}">${badge(s.biz, BIZ_STYLE[s.biz] || '')}</td>
           <td style="${S.tdm}">${s.customerName || '—'}</td>
@@ -393,8 +397,8 @@ Pages.Dashboard = (() => {
 
     return `
       <div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">입고 예정</div>
-      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:12px">
-        <table style="width:100%;border-collapse:collapse">
+      <div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">
+        <table style="width:100%;border-collapse:collapse;font-family:'Pretendard',-apple-system,sans-serif">
           <thead><tr>
             <th style="${S.th}">LOT 번호</th><th style="${S.th}">지역</th><th style="${S.th}">사업</th>
             <th style="${S.th}">고객사</th><th style="${S.thr}">예정수량</th>
