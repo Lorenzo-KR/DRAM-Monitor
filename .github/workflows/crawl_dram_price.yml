@@ -3,11 +3,11 @@ name: DRAM Price Crawler
 on:
   schedule:
     - cron: '0 2 * * *'  # 매일 KST 11:00 (UTC 02:00)
-  workflow_dispatch:       # 수동 실행
+  workflow_dispatch:
 
 jobs:
   crawl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # 24 대신 22.04 사용 (libasound2 호환)
     steps:
       - uses: actions/checkout@v4
 
@@ -19,8 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r crawler/requirements.txt
-          playwright install chromium
-          playwright install-deps chromium
+          playwright install chromium --with-deps
 
       - name: Run crawler
         env:
