@@ -8,9 +8,9 @@ Pages.KpiTarget = (() => {
   let _year        = new Date().getFullYear();
   let _bizSet      = new Set(['all']);
   let _rollingYear = new Date().getFullYear();
+  let _rollingMode = 'kpi'; // 'kpi' | 'ec'
 
   // ── 롤링 데이터 저장소 ─────────────────────────────────────
-  // 구조: { 2026: { DRAM: [m1..m12], SSD: [...], MID: [...], TBD1..TBD5 } }
   let _rolling = JSON.parse(localStorage.getItem('kpi_rolling') || 'null') || {
     2026: {
       DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
@@ -33,21 +33,37 @@ Pages.KpiTarget = (() => {
 
   const BIZ_KEY = { DRAM: 'DRAM', SSD: 'SSD', MID: 'MID', SCR: 'SCR', RMA: 'RMA', SUS: 'SUS', MOD: 'MOD' };
 
+  // ── EC 롤링 저장소 (Expected Cost 기준) ───────────────────
+  let _ecRolling = JSON.parse(localStorage.getItem('ec_rolling') || 'null') || {
+    2026: { DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
+            SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+            SUS:  Array(12).fill(0), MOD:  Array(12).fill(0) },
+    2027: { DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
+            SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+            SUS:  Array(12).fill(0), MOD:  Array(12).fill(0) },
+    2028: { DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
+            SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+            SUS:  Array(12).fill(0), MOD:  Array(12).fill(0) },
+  };
+
+  function _getActiveRolling() { return _rollingMode === 'ec' ? _ecRolling : _rolling; }
+
   // ── 롤링 기반 목표 계산 ─────────────────────────────────────
-  function _getRollingMonths(year, biz) {
-    // Million USD → USD 변환 (* 1,000,000)
-    return (_rolling[year]?.[biz] || Array(12).fill(0)).map(v => (parseFloat(v)||0) * 1000000);
+  function _getRollingMonths(year, biz, mode) {
+    const src = (mode === 'ec') ? _ecRolling : _rolling;
+    return (src[year]?.[biz] || Array(12).fill(0)).map(v => (parseFloat(v)||0) * 1000000);
   }
 
-  function _getTarget(year, biz) {
-    return _getRollingMonths(year, biz).reduce((s,v) => s+v, 0);
+  function _getTarget(year, biz, mode) {
+    return _getRollingMonths(year, biz, mode).reduce((s,v) => s+v, 0);
   }
 
-  function _getTotalTarget(year) {
-    return CONFIG.BIZ_LIST.reduce((s, b) => s + _getTarget(year, b), 0);
+  function _getTotalTarget(year, mode) {
+    return CONFIG.BIZ_LIST.reduce((s, b) => s + _getTarget(year, b, mode), 0);
   }
 
-  function _getMonthlyTarget(year, biz, month) {
+  function _getMonthlyTarget(year, biz, month, mode) {
+    return _getRollingMonths(year, biz, mode)[month - 1] || 0;
     // month: 1~12
     return _getRollingMonths(year, biz)[month - 1] || 0;
   }
@@ -68,27 +84,45 @@ Pages.KpiTarget = (() => {
 
   // ── 롤링 저장 ──────────────────────────────────────────────
   function _saveRollingData(year, data) {
-    if (!_rolling[year]) _rolling[year] = {};
-    Object.assign(_rolling[year], data);
-    localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
-    // 서버에도 저장 (settings 시트)
-    Api.setSetting('kpi_rolling', JSON.stringify(_rolling));
+    if (_rollingMode === 'ec') {
+      if (!_ecRolling[year]) _ecRolling[year] = {};
+      Object.assign(_ecRolling[year], data);
+      localStorage.setItem('ec_rolling', JSON.stringify(_ecRolling));
+      Api.setSetting('ec_rolling', JSON.stringify(_ecRolling));
+    } else {
+      if (!_rolling[year]) _rolling[year] = {};
+      Object.assign(_rolling[year], data);
+      localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
+      Api.setSetting('kpi_rolling', JSON.stringify(_rolling));
+    }
   }
 
   // ── 서버 settings에서 rolling 데이터 동기화 ───────────────
   function _loadFromSettings() {
     const raw = Store.getSetting('kpi_rolling');
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        // 서버 값을 로컬에 병합 (서버 우선)
-        Object.keys(parsed).forEach(y => {
-          _rolling[y] = { ...(_rolling[y] || {}), ...parsed[y] };
-        });
-        localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
-      }
-    } catch(e) { /* ignore */ }
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(parsed).forEach(y => {
+            _rolling[y] = { ...(_rolling[y] || {}), ...parsed[y] };
+          });
+          localStorage.setItem('kpi_rolling', JSON.stringify(_rolling));
+        }
+      } catch(e) { /* ignore */ }
+    }
+    const rawEc = Store.getSetting('ec_rolling');
+    if (rawEc) {
+      try {
+        const parsed = JSON.parse(rawEc);
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(parsed).forEach(y => {
+            _ecRolling[y] = { ...(_ecRolling[y] || {}), ...parsed[y] };
+          });
+          localStorage.setItem('ec_rolling', JSON.stringify(_ecRolling));
+        }
+      } catch(e) { /* ignore */ }
+    }
   }
 
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
@@ -123,7 +157,8 @@ Pages.KpiTarget = (() => {
     const isAll   = _bizSet.has('all');
     const bizList = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
 
-    const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b), 0);
+    const mode = _rollingMode;
+    const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b, mode), 0);
     if (totalTgt === 0) {
       el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>`;
       return;
@@ -402,11 +437,27 @@ Pages.KpiTarget = (() => {
           <!-- 월별 트래킹 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;gap:6px;flex-wrap:wrap">${bizBtns}</div>
-            <button onclick="Pages.KpiTarget.openRolling()"
-              style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer">
-              <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-              KPI 롤링 데이터 입력
-            </button>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <!-- KPI/EC 기준 선택 -->
+              <div style="display:flex;border:1.5px solid #CCC;border-radius:7px;overflow:hidden">
+                <button id="kpi-mode-kpi" onclick="Pages.KpiTarget.setMode('kpi')"
+                  style="padding:6px 14px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:#1D1D1F;color:#fff;font-family:Pretendard,sans-serif">KPI 기준</button>
+                <button id="kpi-mode-ec" onclick="Pages.KpiTarget.setMode('ec')"
+                  style="padding:6px 14px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#555;font-family:Pretendard,sans-serif">EC 기준</button>
+              </div>
+              <!-- KPI 롤링 입력 -->
+              <button onclick="Pages.KpiTarget.openRolling('kpi')"
+                style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer;font-family:Pretendard,sans-serif">
+                <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                KPI 롤링 입력
+              </button>
+              <!-- EC 롤링 입력 -->
+              <button onclick="Pages.KpiTarget.openRolling('ec')"
+                style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #0F6E56;border-radius:7px;background:none;color:#0F6E56;font-size:12px;font-weight:500;cursor:pointer;font-family:Pretendard,sans-serif">
+                <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                EC 롤링 입력
+              </button>
+            </div>
           </div>
           <div id="kpi-tracking-wrap"></div>
         </div>`;
@@ -414,11 +465,14 @@ Pages.KpiTarget = (() => {
       _renderTracking();
     },
 
-    openRolling() {
+    openRolling(mode) {
       _rollingYear = _year;
+      _rollingMode = mode || 'kpi';
       const el = document.getElementById('kpi-rolling-panel');
       const ov = document.getElementById('kpi-rolling-overlay');
-      // 연도 select 동기화
+      // 패널 제목 업데이트
+      const title = document.getElementById('kpi-rolling-title');
+      if (title) title.textContent = _rollingMode === 'ec' ? 'EC 롤링 데이터 입력' : 'KPI 롤링 데이터 입력';
       const sel = document.querySelector('#kpi-rolling-panel select');
       if (sel) sel.value = String(_rollingYear);
       if (el) { el.style.display = 'block'; document.body.style.overflow = 'hidden'; }
@@ -476,7 +530,8 @@ Pages.KpiTarget = (() => {
     renderRolling() {
       const wrap = document.getElementById('kpi-rolling-inner'); if (!wrap) return;
       const y = _rollingYear;
-      const yData = _rolling[y] || {};
+      const src = _rollingMode === 'ec' ? _ecRolling : _rolling;
+      const yData = src[y] || {};
 
       const ROWS = [
         { key:'DRAM', label:'DRAM Test',              fixed:true },
@@ -516,7 +571,7 @@ Pages.KpiTarget = (() => {
       ).join('');
 
       wrap.innerHTML = `
-        <div style="font-size:12px;color:#E24B4A;font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; 저장하면 목표 설정에 즉시 반영됩니다</div>
+        <div style="font-size:12px;color:${_rollingMode==='ec'?'#0F6E56':'#E24B4A'};font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; ${_rollingMode==='ec'?'EC(예상비용) 기준':'KPI 목표 기준'} · 저장하면 즉시 반영됩니다</div>
         <div style="overflow-x:auto">
           <table style="border-collapse:collapse;table-layout:auto">
             <thead>
@@ -554,7 +609,17 @@ Pages.KpiTarget = (() => {
       Pages.KpiTarget.closeRolling();
       Pages.KpiTarget.render();
       if (typeof Nav !== 'undefined' && Nav.current && Nav.current() === 'dash') Pages.Dashboard.render();
-      UI.toast(`${y}년 KPI 롤링 데이터 저장됨`);
+      UI.toast(`${y}년 ${_rollingMode === 'ec' ? 'EC' : 'KPI'} 롤링 데이터 저장됨`);
+    },
+
+    setMode(mode) {
+      _rollingMode = mode;
+      // 버튼 UI 업데이트
+      const kpiBtn = document.getElementById('kpi-mode-kpi');
+      const ecBtn  = document.getElementById('kpi-mode-ec');
+      if (kpiBtn) { kpiBtn.style.background = mode==='kpi' ? '#1D1D1F' : '#fff'; kpiBtn.style.color = mode==='kpi' ? '#fff' : '#555'; }
+      if (ecBtn)  { ecBtn.style.background  = mode==='ec'  ? '#0F6E56' : '#fff'; ecBtn.style.color  = mode==='ec'  ? '#fff' : '#555'; }
+      _renderTracking();
     },
   };
 
