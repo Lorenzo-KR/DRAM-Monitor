@@ -16,22 +16,22 @@ Pages.KpiTarget = (() => {
       DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
       SSD:  [0,0,0.1,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667],
       MID:  [0,0,1.2,0,0,1.2,0,0,1.2,0,0,1.2],
-      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
-      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+      SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+      SUS:  Array(12).fill(0), MOD:  Array(12).fill(0),
     },
     2027: {
       DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
-      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
-      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+      SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+      SUS:  Array(12).fill(0), MOD:  Array(12).fill(0),
     },
     2028: {
       DRAM: Array(12).fill(0), SSD: Array(12).fill(0), MID: Array(12).fill(0),
-      TBD1: Array(12).fill(0), TBD2: Array(12).fill(0), TBD3: Array(12).fill(0),
-      TBD4: Array(12).fill(0), TBD5: Array(12).fill(0),
+      SCR:  Array(12).fill(0), RMA:  Array(12).fill(0),
+      SUS:  Array(12).fill(0), MOD:  Array(12).fill(0),
     },
   };
 
-  const BIZ_KEY = { DRAM: 'DRAM', SSD: 'SSD', MID: 'MID' };
+  const BIZ_KEY = { DRAM: 'DRAM', SSD: 'SSD', MID: 'MID', SCR: 'SCR', RMA: 'RMA', SUS: 'SUS', MOD: 'MOD' };
 
   // ── 롤링 기반 목표 계산 ─────────────────────────────────────
   function _getRollingMonths(year, biz) {
@@ -479,14 +479,13 @@ Pages.KpiTarget = (() => {
       const yData = _rolling[y] || {};
 
       const ROWS = [
-        { key:'DRAM', label:'DRAM Test', fixed:true },
-        { key:'SSD',  label:'SSD Test',  fixed:true },
-        { key:'MID',  label:'Mobile Ink Die', fixed:true },
-        { key:'TBD1', label:'TBD', fixed:false },
-        { key:'TBD2', label:'TBD', fixed:false },
-        { key:'TBD3', label:'TBD', fixed:false },
-        { key:'TBD4', label:'TBD', fixed:false },
-        { key:'TBD5', label:'TBD', fixed:false },
+        { key:'DRAM', label:'DRAM Test',              fixed:true },
+        { key:'SSD',  label:'SSD Test',               fixed:true },
+        { key:'MID',  label:'Mobile Ink Die',          fixed:true },
+        { key:'SCR',  label:'Scrap 자재 공급',         fixed:true },
+        { key:'RMA',  label:'RMA 운영',               fixed:true },
+        { key:'SUS',  label:'Sustainability 컨설팅',   fixed:true },
+        { key:'MOD',  label:'모듈 세일즈',             fixed:true },
       ];
       const MO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
       const thS = 'padding:6px 6px;text-align:center;font-size:11px;font-weight:500;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap';
@@ -543,7 +542,7 @@ Pages.KpiTarget = (() => {
     saveRolling() {
       const body = document.getElementById('rolling-tbody'); if (!body) return;
       const y = _rollingYear;
-      const ROWS = ['DRAM','SSD','MID','TBD1','TBD2','TBD3','TBD4','TBD5'];
+      const ROWS = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
       const rows = body.querySelectorAll('tr');
       const newData = {};
       rows.forEach((row, ri) => {
