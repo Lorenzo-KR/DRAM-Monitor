@@ -311,11 +311,12 @@ Pages.Report = (() => {
             ${_dot(dot)}
             <span style="font-size:14px;font-weight:700;color:#111;font-family:'Pretendard',-apple-system,sans-serif">${title}</span>
           </div>
-          <div style="display:flex;align-items:flex-start;gap:0">
-            <div style="${half};border-right:1px solid #E0E0E0;padding-right:12px;overflow:hidden">
+          <div style="display:flex;align-items:stretch;gap:0;position:relative">
+            <div style="${half};padding-right:12px;overflow:hidden">
               <div style="font-size:11px;color:#888;margin-bottom:8px;font-family:'Pretendard',-apple-system,sans-serif">${subFn?subFn(prev['cnt'+tableKey]):''}${prev['cnt'+tableKey]}건</div>
               ${prev['table'+tableKey]}
             </div>
+            <div style="width:1px;background:#D0D0D0;flex-shrink:0;align-self:stretch;margin:0 0"></div>
             <div style="${half};padding-left:12px;overflow:hidden">
               <div style="font-size:11px;color:#888;margin-bottom:8px;font-family:'Pretendard',-apple-system,sans-serif">${subFn?subFn(curr['cnt'+tableKey]):''}${curr['cnt'+tableKey]}건</div>
               ${curr['table'+tableKey]}
@@ -327,11 +328,12 @@ Pages.Report = (() => {
         <div style="margin-bottom:28px;background:#F7F7F5;border-radius:10px;padding:16px">
           <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #222;font-family:'Pretendard',-apple-system,sans-serif">${coLabel}</div>
           <!-- 월 헤더 -->
-          <div style="display:flex;margin-bottom:12px">
-            <div style="${half};border-right:1px solid #E8E8ED">
+          <div style="display:flex;margin-bottom:12px;align-items:stretch">
+            <div style="${half};padding-right:12px">
               <span style="${mhStyle(false)}">${prevLabel} (전월)</span>
             </div>
-            <div style="${half}">
+            <div style="width:1px;background:#D0D0D0;flex-shrink:0;align-self:stretch"></div>
+            <div style="${half};padding-left:12px">
               <span style="${mhStyle(true)}">${currLabel} (기준월)</span>
             </div>
           </div>
