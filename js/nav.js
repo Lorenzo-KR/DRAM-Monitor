@@ -27,6 +27,7 @@ const Nav = (() => {
     customers:  { index: 7, render: () => Pages.Customers.render() },
     report:     { index: 8, render: () => Pages.Report.render() },
     changelog:  { index: 9, render: () => Pages.Changelog.render() },
+    dramprice:  { index: 10, render: () => Pages.DramPrice.render() },
   };
 
   let _current = null;
