@@ -1,0 +1,29 @@
+name: DRAM Price Crawler
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 매일 KST 11:00 (UTC 02:00)
+  workflow_dispatch:       # 수동 실행
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r crawler/requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run crawler
+        env:
+          GSHEET_ID: ${{ secrets.DRAM_PRICE_SHEET_ID }}
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+        run: python crawler/crawl_dram_price.py
