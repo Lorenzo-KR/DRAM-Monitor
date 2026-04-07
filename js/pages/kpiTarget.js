@@ -48,6 +48,37 @@ Pages.KpiTarget = (() => {
 
   function _getActiveRolling() { return _rollingMode === 'ec' ? _ecRolling : _rolling; }
 
+  // ── 사업별 Factor (KPI 기준 매출이익 계산용) ─────────────
+  // Factor: 매출이익 = 매출 × Factor
+  let _factors = JSON.parse(localStorage.getItem('kpi_factors') || 'null') || {
+    DRAM: 1.0, SSD: 1.0, MID: 1.0, SCR: 1.0, RMA: 1.0, SUS: 1.0, MOD: 1.0,
+  };
+
+  function _getFactor(biz) { return parseFloat(_factors[biz] ?? 1.0); }
+
+  function _saveFactors(data) {
+    Object.assign(_factors, data);
+    localStorage.setItem('kpi_factors', JSON.stringify(_factors));
+    Api.setSetting('kpi_factors', JSON.stringify(_factors));
+  }
+
+  function _loadFactors() {
+    const raw = Store.getSetting('kpi_factors');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(_factors, parsed);
+        localStorage.setItem('kpi_factors', JSON.stringify(_factors));
+      }
+    } catch(e) {}
+  }
+
+  // KPI 기준 매출이익 = 실제매출 × Factor
+  function _getActualProfit(year, biz) {
+    return _getActual(year, biz) * _getFactor(biz);
+  }
+
   // ── 롤링 기반 목표 계산 ─────────────────────────────────────
   function _getRollingMonths(year, biz, mode) {
     const src = (mode === 'ec') ? _ecRolling : _rolling;
@@ -121,8 +152,9 @@ Pages.KpiTarget = (() => {
           });
           localStorage.setItem('ec_rolling', JSON.stringify(_ecRolling));
         }
-      } catch(e) { /* ignore */ }
+      } catch(e) {}
     }
+    _loadFactors();
   }
 
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
@@ -326,15 +358,19 @@ Pages.KpiTarget = (() => {
     loadFromSettings: ()                 => _loadFromSettings(),
 
     render() {
-      // 페이지 진입 시 서버 settings → _rolling 재동기화 (로드 타이밍 보정)
       _loadFromSettings();
       const el = document.getElementById('kpitarget-body'); if (!el) return;
       const year = _year;
+      const mode = _rollingMode;
 
-      // 롤링 데이터 기반 연간 목표
+      // 롤링 데이터 기반 연간 목표 (KPI=매출이익 / EC=매출 기준)
+      const isKpi = mode === 'kpi';
       const bizRows = CONFIG.BIZ_LIST.map(b => {
-        const tgt    = _getTarget(year, b);
-        const act    = _getActual(year, b);
+        const tgt    = _getTarget(year, b, mode);
+        const rawAct = _getActual(year, b);
+        // KPI 기준: 실적도 매출이익(×Factor)으로 환산
+        const act    = isKpi ? _getActualProfit(year, b) : rawAct;
+        const factor = _getFactor(b);
         const pct    = tgt > 0 ? Math.min(100, Math.round(act / tgt * 100)) : 0;
         const rem    = Math.max(0, tgt - act);
         const color  = CONFIG.BIZ_COLORS[b];
@@ -342,18 +378,24 @@ Pages.KpiTarget = (() => {
 
         return `
           <tr style="border-top:1px solid var(--tbl-row-bd)">
-            <td style="padding:12px 14px"><span style="font-size:12px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span></td>
-            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
-              ${tgt > 0 ? '$' + formatNumber(Math.round(tgt)) : '<span style="color:var(--tbl-tx-body);font-weight:400">롤링 데이터 미입력</span>'}
+            <td style="padding:12px 14px">
+              <span style="font-size:12px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span>
+              ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:6px">×${factor}</span>` : ''}
             </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">${act>0?'$'+formatNumber(Math.round(act)):'—'}</td>
+            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
+              ${tgt > 0 ? '$' + formatNumber(Math.round(tgt)) : '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'}
+            </td>
+            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">
+              ${act > 0 ? '$' + formatNumber(Math.round(act)) : '—'}
+              ${isKpi && rawAct > 0 ? `<div style="font-size:10px;color:#888">매출 $${formatNumber(Math.round(rawAct))}</div>` : ''}
+            </td>
             <td style="padding:12px 14px;min-width:160px">
               ${tgt>0?`<div style="display:flex;align-items:center;gap:8px">
                 <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                   <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
                 </div>
                 <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
-              </div>`:'<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 데이터 필요</span>'}
+              </div>`:'<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 필요</span>'}
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">
               ${tgt>0?'$'+formatNumber(Math.round(rem)):'—'}
@@ -361,8 +403,10 @@ Pages.KpiTarget = (() => {
           </tr>`;
       }).join('');
 
-      const totalTgt = _getTotalTarget(year);
-      const totalAct = CONFIG.BIZ_LIST.reduce((s, b) => s + _getActual(year, b), 0);
+      const totalTgt = _getTotalTarget(year, mode);
+      const totalAct = isKpi
+        ? CONFIG.BIZ_LIST.reduce((s, b) => s + _getActualProfit(year, b), 0)
+        : CONFIG.BIZ_LIST.reduce((s, b) => s + _getActual(year, b), 0);
       const totalPct = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
       const totalRem = Math.max(0, totalTgt - totalAct);
       const totalClr = totalPct >= 100 ? '#1D9E75' : totalPct >= 70 ? 'var(--navy)' : '#EF9F27';
@@ -376,6 +420,8 @@ Pages.KpiTarget = (() => {
 
       const TH  = l => `<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
       const THR = l => `<th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
+      const actHeader = isKpi ? '누적 매출이익' : '누적 실적';
+      const tgtHeader = isKpi ? '목표 매출이익' : '목표 매출';
 
       const bizBtns = [
         {key:'all', label:'전체', color:'#1B4F8A'},
@@ -387,34 +433,76 @@ Pages.KpiTarget = (() => {
           background:${on?color:'none'};color:${on?'#fff':color};transition:.15s">${label}</button>`;
       }).join('');
 
+      const modeLabel = mode === 'ec' ? 'EC 기준' : 'KPI 기준';
+      const modeColor = mode === 'ec' ? '#0F6E56' : '#185FA5';
+
       el.innerHTML = `
         <div style="max-width:1000px">
+
+          <!-- ① KPI/EC 기준 선택 + 롤링 입력 버튼 (최상단) -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--tx2);font-weight:500">기준 선택:</span>
+              <div style="display:flex;border:1.5px solid #CCC;border-radius:7px;overflow:hidden">
+                <button id="kpi-mode-kpi" onclick="Pages.KpiTarget.setMode('kpi')"
+                  style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
+                         background:${mode==='kpi'?'#1D1D1F':'#fff'};color:${mode==='kpi'?'#fff':'#555'};
+                         font-family:Pretendard,sans-serif">KPI 기준</button>
+                <button id="kpi-mode-ec" onclick="Pages.KpiTarget.setMode('ec')"
+                  style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
+                         background:${mode==='ec'?'#0F6E56':'#fff'};color:${mode==='ec'?'#fff':'#555'};
+                         font-family:Pretendard,sans-serif">EC 기준</button>
+              </div>
+              <span style="font-size:11px;color:${modeColor};font-weight:600;padding:3px 8px;border:1px solid ${modeColor};border-radius:4px">${modeLabel}</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="Pages.KpiTarget.openRolling('kpi')"
+                style="display:flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer">
+                <svg width="12" height="12" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                KPI 롤링 입력
+              </button>
+              <button onclick="Pages.KpiTarget.openRolling('ec')"
+                style="display:flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #0F6E56;border-radius:7px;background:none;color:#0F6E56;font-size:12px;font-weight:500;cursor:pointer">
+                <svg width="12" height="12" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                EC 롤링 입력
+              </button>
+              ${isKpi ? `
+              <button onclick="Pages.KpiTarget.openFactorPanel()"
+                style="display:flex;align-items:center;gap:5px;padding:6px 12px;border:1.5px solid #6A3D7C;border-radius:7px;background:none;color:#6A3D7C;font-size:12px;font-weight:500;cursor:pointer">
+                <svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                Factor 설정
+              </button>` : ''}
+            </div>
+          </div>
+
+          <!-- ② 연도 탭 -->
           <div style="display:flex;gap:6px;margin-bottom:16px">${yearTabs}</div>
 
+          <!-- ③ 요약 카드 -->
           ${totalTgt > 0 ? `
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표</div>
-              <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
-              <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">롤링 데이터 합계</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${modeLabel})</div>
+              <div style="font-size:18px;font-weight:600;color:${modeColor}">$${formatNumber(Math.round(totalTgt))}</div>
+              <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">롤링 데이터 합계</div>
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">누적 달성</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">누적 달성</div>
               <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(totalAct))}</div>
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
               <div style="font-size:18px;font-weight:600;color:${totalClr}">${totalPct}%</div>
             </div>
           </div>` : `
           <div style="background:#FFF3E0;border-left:3px solid #EF9F27;padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:#633806">
             롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
-            <button onclick="Pages.KpiTarget.openRolling()" style="background:none;border:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer;text-decoration:underline">KPI 롤링 데이터 입력</button>
+            <button onclick="Pages.KpiTarget.openRolling('kpi')" style="background:none;border:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer;text-decoration:underline">KPI 롤링 데이터 입력</button>
           </div>`}
 
           <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
             <table style="width:100%;border-collapse:collapse">
-              <thead><tr>${TH('사업')}${TH('목표 매출 (USD)')}${THR('누적 실적')}${TH('달성률')}${THR('잔여')}</tr></thead>
+              <thead><tr>${TH('사업')}${TH(tgtHeader + ' (USD)')}${THR(actHeader)}${TH('달성률')}${THR('잔여')}</tr></thead>
               <tbody>${bizRows}</tbody>
               ${totalTgt > 0 ? `
               <tfoot><tr style="background:var(--tbl-sum-bg)">
@@ -437,27 +525,7 @@ Pages.KpiTarget = (() => {
           <!-- 월별 트래킹 -->
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div style="display:flex;gap:6px;flex-wrap:wrap">${bizBtns}</div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <!-- KPI/EC 기준 선택 -->
-              <div style="display:flex;border:1.5px solid #CCC;border-radius:7px;overflow:hidden">
-                <button id="kpi-mode-kpi" onclick="Pages.KpiTarget.setMode('kpi')"
-                  style="padding:6px 14px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:#1D1D1F;color:#fff;font-family:Pretendard,sans-serif">KPI 기준</button>
-                <button id="kpi-mode-ec" onclick="Pages.KpiTarget.setMode('ec')"
-                  style="padding:6px 14px;border:none;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:#555;font-family:Pretendard,sans-serif">EC 기준</button>
-              </div>
-              <!-- KPI 롤링 입력 -->
-              <button onclick="Pages.KpiTarget.openRolling('kpi')"
-                style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #185FA5;border-radius:7px;background:none;color:#185FA5;font-size:12px;font-weight:500;cursor:pointer;font-family:Pretendard,sans-serif">
-                <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                KPI 롤링 입력
-              </button>
-              <!-- EC 롤링 입력 -->
-              <button onclick="Pages.KpiTarget.openRolling('ec')"
-                style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1.5px solid #0F6E56;border-radius:7px;background:none;color:#0F6E56;font-size:12px;font-weight:500;cursor:pointer;font-family:Pretendard,sans-serif">
-                <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                EC 롤링 입력
-              </button>
-            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap"></div>
           </div>
           <div id="kpi-tracking-wrap"></div>
         </div>`;
@@ -614,12 +682,73 @@ Pages.KpiTarget = (() => {
 
     setMode(mode) {
       _rollingMode = mode;
-      // 버튼 UI 업데이트
-      const kpiBtn = document.getElementById('kpi-mode-kpi');
-      const ecBtn  = document.getElementById('kpi-mode-ec');
-      if (kpiBtn) { kpiBtn.style.background = mode==='kpi' ? '#1D1D1F' : '#fff'; kpiBtn.style.color = mode==='kpi' ? '#fff' : '#555'; }
-      if (ecBtn)  { ecBtn.style.background  = mode==='ec'  ? '#0F6E56' : '#fff'; ecBtn.style.color  = mode==='ec'  ? '#fff' : '#555'; }
-      _renderTracking();
+      Pages.KpiTarget.render();
+    },
+
+    openFactorPanel() {
+      const el = document.getElementById('kpi-factor-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      if (!el) return;
+      // Factor 입력 UI 렌더
+      const rows = CONFIG.BIZ_LIST.map(b => {
+        const f = _getFactor(b);
+        return `<tr>
+          <td style="padding:8px 12px;font-size:13px;font-weight:500;color:${CONFIG.BIZ_COLORS[b]};font-family:Pretendard,sans-serif;white-space:nowrap">${CONFIG.BIZ_LABELS[b]}</td>
+          <td style="padding:8px 12px">
+            <input type="number" id="factor-${b}" value="${f}" min="0" max="2" step="0.01"
+              style="width:80px;padding:5px 8px;border:1px solid #CCC;border-radius:4px;font-size:13px;text-align:right;font-family:'DM Mono',monospace">
+          </td>
+          <td style="padding:8px 12px;font-size:12px;color:#888;font-family:Pretendard,sans-serif">
+            매출 100 → 이익 <span id="preview-${b}" style="font-weight:600;color:#333">${(100*f).toFixed(1)}</span>
+          </td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('kpi-factor-inner').innerHTML = `
+        <div style="font-size:12px;color:#888;margin-bottom:14px;font-family:Pretendard,sans-serif">
+          Factor = 매출이익 / 매출 &nbsp;·&nbsp; 예) 매출 100, Factor 0.9 → 매출이익 90
+        </div>
+        <table style="border-collapse:collapse;width:100%">
+          <thead><tr>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:700;background:#F0F0F0;border-bottom:2px solid #CCC;font-family:Pretendard,sans-serif">사업</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:700;background:#F0F0F0;border-bottom:2px solid #CCC;font-family:Pretendard,sans-serif">Factor</th>
+            <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:700;background:#F0F0F0;border-bottom:2px solid #CCC;font-family:Pretendard,sans-serif">미리보기</th>
+          </tr></thead>
+          <tbody id="factor-tbody">${rows}</tbody>
+        </table>`;
+
+      // 실시간 미리보기
+      CONFIG.BIZ_LIST.forEach(b => {
+        const inp = document.getElementById('factor-' + b);
+        if (inp) inp.addEventListener('input', () => {
+          const prev = document.getElementById('preview-' + b);
+          if (prev) prev.textContent = (100 * (parseFloat(inp.value)||0)).toFixed(1);
+        });
+      });
+
+      el.style.display = 'block';
+      if (ov) ov.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    },
+
+    closeFactorPanel() {
+      const el = document.getElementById('kpi-factor-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      if (el) el.style.display = 'none';
+      if (ov) ov.style.display = 'none';
+      document.body.style.overflow = '';
+    },
+
+    saveFactors() {
+      const newFactors = {};
+      CONFIG.BIZ_LIST.forEach(b => {
+        const inp = document.getElementById('factor-' + b);
+        newFactors[b] = parseFloat(inp?.value ?? 1);
+      });
+      _saveFactors(newFactors);
+      Pages.KpiTarget.closeFactorPanel();
+      Pages.KpiTarget.render();
+      UI.toast('Factor 저장 완료');
     },
   };
 

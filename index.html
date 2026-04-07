@@ -714,6 +714,21 @@
       </div>
     </div>
 
+    <!-- Factor 설정 패널 -->
+    <div id="kpi-factor-panel"
+      style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;width:min(96vw,480px);max-height:90vh;overflow-y:auto;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:0.5px solid var(--bd);position:sticky;top:0;background:var(--card);z-index:1">
+        <div style="font-size:16px;font-weight:600;font-family:Pretendard,sans-serif">사업별 Factor 설정</div>
+        <button onclick="Pages.KpiTarget.closeFactorPanel()"
+          style="border:none;background:none;font-size:18px;color:var(--tx3);cursor:pointer;padding:0 4px">×</button>
+      </div>
+      <div id="kpi-factor-inner" style="padding:16px 20px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:0.5px solid var(--bd);background:var(--card);position:sticky;bottom:0">
+        <button onclick="Pages.KpiTarget.closeFactorPanel()" class="btn" style="padding:8px 16px;font-family:Pretendard,sans-serif">취소</button>
+        <button onclick="Pages.KpiTarget.saveFactors()" class="btn pri" style="padding:8px 20px;font-family:Pretendard,sans-serif">저장</button>
+      </div>
+    </div>
+
     <!-- 데이터 검증 -->
     <div class="pg" id="pg-verify">
       <div class="page-wrap">
