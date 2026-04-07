@@ -5,7 +5,7 @@
  */
 Pages.DramPrice = (() => {
 
-  const GAS_URL    = 'https://script.google.com/macros/s/AKfycbw0gy7SOKjWTH3hvMJ-U3Tf2l4ritMDR8iDMaN8uW0HxsguopMvkDCBDs7I5nJTJnEV/exec';
+  const GAS_URL    = 'https://script.google.com/macros/s/AKfycbwcMBLGicPSvh1f_rF8DJyF32FmJBLDxfT7bZIhjb5cCyz6yi-6RAJ7qvKgyg_rGV4/exec';
 
   let _data     = null;
   let _chart    = null;
@@ -29,7 +29,7 @@ Pages.DramPrice = (() => {
       if (json.error) return { error: json.error };
       if (!Array.isArray(json) || json.length === 0) return { headers: [], rows: [] };
       // JSON 배열 → rows 배열로 변환
-      const KEYS = ['Date','Category','Item','Daily High','Daily Low','Session High','Session Low','Session Average','Session Change','Source'];
+      const KEYS = ['Date','Last Update','Item','Daily High','Daily Low','Session High','Session Low','Session Average','Session Change','Source'];
       const rows = json.map(obj => KEYS.map(k => obj[k] || ''));
       return { headers: KEYS, rows };
     } catch (e) {
@@ -37,23 +37,18 @@ Pages.DramPrice = (() => {
     }
   }
 
-  // Date=0 Category=1 Item=2 DailyHigh=3 DailyLow=4 SessHigh=5 SessLow=6 SessAvg=7 SessChg=8
-  const C = { date:0, cat:1, item:2, dHigh:3, dLow:4, sHigh:5, sLow:6, sAvg:7, sChg:8 };
+  // Date=0 LastUpdate=1 Item=2 DailyHigh=3 DailyLow=4 SessHigh=5 SessLow=6 SessAvg=7 SessChg=8
+  const C = { date:0, lastUpdate:1, item:2, dHigh:3, dLow:4, sHigh:5, sLow:6, sAvg:7, sChg:8 };
 
   const pn = s => { const n = parseFloat(String(s||'').replace(/[^0-9.-]/g,'')); return isNaN(n)?null:n; };
 
-  function _getCategories(rows) { return [...new Set(rows.map(r=>r[C.cat]).filter(Boolean))]; }
   function _getItems(rows) {
-    return [...new Set(
-      rows.filter(r => _selCats.size===0 || _selCats.has(r[C.cat]))
-          .map(r => r[C.item]).filter(Boolean)
-    )];
+    return [...new Set(rows.map(r => r[C.item]).filter(Boolean))];
   }
 
   function _buildChart(rows, items) {
     const byDate = {};
-    rows.filter(r => _selCats.size===0 || _selCats.has(r[C.cat]))
-        .forEach(r => {
+    rows.forEach(r => {
           const d = r[C.date], item = r[C.item];
           if (!byDate[d]) byDate[d] = {};
           const val = _metric==='high' ? pn(r[C.dHigh])
@@ -107,13 +102,11 @@ Pages.DramPrice = (() => {
     if (!filtered.length) return '<div style="padding:20px;text-align:center;color:#999">데이터 없음</div>';
 
     const chgColor = s => s?.includes('▲') ? '#1A6B3A' : s?.includes('▼') ? '#A32D2D' : '#555';
-    const catBadge = cat => `<span style="padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;
-      border:1px solid ${CAT_COLOR[cat]||'#999'};color:${CAT_COLOR[cat]||'#999'}">${cat||'—'}</span>`;
 
     const trs = filtered.map((r,i) => `
       <tr style="${i%2===1?'background:#FAFAFA':''}">
         <td class="td-c" style="font-size:11px;color:#888;white-space:nowrap">${r[C.date]}</td>
-        <td class="td-c">${catBadge(r[C.cat])}</td>
+        <td class="td-c" style="font-size:11px;color:#888;white-space:nowrap">${r[C.lastUpdate]||'—'}</td>
         <td class="td-l" style="white-space:nowrap;font-size:12px">${r[C.item]}</td>
         <td class="td-r" style="font-family:'DM Mono',monospace;font-size:12px">${r[C.dHigh]||'—'}</td>
         <td class="td-r" style="font-family:'DM Mono',monospace;font-size:12px">${r[C.dLow]||'—'}</td>
@@ -122,7 +115,7 @@ Pages.DramPrice = (() => {
       </tr>`).join('');
 
     return `<div style="overflow-x:auto"><table class="std-table">
-      <thead><tr><th>날짜</th><th>구분</th><th>제품</th>
+      <thead><tr><th>날짜</th><th>Last Update</th><th>제품</th>
         <th>Daily High</th><th>Daily Low</th><th>Session Avg</th><th>Session Change</th>
       </tr></thead><tbody>${trs}</tbody></table></div>`;
   }
@@ -180,16 +173,11 @@ Pages.DramPrice = (() => {
       }
 
       _data = result;
-      const cats      = _getCategories(result.rows);
-      const items     = _getItems(result.rows);
-      const lastDate  = result.rows.length ? [...result.rows].sort((a,b)=>b[C.date].localeCompare(a[C.date]))[0][C.date] : '—';
-      const totalDays = new Set(result.rows.map(r=>r[C.date])).size;
-
-      const catBtns = cats.map(cat => `
-        <button class="dp-cat-btn" data-cat="${cat}" onclick="Pages.DramPrice.toggleCat('${cat}')"
-          style="padding:3px 12px;border:1px solid ${CAT_COLOR[cat]||'#999'};border-radius:4px;
-                 font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;
-                 background:${CAT_COLOR[cat]||'#999'};color:#fff;margin:2px;font-weight:700">${cat}</button>`).join('');
+      const items      = _getItems(result.rows);
+      const sorted     = [...result.rows].sort((a,b) => b[C.date].localeCompare(a[C.date]));
+      const lastDate   = sorted.length ? sorted[0][C.date] : '—';
+      const lastUpdate = sorted.length ? sorted[0][C.lastUpdate] : '—';
+      const totalDays  = new Set(result.rows.map(r=>r[C.date])).size;
 
       const prodBtns = items.map((p,i) => `
         <button class="dp-prod-btn" data-prod="${p}" onclick="Pages.DramPrice.toggleProduct('${p}')"
@@ -201,16 +189,12 @@ Pages.DramPrice = (() => {
         <div class="page-wrap">
           <div class="ph-row">
             <div class="ph"><h1>DRAM Price Tracking</h1>
-              <p>TrendForce Spot Price · 최종: ${lastDate} · ${totalDays}일 누적 · ${result.rows.length}건</p>
+              <p>TrendForce DRAM Spot Price · 수집일: ${lastDate} · ${lastUpdate} · ${totalDays}일 누적</p>
             </div>
           </div>
 
           <div class="page-card" style="margin-bottom:12px">
             <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
-              <div>
-                <div style="font-size:11px;color:#888;margin-bottom:6px;font-family:Pretendard,sans-serif;font-weight:600">카테고리</div>
-                <div>${catBtns}</div>
-              </div>
               <div>
                 <div style="font-size:11px;color:#888;margin-bottom:6px;font-family:Pretendard,sans-serif;font-weight:600">지표</div>
                 <div style="display:flex;gap:4px">
