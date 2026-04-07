@@ -73,6 +73,9 @@ const CONFIG = {
   // KPI 차트 시작 연도
   CHART_START_YEAR: 2026,
 
+  // DRAM Price Tracking Google Sheet ID
+  DRAM_PRICE_SHEET_ID: '1B46Hj-5u0ikoGBm56PBvq8BIJhi5zDgsSlPE-tDM0BA',
+
   // LOT 기본 목표 완료일 (입고일 + N일)
   LOT_DEFAULT_TARGET_DAYS: 14,
 };
