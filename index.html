@@ -246,7 +246,7 @@
             <select id="ep-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select>
           </div>
           <div class="fld"><label>사업</label>
-            <select id="ep-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+            <select id="ep-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
           </div>
           <div class="fld"><label>고객사</label><input type="text" id="ep-cust"></div>
           <div class="fld"><label>입고일</label><input type="date" id="ep-indate" onchange="Pages.Progress.calcEditTgt()"></div>
@@ -371,7 +371,7 @@
         <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fld"><label>사업</label>
-              <select id="sp-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+              <select id="sp-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
             </div>
             <div class="fld"><label>국가</label>
               <select id="sp-country"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
@@ -527,7 +527,7 @@
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="fld"><label>사업</label>
-              <select id="ip-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option></select>
+              <select id="ip-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
             </div>
             <div class="fld"><label>국가</label>
               <select id="ip-co"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
@@ -590,9 +590,13 @@
         <button class="pill psg" id="rv-co-sg"  onclick="Pages.Revenue.setCo(this,'SG')">싱가포르</button>
         <span class="sep"></span>
         <button class="pill pa on" id="rv-biz-all"  onclick="Pages.Revenue.setBiz(this,'')">전체</button>
-        <button class="pill pd"   id="rv-biz-dram" onclick="Pages.Revenue.setBiz(this,'DRAM')">DRAM Test</button>
-        <button class="pill ps"   id="rv-biz-ssd"  onclick="Pages.Revenue.setBiz(this,'SSD')">SSD Test</button>
-        <button class="pill pm"   id="rv-biz-mid"  onclick="Pages.Revenue.setBiz(this,'MID')">Mobile Ink Die</button>
+        <button class="pill pd"   id="rv-biz-dram" onclick="Pages.Revenue.setBiz(this,'DRAM')">DRAM</button>
+        <button class="pill ps"   id="rv-biz-ssd"  onclick="Pages.Revenue.setBiz(this,'SSD')">SSD</button>
+        <button class="pill pm"   id="rv-biz-mid"  onclick="Pages.Revenue.setBiz(this,'MID')">MID</button>
+        <button class="pill"      id="rv-biz-scr"  onclick="Pages.Revenue.setBiz(this,'SCR')">Scrap</button>
+        <button class="pill"      id="rv-biz-rma"  onclick="Pages.Revenue.setBiz(this,'RMA')">RMA</button>
+        <button class="pill"      id="rv-biz-sus"  onclick="Pages.Revenue.setBiz(this,'SUS')">Sustainability</button>
+        <button class="pill"      id="rv-biz-mod"  onclick="Pages.Revenue.setBiz(this,'MOD')">모듈</button>
       </div>
       <div class="mg mg4" id="rv-top"></div>
       <div id="rv-year-breakdown" style="display:none;margin-bottom:14px"></div>
@@ -718,7 +722,7 @@
         <div class="fg fg3">
           <div class="fld"><label>고객사명</label><input type="text" id="cu-name" placeholder="예: Samsung Electronics HK"></div>
           <div class="fld"><label>국가 법인</label><select id="cu-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select></div>
-          <div class="fld"><label>주요 사업</label><select id="cu-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="ALL">전체</option></select></div>
+          <div class="fld"><label>주요 사업</label><select id="cu-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option><option value="ALL">전체</option></select></div>
         </div>
         <div class="fg fg3">
           <div class="fld"><label>담당자 연락처</label><input type="text" id="cu-contact" placeholder="담당자명 / 이메일"></div>

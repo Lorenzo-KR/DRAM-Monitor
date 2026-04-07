@@ -25,13 +25,17 @@ const CONFIG = {
   },
 
   // 사업 목록
-  BIZ_LIST: ['DRAM', 'SSD', 'MID'],
+  BIZ_LIST: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
 
   // 사업 표시명
   BIZ_LABELS: {
     DRAM: 'DRAM Test',
     SSD:  'SSD Test',
     MID:  'Mobile Ink Die',
+    SCR:  'Scrap 자재',
+    RMA:  'RMA 운영',
+    SUS:  'Sustainability',
+    MOD:  '모듈 세일즈',
   },
 
   // 사업 색상
@@ -39,6 +43,10 @@ const CONFIG = {
     DRAM: '#1B4F8A',
     SSD:  '#0F6E56',
     MID:  '#6A3D7C',
+    SCR:  '#B45309',
+    RMA:  '#0C6B8A',
+    SUS:  '#2D7D46',
+    MOD:  '#8B3A3A',
   },
 
   // 국가 목록
@@ -58,8 +66,8 @@ const CONFIG = {
 
   // 국가별 취급 사업
   COUNTRY_BIZ_MAP: {
-    HK: ['DRAM'],
-    SG: ['DRAM', 'SSD', 'MID'],
+    HK: ['DRAM', 'SCR', 'RMA', 'SUS', 'MOD'],
+    SG: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
   },
 
   // KPI 차트 시작 연도

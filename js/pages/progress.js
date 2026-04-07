@@ -172,7 +172,7 @@ Pages.Progress = (() => {
         </td>
         <td style="${tdS}">
           <select id="nl-biz" style="${inp};width:100%;padding:2px 3px">
-            <option>DRAM</option><option>SSD</option><option>MID</option>
+            <option value="DRAM">DRAM</option><option value="SSD">SSD</option><option value="MID">MID</option><option value="SCR">Scrap 자재</option><option value="RMA">RMA</option><option value="SUS">Sustainability</option><option value="MOD">모듈 세일즈</option>
           </select>
         </td>
         <td style="${tdS}">
