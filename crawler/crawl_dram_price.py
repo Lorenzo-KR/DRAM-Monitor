@@ -1,7 +1,9 @@
 """
 crawl_dram_price.py
 TrendForce DRAM Spot Price 크롤링 → Google Sheets 저장
-컬럼: Date | Category | Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | Source
+- DRAM Spot Price 섹션만 수집 (7개 제품)
+- Last Update 시간 포함
+컬럼: Date | Last Update | Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | Source
 """
 
 import os, json, time, datetime
@@ -13,8 +15,21 @@ SHEET_ID   = os.environ.get('GSHEET_ID', '')
 GCP_CREDS  = os.environ.get('GCP_CREDENTIALS', '')
 TARGET_URL = 'https://www.trendforce.com/price/dram/dram_spot'
 
-HEADERS = ['Date', 'Category', 'Item', 'Daily High', 'Daily Low',
-           'Session High', 'Session Low', 'Session Average', 'Session Change', 'Source']
+HEADERS = ['Date', 'Last Update', 'Item',
+           'Daily High', 'Daily Low',
+           'Session High', 'Session Low',
+           'Session Average', 'Session Change', 'Source']
+
+# DRAM Spot 제품 목록 (이것만 수집)
+DRAM_SPOT_ITEMS = [
+    'DDR5 16Gb (2Gx8) 4800/5600',
+    'DDR5 16Gb (2Gx8) eTT',
+    'DDR4 16Gb (2Gx8) 3200',
+    'DDR4 16Gb (2Gx8) eTT',
+    'DDR4 8Gb (1Gx8) 3200',
+    'DDR4 8Gb (1Gx8) eTT',
+    'DDR3 4Gb 512Mx8 1600/1866',
+]
 
 def get_sheet():
     creds_dict = json.loads(GCP_CREDS)
@@ -29,24 +44,17 @@ def get_sheet():
         if first != HEADERS:
             ws.clear()
             ws.append_row(HEADERS)
-            print('[Sheet] Headers reset to new format')
+            print('[Sheet] Headers reset')
     except gspread.WorksheetNotFound:
-        ws = sh.add_worksheet('spot_prices', rows=5000, cols=20)
+        ws = sh.add_worksheet('spot_prices', rows=5000, cols=15)
         ws.append_row(HEADERS)
         print('[Sheet] Created spot_prices')
     return ws
 
-def is_number(s):
-    """숫자인지 확인 (콤마 포함)"""
-    try:
-        float(str(s).replace(',', ''))
-        return True
-    except:
-        return False
-
 def crawl():
     rows = []
     today = datetime.date.today().isoformat()
+    last_update = ''
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -58,120 +66,85 @@ def crawl():
         page.goto(TARGET_URL, wait_until='networkidle', timeout=90000)
         time.sleep(6)
 
-        # 섹션 제목과 테이블을 함께 찾기
-        # TrendForce 구조: 섹션 헤딩 → 테이블 반복
-        html_content = page.content()
-        print(f'[Crawl] Page HTML size: {len(html_content)}')
+        # Last Update 텍스트 추출
+        try:
+            page_text = page.evaluate('document.body.innerText')
+            for line in page_text.split('\n'):
+                if 'Last Update' in line:
+                    last_update = line.strip()
+                    print(f'[Crawl] Last Update: {last_update}')
+                    break
+        except Exception as e:
+            print(f'[Crawl] Last Update extract error: {e}')
 
-        # 섹션 키워드로 카테고리 판별
-        SECTION_KEYWORDS = {
-            'Spot': ['spot', 'dram spot', 'dram_spot'],
-            'Contract': ['contract'],
-            'Module': ['module', 'so-dimm', 'sodimm', 'udimm', 'rdimm'],
-        }
-
+        # 테이블 파싱
         tables = page.query_selector_all('table')
         print(f'[Crawl] Found {len(tables)} tables')
 
+        found_spot = False
         for ti, tbl in enumerate(tables):
-            # 테이블 위에 있는 제목 찾기 (이전 형제 또는 부모)
-            category = 'Spot'  # 기본값
-            try:
-                # 테이블 주변 텍스트로 카테고리 추론
-                parent_text = page.evaluate('''(tbl) => {
-                    let el = tbl;
-                    for (let i = 0; i < 5; i++) {
-                        el = el.parentElement;
-                        if (!el) break;
-                        const h = el.querySelector("h1,h2,h3,h4,h5,.title,.section-title");
-                        if (h) return h.innerText;
-                    }
-                    // 이전 형제 요소들 확인
-                    let sib = tbl.previousElementSibling;
-                    for (let i = 0; i < 5; i++) {
-                        if (!sib) break;
-                        const t = sib.innerText || '';
-                        if (t.trim()) return t;
-                        sib = sib.previousElementSibling;
-                    }
-                    return "";
-                }''', tbl)
-
-                pt_lower = (parent_text or '').lower()
-                if 'contract' in pt_lower:
-                    category = 'Contract'
-                elif 'module' in pt_lower:
-                    category = 'Module'
-                elif 'spot' in pt_lower:
-                    category = 'Spot'
-                print(f'[Table {ti}] Category hint: {repr(parent_text[:60] if parent_text else "")} → {category}')
-            except Exception as e:
-                print(f'[Table {ti}] Category detect error: {e}')
-
-            # 헤더 확인
             ths = [th.inner_text().strip() for th in tbl.query_selector_all('th')]
-            print(f'[Table {ti}] Headers: {ths}')
+            ths_str = ' '.join(ths).lower()
 
-            # Item/Daily 컬럼 없으면 스킵
-            ths_lower = ' '.join(ths).lower()
-            if not any(k in ths_lower for k in ['item', 'daily', 'session', 'high', 'low']):
+            # Item/Daily/Session 컬럼 있는 테이블만
+            if not any(k in ths_str for k in ['item', 'daily', 'session']):
                 continue
 
-            # 헤더 인덱스 매핑
-            def hi(keywords):
-                for kw in keywords:
+            # 헤더 인덱스
+            def hi(kws):
+                for kw in kws:
                     for i, h in enumerate(ths):
                         if kw.lower() in h.lower():
                             return i
                 return -1
 
-            idx_item  = hi(['item'])
-            idx_dh    = hi(['daily high'])
-            idx_dl    = hi(['daily low'])
-            idx_sh    = hi(['session high'])
-            idx_sl    = hi(['session low'])
-            idx_savg  = hi(['session average', 'session avg'])
-            idx_schg  = hi(['session change', 'change'])
-
-            print(f'[Table {ti}] Col indices: item={idx_item} dH={idx_dh} dL={idx_dl} sAvg={idx_savg} sChg={idx_schg}')
+            idx_item = hi(['item'])
+            idx_dh   = hi(['daily high'])
+            idx_dl   = hi(['daily low'])
+            idx_sh   = hi(['session high'])
+            idx_sl   = hi(['session low'])
+            idx_savg = hi(['session average', 'session avg'])
+            idx_schg = hi(['session change'])
 
             trs = tbl.query_selector_all('tbody tr')
+            print(f'[Table {ti}] {len(trs)} rows, headers: {ths[:4]}')
+
             for tr in trs:
                 tds = tr.query_selector_all('td')
                 cells = [td.inner_text().strip() for td in tds]
-                if not cells:
-                    continue
+                if not cells: continue
 
-                def g(idx):
-                    return cells[idx] if 0 <= idx < len(cells) else ''
+                def g(idx): return cells[idx] if 0 <= idx < len(cells) else ''
 
                 item = g(idx_item) if idx_item >= 0 else g(0)
-                if not item:
+                if not item: continue
+
+                # DRAM Spot 제품인지 확인 (부분 매칭)
+                is_spot = any(spot.lower() in item.lower() or item.lower() in spot.lower()
+                             for spot in DRAM_SPOT_ITEMS)
+                if not is_spot:
+                    print(f'  [Skip] {item[:50]}')
                     continue
 
-                # 숫자가 아닌 셀이 item 위치에 오면 사용
-                d_high = g(idx_dh)  if idx_dh  >= 0 else g(1)
-                d_low  = g(idx_dl)  if idx_dl  >= 0 else g(2)
-                s_high = g(idx_sh)  if idx_sh  >= 0 else g(3)
-                s_low  = g(idx_sl)  if idx_sl  >= 0 else g(4)
+                d_high = g(idx_dh)   if idx_dh   >= 0 else g(1)
+                d_low  = g(idx_dl)   if idx_dl   >= 0 else g(2)
+                s_high = g(idx_sh)   if idx_sh   >= 0 else g(3)
+                s_low  = g(idx_sl)   if idx_sl   >= 0 else g(4)
                 s_avg  = g(idx_savg) if idx_savg >= 0 else g(5)
                 s_chg  = g(idx_schg) if idx_schg >= 0 else g(6)
 
-                # SO-DIMM 등 Module 제품은 카테고리 보정
-                item_lower = item.lower()
-                if any(k in item_lower for k in ['so-dimm', 'sodimm', 'udimm', 'rdimm', 'lpddr']):
-                    row_category = 'Module'
-                elif any(k in item_lower for k in ['gddr']):
-                    row_category = 'Graphics'
-                else:
-                    row_category = category
+                print(f'  [Spot] {item[:45]} | H:{d_high} L:{d_low} Avg:{s_avg} Chg:{s_chg}')
+                rows.append([today, last_update, item,
+                             d_high, d_low, s_high, s_low, s_avg, s_chg,
+                             'TrendForce'])
+                found_spot = True
 
-                print(f'  [{row_category}] {item[:40]} | H:{d_high} L:{d_low} Avg:{s_avg} Chg:{s_chg}')
-                rows.append([today, row_category, item, d_high, d_low, s_high, s_low, s_avg, s_chg, 'TrendForce'])
+        if not found_spot:
+            print('[Crawl] WARNING: No DRAM Spot items found!')
 
         browser.close()
 
-    print(f'[Crawl] Total rows collected: {len(rows)}')
+    print(f'[Crawl] Total rows: {len(rows)}')
     return rows
 
 def save(ws, rows):
