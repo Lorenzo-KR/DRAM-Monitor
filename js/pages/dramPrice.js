@@ -5,8 +5,7 @@
  */
 Pages.DramPrice = (() => {
 
-  const SHEET_ID   = CONFIG.DRAM_PRICE_SHEET_ID || '';
-  const SHEET_NAME = 'spot_prices';
+  const GAS_URL    = 'https://script.google.com/macros/s/AKfycbw0gy7SOKjWTH3hvMJ-U3Tf2l4ritMDR8iDMaN8uW0HxsguopMvkDCBDs7I5nJTJnEV/exec';
 
   let _data     = null;
   let _chart    = null;
@@ -21,34 +20,21 @@ Pages.DramPrice = (() => {
 
   const CAT_COLOR = { Spot:'#1B4F8A', Contract:'#0F6E56', Module:'#6A3D7C', Graphics:'#B45309' };
 
-  // ── CSV fetch ─────────────────────────────────────────
+  // ── GAS API fetch ────────────────────────────────────
   async function _fetch() {
-    if (!SHEET_ID) return { error: 'SHEET_ID 미설정' };
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
     try {
-      const res = await fetch(url);
+      const res = await fetch(`${GAS_URL}?action=getDramPrices`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return _parseCSV(await res.text());
+      const json = await res.json();
+      if (json.error) return { error: json.error };
+      if (!Array.isArray(json) || json.length === 0) return { headers: [], rows: [] };
+      // JSON 배열 → rows 배열로 변환
+      const KEYS = ['Date','Category','Item','Daily High','Daily Low','Session High','Session Low','Session Average','Session Change','Source'];
+      const rows = json.map(obj => KEYS.map(k => obj[k] || ''));
+      return { headers: KEYS, rows };
     } catch (e) {
       return { error: '데이터 로드 실패: ' + e.message };
     }
-  }
-
-  function _parseCSV(text) {
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) return { headers: [], rows: [] };
-    const parse = line => {
-      const r = []; let cur = '', q = false;
-      for (const c of line) {
-        if (c === '"') { q = !q; continue; }
-        if (c === ',' && !q) { r.push(cur.trim()); cur = ''; continue; }
-        cur += c;
-      }
-      r.push(cur.trim()); return r;
-    };
-    const headers = parse(lines[0]);
-    const rows    = lines.slice(1).map(parse).filter(r => r[0] && r[2]);
-    return { headers, rows };
   }
 
   // Date=0 Category=1 Item=2 DailyHigh=3 DailyLow=4 SessHigh=5 SessLow=6 SessAvg=7 SessChg=8
