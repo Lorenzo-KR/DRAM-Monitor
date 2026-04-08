@@ -698,6 +698,32 @@ Pages.KpiTarget = (() => {
 
       wrap.innerHTML = `
         <div style="font-size:12px;color:${_rollingMode==='ec'?'#0F6E56':'#E24B4A'};font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; ${_rollingMode==='ec'?'EC(예상비용) 기준':'KPI 목표 기준'} · 저장하면 즉시 반영됩니다</div>
+
+        <!-- 붙여넣기 영역 -->
+        <div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">
+          <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:6px;font-family:Pretendard,sans-serif">
+            📋 엑셀에서 붙여넣기
+            <span style="font-size:11px;font-weight:400;color:#888;margin-left:6px">사업명 + 월별 숫자 형태로 복사 후 붙여넣기</span>
+          </div>
+          <textarea id="rolling-paste-area"
+            placeholder="엑셀에서 행을 선택 복사(Ctrl+C) 후 여기에 붙여넣기(Ctrl+V)&#10;예)&#10;비정품 DRAM Test	0	0	0	0.5	1.7	1.7	1.7	1.7	1.7	1.7	1.7	1.7&#10;비정품 SSD Test	0	0.3	0	0.3	0.3	..."
+            style="width:100%;height:90px;padding:8px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:'DM Mono',monospace;resize:vertical;box-sizing:border-box;color:#333;background:#fff"
+            onpaste="setTimeout(()=>Pages.KpiTarget.parsePasteRolling(),0)"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+            <div id="rolling-paste-msg" style="font-size:11px;color:#888;font-family:Pretendard,sans-serif"></div>
+            <div style="display:flex;gap:6px">
+              <button onclick="Pages.KpiTarget.parsePasteRolling()"
+                style="padding:4px 12px;border:1px solid #185FA5;border-radius:4px;background:#185FA5;color:#fff;font-size:11px;cursor:pointer;font-family:Pretendard,sans-serif">
+                적용
+              </button>
+              <button onclick="document.getElementById('rolling-paste-area').value='';document.getElementById('rolling-paste-msg').textContent=''"
+                style="padding:4px 12px;border:1px solid #CCC;border-radius:4px;background:#fff;color:#555;font-size:11px;cursor:pointer;font-family:Pretendard,sans-serif">
+                초기화
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div style="overflow-x:auto">
           <table style="border-collapse:collapse;table-layout:auto">
             <thead>
@@ -718,6 +744,86 @@ Pages.KpiTarget = (() => {
             </tfoot>
           </table>
         </div>`;
+    },
+
+    parsePasteRolling() {
+      const ta  = document.getElementById('rolling-paste-area'); if (!ta) return;
+      const msg = document.getElementById('rolling-paste-msg');
+      const raw = ta.value.trim();
+      if (!raw) return;
+
+      // 사업명 → BIZ KEY 매핑 (유연한 부분 매칭)
+      const BIZ_MAP = [
+        { key:'DRAM', keywords:['dram','디램'] },
+        { key:'SSD',  keywords:['ssd'] },
+        { key:'MID',  keywords:['mid','mobile ink','모바일','ink die'] },
+        { key:'SCR',  keywords:['scr','scrap','스크랩','자재'] },
+        { key:'RMA',  keywords:['rma'] },
+        { key:'SUS',  keywords:['sus','sustainability','컨설팅','지속'] },
+        { key:'MOD',  keywords:['mod','모듈','module'] },
+      ];
+
+      function matchBiz(name) {
+        const lower = name.toLowerCase().replace(/\s+/g,' ').trim();
+        for (const b of BIZ_MAP) {
+          if (b.keywords.some(k => lower.includes(k))) return b.key;
+        }
+        return null;
+      }
+
+      const lines = raw.split('\n').filter(l => l.trim());
+      let matched = 0, skipped = 0;
+
+      for (const line of lines) {
+        // 탭 또는 다중 공백 구분
+        const cols = line.split(/\t/).map(c => c.trim());
+        if (cols.length < 2) continue;
+
+        // 첫 번째 열이 사업명인지 숫자인지 판단
+        const firstIsNum = !isNaN(parseFloat(cols[0])) && cols[0] !== '';
+        if (firstIsNum) { skipped++; continue; } // 헤더행(숫자) 스킵
+
+        const bizName = cols[0];
+        const bizKey  = matchBiz(bizName);
+
+        if (!bizKey) {
+          console.log('[Paste] No match for:', bizName);
+          skipped++;
+          continue;
+        }
+
+        // 숫자 컬럼 추출 (최대 12개)
+        const nums = [];
+        for (let i = 1; i < cols.length && nums.length < 12; i++) {
+          const v = cols[i].replace(/,/g, '');
+          nums.push(isNaN(parseFloat(v)) ? 0 : parseFloat(v));
+        }
+        // 12개 미만이면 0으로 채우기
+        while (nums.length < 12) nums.push(0);
+
+        // 해당 사업 row의 input에 값 설정
+        const body = document.getElementById('rolling-tbody'); if (!body) continue;
+        const ROWS = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
+        const rowIdx = ROWS.indexOf(bizKey);
+        if (rowIdx < 0) continue;
+        const tr = body.querySelectorAll('tr')[rowIdx]; if (!tr) continue;
+        const inputs = tr.querySelectorAll('input[type=number]');
+        inputs.forEach((inp, i) => {
+          inp.value = nums[i] || '';
+        });
+        matched++;
+      }
+
+      Pages.KpiTarget.calcRollingAll();
+      if (msg) {
+        if (matched > 0) {
+          msg.textContent = `✓ ${matched}개 사업 적용 완료${skipped > 0 ? ` (${skipped}행 스킵)` : ''}`;
+          msg.style.color = '#1A6B3A';
+        } else {
+          msg.textContent = '매칭된 사업이 없습니다. 사업명 확인 후 다시 시도해주세요.';
+          msg.style.color = '#A32D2D';
+        }
+      }
     },
 
     saveRolling() {
