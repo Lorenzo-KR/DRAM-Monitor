@@ -224,7 +224,10 @@ Pages.KpiTarget = (() => {
     const isAll   = _bizSet.has('all');
     const bizList = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
 
-    const mode = _rollingMode;
+    const mode    = _rollingMode;
+    const isKpiT  = mode === 'kpi';
+    const hasRateT = isKpiT && _exchangeRate > 0;
+
     const totalTgt = bizList.reduce((s, b) => s + _getTarget(year, b, mode), 0);
     if (totalTgt === 0) {
       el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>`;
@@ -234,13 +237,20 @@ Pages.KpiTarget = (() => {
     const now       = new Date();
     const curMonIdx = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
     const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const fmtVal    = (v) => isKpiT
+      ? (hasRateT ? (v/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(v)))
+      : '$'+formatNumber(Math.round(v));
 
-    // 롤링 기반 월별 목표 (합산)
+    // 월별 목표: KPI=원, EC=USD
     const monthTargets = MONTHS.map((_, i) =>
-      bizList.reduce((s, b) => s + _getMonthlyTarget(year, b, i+1), 0)
+      bizList.reduce((s, b) => s + _getMonthlyTarget(year, b, i+1, mode), 0)
     );
+    // 월별 실적: KPI=매출이익×환율(원), EC=USD
     const monthActuals = MONTHS.map((_, i) => {
       if (i > curMonIdx) return null;
+      if (isKpiT && hasRateT) {
+        return bizList.reduce((s, b) => s + _getActualMonth(year, b, i+1) * _getFactor(b) * _exchangeRate, 0);
+      }
       return bizList.reduce((s, b) => s + _getActualMonth(year, b, i+1), 0);
     });
 
@@ -265,22 +275,22 @@ Pages.KpiTarget = (() => {
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
         <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
           <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
-          <div style="font-size:18px;font-weight:600">$${formatNumber(Math.round(totalTgt))}</div>
-          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">롤링 데이터 기준</div>
+          <div style="font-size:18px;font-weight:600">${fmtVal(totalTgt)}</div>
+          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${isKpiT?'목표 매출이익':'롤링 데이터 기준'}</div>
         </div>
         <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
-          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 실적 (${periodLabel})</div>
-          <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(curCumA))}</div>
-          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 $${formatNumber(Math.round(curCumT))}</div>
+          <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${isKpiT?'누적 매출이익':'누적 실적'} (${periodLabel})</div>
+          <div style="font-size:18px;font-weight:600;color:var(--tx)">${fmtVal(curCumA)}</div>
+          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 ${fmtVal(curCumT)}</div>
         </div>
         <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
           <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (${periodLabel})</div>
           <div style="font-size:18px;font-weight:600;color:${overallPct>=100?'#085041':overallPct>=70?'#0C447C':'#A32D2D'}">${overallPct}%</div>
-          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 대비</div>
+          <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${isKpiT?(hasRateT?'원화 기준':'환율 미입력'):'USD 기준'}</div>
         </div>
         <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
           <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (${periodLabel})</div>
-          <div style="font-size:18px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}$${formatNumber(Math.round(Math.abs(diff)))}</div>
+          <div style="font-size:18px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}${fmtVal(Math.abs(diff))}</div>
           <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${diff>=0?'목표 초과':'목표 미달'}</div>
         </div>
       </div>`;
@@ -309,14 +319,14 @@ Pages.KpiTarget = (() => {
       const barC = pct === null ? '#e5e7eb' : pct >= 100 ? '#1D9E75' : pct >= 70 ? '#185FA5' : '#E24B4A';
       const pctC = pct === null ? 'var(--tx3)' : pct >= 100 ? '#085041' : pct >= 70 ? '#0C447C' : '#791F1F';
       const difBadge = dif === null ? '—'
-        : dif >= 0 ? `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--tx2);background:transparent">+$${Math.round(dif).toLocaleString()}</span>`
-                   : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid #FECACA;color:#dc2626;background:#FEF2F2">-$${Math.round(Math.abs(dif)).toLocaleString()}</span>`;
+        : dif >= 0 ? `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--tx2);background:transparent">+${fmtVal(dif)}</span>`
+                   : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid #FECACA;color:#dc2626;background:#FEF2F2">-${fmtVal(Math.abs(dif))}</span>`;
       return `<tr style="${isCur?'background:#F0F7FF':''}${!isPast?';opacity:0.38':''}">
         <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">${m}${isCur?' ◀':''}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${monthTargets[i]>0?'$'+formatNumber(Math.round(monthTargets[i])):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px">${act!==null?'$'+Math.round(act).toLocaleString():'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${cumTA2>0?'$'+Math.round(cumTA2).toLocaleString():'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?'$'+Math.round(cumAVal).toLocaleString():'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${monthTargets[i]>0?fmtVal(monthTargets[i]):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px">${act!==null?fmtVal(act):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${cumTA2>0?fmtVal(cumTA2):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?fmtVal(cumAVal):'—'}</td>
         <td style="padding:9px 12px;min-width:130px">
           ${pct!==null?`<div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
@@ -398,66 +408,89 @@ Pages.KpiTarget = (() => {
       const year = _year;
       const mode = _rollingMode;
 
-      // 롤링 데이터 기반 연간 목표 (KPI=매출이익 / EC=매출 기준)
+      // 롤링 데이터 기반 연간 목표 (KPI=매출이익 억원 / EC=매출 USD 기준)
       const isKpi = mode === 'kpi';
+      const hasRate = isKpi && _exchangeRate > 0;
+
+      // KPI: 목표(억원→원), 실적(USD×Factor×환율→원)으로 통일
+      // EC:  목표(Million USD→USD), 실적(USD) 그대로
       const bizRows = CONFIG.BIZ_LIST.map(b => {
-        const tgt    = _getTarget(year, b, mode);
-        const rawAct = _getActual(year, b);
-        // KPI 기준: 실적도 매출이익(×Factor)으로 환산
-        const act    = isKpi ? _getActualProfit(year, b) : rawAct;
-        const factor = _getFactor(b);
-        const pct    = tgt > 0 ? Math.min(100, Math.round(act / tgt * 100)) : 0;
-        const rem    = Math.max(0, tgt - act);
+        const tgtRaw = _getTarget(year, b, mode);  // KPI=원, EC=USD
+        const rawAct = _getActual(year, b);         // USD
+
+        // KPI: 목표(원), 실적(원) — 환율 있을 때만 원화 비교 가능
+        const tgtKrw = tgtRaw;                          // 이미 원 단위
+        const actKrw = hasRate ? _getActualProfit(year, b) * _exchangeRate : null;
+        // EC: 목표/실적 모두 USD
+        const tgtUsd = tgtRaw;
+        const actUsd = rawAct;
+
+        const tgt = isKpi ? tgtKrw : tgtUsd;
+        const act = isKpi ? (hasRate ? actKrw : _getActualProfit(year, b)) : actUsd;
+
+        const pct    = tgt > 0 && act !== null ? Math.min(100, Math.round(act / tgt * 100)) : 0;
+        const rem    = tgt > 0 && act !== null ? Math.max(0, tgt - act) : 0;
         const color  = CONFIG.BIZ_COLORS[b];
+        const factor = _getFactor(b);
         const barClr = pct >= 100 ? '#1D9E75' : pct >= 70 ? color : '#EF9F27';
+
+        // 표시 함수
+        const fmtTgt = () => {
+          if (!tgt) return '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>';
+          if (isKpi) return `<div style="font-weight:600">${(tgt/100000000).toFixed(2)}억원</div>`;
+          return '$' + formatNumber(Math.round(tgt));
+        };
+        const fmtAct = () => {
+          if (isKpi) {
+            if (hasRate && actKrw > 0)
+              return `<div style="font-weight:600">${(actKrw/100000000).toFixed(2)}억원</div>
+                      <div style="font-size:10px;color:#888">$${formatNumber(Math.round(_getActualProfit(year,b)))} × ${_exchangeRate.toLocaleString()}</div>
+                      <div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>`;
+            if (rawAct > 0)
+              return `<div style="color:#888">환율 미입력</div><div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>`;
+            return '—';
+          }
+          return actUsd > 0 ? '$' + formatNumber(Math.round(actUsd)) : '—';
+        };
+        const fmtRem = () => {
+          if (!tgt) return '—';
+          if (isKpi && hasRate)
+            return `<div>${(rem/100000000).toFixed(2)}억원</div>`;
+          if (isKpi) return `${(rem/100000000).toFixed(2)}억원`;
+          return '$' + formatNumber(Math.round(rem));
+        };
 
         return `
           <tr style="border-top:1px solid var(--tbl-row-bd)">
             <td style="padding:12px 14px">
               <span style="font-size:12px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span>
-              ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:6px">×${factor}</span>` : ''}
+              ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:5px">×${factor}</span>` : ''}
             </td>
-            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
-              ${tgt > 0
-                ? isKpi
-                  ? `<div>${(tgt/100000000).toFixed(2)}억원</div>`
-                  : '$' + formatNumber(Math.round(tgt))
-                : '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'}
-            </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">
-              ${act > 0
-                ? isKpi && _exchangeRate > 0
-                  ? `<div style="font-weight:600">₩${(act * _exchangeRate / 100000000).toFixed(2)}억</div><div style="font-size:10px;color:#888">$${formatNumber(Math.round(act))}</div>`
-                  : isKpi
-                    ? `$${formatNumber(Math.round(act))}`
-                    : '$' + formatNumber(Math.round(act))
-                : '—'}
-              ${isKpi && rawAct > 0 ? `<div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>` : ''}
-            </td>
+            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px">${fmtTgt()}</td>
+            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">${fmtAct()}</td>
             <td style="padding:12px 14px;min-width:160px">
-              ${tgt>0?`<div style="display:flex;align-items:center;gap:8px">
-                <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
-                  <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
-                </div>
-                <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
-              </div>`:'<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 필요</span>'}
+              ${tgt > 0 && (hasRate || !isKpi) ? `
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
+                    <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
+                  </div>
+                  <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
+                </div>` : isKpi ? '<span style="font-size:11px;color:#999">환율 입력 필요</span>' : '<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 필요</span>'}
             </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">
-              ${tgt > 0
-                ? isKpi && _exchangeRate > 0
-                  ? `<div>₩${(rem * _exchangeRate / 100000000).toFixed(2)}억</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(rem))}</div>`
-                  : isKpi
-                    ? `${(rem/100000000).toFixed(2)}억원`
-                    : '$' + formatNumber(Math.round(rem))
-                : '—'}
-            </td>
+            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">${fmtRem()}</td>
           </tr>`;
       }).join('');
 
-      const totalTgt = _getTotalTarget(year, mode);
-      const totalAct = isKpi
-        ? CONFIG.BIZ_LIST.reduce((s, b) => s + _getActualProfit(year, b), 0)
-        : CONFIG.BIZ_LIST.reduce((s, b) => s + _getActual(year, b), 0);
+      // 합계 계산
+      const totalTgtRaw = _getTotalTarget(year, mode);
+      // KPI: 원화 환산된 실적 합산
+      const totalActKrw = hasRate
+        ? CONFIG.BIZ_LIST.reduce((s,b) => s + _getActualProfit(year,b) * _exchangeRate, 0)
+        : CONFIG.BIZ_LIST.reduce((s,b) => s + _getActualProfit(year,b), 0);
+      const totalActUsd = CONFIG.BIZ_LIST.reduce((s,b) => s + _getActual(year,b), 0);
+
+      const totalTgt = totalTgtRaw;
+      const totalAct = isKpi ? totalActKrw : totalActUsd;
       const totalPct = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
       const totalRem = Math.max(0, totalTgt - totalAct);
       const totalClr = totalPct >= 100 ? '#1D9E75' : totalPct >= 70 ? 'var(--navy)' : '#EF9F27';
@@ -471,8 +504,8 @@ Pages.KpiTarget = (() => {
 
       const TH  = l => `<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
       const THR = l => `<th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
-      const actHeader = isKpi ? '누적 매출이익' : '누적 실적';
-      const tgtHeader = isKpi ? '목표 매출이익' : '목표 매출';
+      const actHeader = isKpi ? '누적 매출이익 (억원)' : '누적 실적 (USD)';
+      const tgtHeader = isKpi ? '목표 매출이익 (억원)' : '목표 매출 (USD)';
 
       const bizBtns = [
         {key:'all', label:'전체', color:'#1B4F8A'},
@@ -549,26 +582,27 @@ Pages.KpiTarget = (() => {
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${modeLabel})</div>
               <div style="font-size:18px;font-weight:600;color:${modeColor}">
                 ${isKpi
-                  ? '₩' + formatNumber(Math.round(totalTgt / 100000000 * 10) / 10) + '억'
+                  ? (totalTgt/100000000).toFixed(2) + '억원'
                   : '$' + formatNumber(Math.round(totalTgt))}
               </div>
               <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">
-                ${isKpi ? (totalTgt/100000000).toFixed(2) + '억원 (롤링 합계)' : '롤링 데이터 합계'}
+                ${isKpi ? '목표 매출이익 (롤링 합계)' : '롤링 데이터 합계'}
               </div>
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpi ? '누적 매출이익' : '누적 달성'}</div>
               <div style="font-size:18px;font-weight:600;color:var(--tx)">
-                ${isKpi && _exchangeRate > 0
-                  ? '₩' + formatNumber(Math.round(totalAct * _exchangeRate / 100000000 * 10) / 10) + '억'
-                  : isKpi ? '$' + formatNumber(Math.round(totalAct))
-                  : '$' + formatNumber(Math.round(totalAct))}
+                ${isKpi && hasRate
+                  ? (totalActKrw/100000000).toFixed(2) + '억원'
+                  : isKpi ? '$' + formatNumber(Math.round(totalActKrw))
+                  : '$' + formatNumber(Math.round(totalActUsd))}
               </div>
-              ${isKpi && _exchangeRate > 0 ? `<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(totalAct))} × ${_exchangeRate.toLocaleString()}원</div>` : ''}
+              ${isKpi && hasRate ? `<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0)))} × ${_exchangeRate.toLocaleString()}원</div>` : ''}
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
               <div style="font-size:18px;font-weight:600;color:${totalClr}">${totalPct}%</div>
+              <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpi ? (hasRate ? "원화 기준" : "환율 미입력") : "USD 기준"}</div>
             </div>
           </div>` : `
           <div style="background:#FFF3E0;border-left:3px solid #EF9F27;padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:#633806">
