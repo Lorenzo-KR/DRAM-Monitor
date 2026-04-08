@@ -98,12 +98,6 @@ Pages.Dashboard = (() => {
   // ── 3. KPI 카드 (5개 한 줄) ─────────────────────────────────
   function _renderKpiRow(kpi) {
     const year     = new Date().getFullYear();
-    // 롤링 기반 목표 (KPI 목표설정 탭과 동일한 값)
-    const totalTgt = Pages.KpiTarget.getTotalTarget(year);
-    const totalAct = CONFIG.BIZ_LIST.reduce((s, b) =>
-      s + kpi.invoices.filter(r => r.biz === b && String(r.date || '').startsWith(String(year))).reduce((t, r) => t + parseNumber(r.total || r.amount), 0), 0);
-    const kpiPct   = totalTgt > 0 ? Math.min(100, Math.round(totalAct / totalTgt * 100)) : 0;
-    const kpiColor = kpiPct >= 100 ? 'var(--tx)' : kpiPct >= 70 ? 'var(--tx2)' : 'var(--tx3)';
 
     function kpiCard(label, value, sub, color = '', subExtra = '', fxInput = '') {
       return `<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">
@@ -131,13 +125,32 @@ Pages.Dashboard = (() => {
       onclick="Store.setSetting('usd_krw',document.getElementById('fx-rate-input').value);Pages.Dashboard.render();"
       style="padding:3px 8px;font-size:11px;font-weight:500;border:1px solid var(--bd2);border-radius:5px;background:var(--tx);color:#fff;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif">적용</button>`;
 
+    // KPI 목표설정 탭과 동일한 계산값 사용
+    const kpiSum   = Pages.KpiTarget.getKpiSummary(year);
+    const kpiPct   = kpiSum.pct;
+    const kpiColor = kpiPct === null ? '' : kpiPct >= 100 ? 'var(--tx)' : kpiPct >= 70 ? 'var(--tx2)' : 'var(--tx3)';
+
+    let kpiCardHtml;
+    if (kpiSum.tgt === null) {
+      kpiCardHtml = kpiCard('KPI 달성률', '—', '목표 미설정');
+    } else {
+      const fmt = (v) => kpiSum.hasRate
+        ? (v / 100000000).toFixed(2) + '억원'
+        : '$' + formatNumberShort(Math.round(v));
+      const tgtStr = fmt(kpiSum.tgt);
+      const actStr = fmt(kpiSum.act);
+      const sub    = `목표 ${tgtStr}`;
+      const subEx  = `실적 ${actStr}`;
+      kpiCardHtml  = kpiCard('KPI 달성률', kpiPct + '%', sub, kpiColor, subEx);
+    }
+
     return `
       <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px">
         ${kpiCard('Job Orders', kpi.lots.length, `진행 ${kpi.activeLots.length} · 완료 ${kpi.doneLots.length}`)}
         ${kpiCard('Total Units', formatNumber(kpi.totalUnits), `처리 ${formatNumber(kpi.totalProc)} · 잔량 ${formatNumber(Math.max(0, kpi.totalUnits - kpi.totalProc))}`)}
         ${kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', 'var(--tx)', krwSub, fxInputHtml)}
         ${kpiCard('Active Orders', kpi.activeLots.length, kpi.overdueLots.length > 0 ? `지연 ${kpi.overdueLots.length}건 포함` : '지연 없음', 'var(--tx2)')}
-        ${totalTgt > 0 ? kpiCard('KPI 달성률', kpiPct + '%', `목표 $${formatNumberShort(totalTgt)}`, kpiColor) : kpiCard('KPI 달성률', '—', '목표 미설정')}
+        ${kpiCardHtml}
       </div>`;
   }
 
