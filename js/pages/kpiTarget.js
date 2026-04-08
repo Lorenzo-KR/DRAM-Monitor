@@ -413,6 +413,29 @@ Pages.KpiTarget = (() => {
     /** 앱 로드 후 서버 settings → _rolling 동기화 */
     loadFromSettings: ()                 => _loadFromSettings(),
 
+    /**
+     * 대시보드용 KPI 요약 반환
+     * @returns {{ tgt: number|null, act: number|null, pct: number|null, hasRate: boolean, unit: 'krw'|'usd' }}
+     *   tgt/act 단위: hasRate=true → 원(KRW), false → USD
+     */
+    getKpiSummary(year) {
+      const mode    = 'kpi';
+      const hasRate = _exchangeRate > 0;
+      const tgtRaw  = _getTotalTarget(year, mode); // 원(KRW)
+      if (tgtRaw <= 0) return { tgt: null, act: null, pct: null, hasRate, unit: hasRate ? 'krw' : 'usd' };
+
+      const actKrw = hasRate
+        ? CONFIG.BIZ_LIST.reduce((s, b) => s + _getActualProfit(year, b) * _exchangeRate, 0)
+        : null;
+      const actUsd = CONFIG.BIZ_LIST.reduce((s, b) => s + _getActualProfit(year, b), 0);
+
+      const tgt = tgtRaw;
+      const act = hasRate ? actKrw : actUsd * _exchangeRate || actUsd;
+      const pct = tgt > 0 ? Math.min(100, Math.round((hasRate ? actKrw : actUsd) / tgt * 100)) : null;
+
+      return { tgt, act: hasRate ? actKrw : actUsd, pct, hasRate, unit: hasRate ? 'krw' : 'usd' };
+    },
+
     render() {
       _loadFromSettings();
       const el = document.getElementById('kpitarget-body'); if (!el) return;
