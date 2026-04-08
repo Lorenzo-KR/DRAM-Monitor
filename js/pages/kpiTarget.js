@@ -109,7 +109,14 @@ Pages.KpiTarget = (() => {
   // ── 롤링 기반 목표 계산 ─────────────────────────────────────
   function _getRollingMonths(year, biz, mode) {
     const src = (mode === 'ec') ? _ecRolling : _rolling;
-    return (src[year]?.[biz] || Array(12).fill(0)).map(v => (parseFloat(v)||0) * 1000000);
+    const vals = src[year]?.[biz] || Array(12).fill(0);
+    if (mode === 'ec') {
+      // EC: Million USD → USD
+      return vals.map(v => (parseFloat(v)||0) * 1000000);
+    } else {
+      // KPI: 억원 → 원 (환율 있으면 USD로 환산, 없으면 그냥 억원 숫자)
+      return vals.map(v => (parseFloat(v)||0) * 100000000);
+    }
   }
 
   function _getTarget(year, biz, mode) {
@@ -412,15 +419,19 @@ Pages.KpiTarget = (() => {
             </td>
             <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
               ${tgt > 0
-                ? (isKpi && _exchangeRate > 0
-                  ? `<div>₩${formatNumber(Math.round(tgt * _exchangeRate))}</div><div style="font-size:10px;color:#888;font-weight:400">$${formatNumber(Math.round(tgt))}</div>`
-                  : '$' + formatNumber(Math.round(tgt)))
+                ? isKpi
+                  ? `<div>${(tgt/100000000).toFixed(2)}억원</div>`
+                  : '$' + formatNumber(Math.round(tgt))
                 : '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'}
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">
-              ${act > 0 ? (isKpi && _exchangeRate > 0
-                ? `<div style="font-weight:600">₩${formatNumber(Math.round(act * _exchangeRate))}</div><div style="font-size:10px;color:#888">$${formatNumber(Math.round(act))}</div>`
-                : '$' + formatNumber(Math.round(act))) : '—'}
+              ${act > 0
+                ? isKpi && _exchangeRate > 0
+                  ? `<div style="font-weight:600">₩${(act * _exchangeRate / 100000000).toFixed(2)}억</div><div style="font-size:10px;color:#888">$${formatNumber(Math.round(act))}</div>`
+                  : isKpi
+                    ? `$${formatNumber(Math.round(act))}`
+                    : '$' + formatNumber(Math.round(act))
+                : '—'}
               ${isKpi && rawAct > 0 ? `<div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>` : ''}
             </td>
             <td style="padding:12px 14px;min-width:160px">
@@ -433,9 +444,11 @@ Pages.KpiTarget = (() => {
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">
               ${tgt > 0
-                ? (isKpi && _exchangeRate > 0
-                  ? `<div>₩${formatNumber(Math.round(rem * _exchangeRate))}</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(rem))}</div>`
-                  : '$' + formatNumber(Math.round(rem)))
+                ? isKpi && _exchangeRate > 0
+                  ? `<div>₩${(rem * _exchangeRate / 100000000).toFixed(2)}억</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(rem))}</div>`
+                  : isKpi
+                    ? `${(rem/100000000).toFixed(2)}억원`
+                    : '$' + formatNumber(Math.round(rem))
                 : '—'}
             </td>
           </tr>`;
@@ -535,18 +548,23 @@ Pages.KpiTarget = (() => {
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${modeLabel})</div>
               <div style="font-size:18px;font-weight:600;color:${modeColor}">
-                ${isKpi && _exchangeRate > 0 ? '₩' + formatNumber(Math.round(totalTgt * _exchangeRate)) : '$' + formatNumber(Math.round(totalTgt))}
+                ${isKpi
+                  ? '₩' + formatNumber(Math.round(totalTgt / 100000000 * 10) / 10) + '억'
+                  : '$' + formatNumber(Math.round(totalTgt))}
               </div>
               <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">
-                ${isKpi && _exchangeRate > 0 ? '($' + formatNumber(Math.round(totalTgt)) + ' × ' + _exchangeRate.toLocaleString() + ')' : '롤링 데이터 합계'}
+                ${isKpi ? (totalTgt/100000000).toFixed(2) + '억원 (롤링 합계)' : '롤링 데이터 합계'}
               </div>
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpi ? '누적 매출이익' : '누적 달성'}</div>
               <div style="font-size:18px;font-weight:600;color:var(--tx)">
-                ${isKpi && _exchangeRate > 0 ? '₩' + formatNumber(Math.round(totalAct * _exchangeRate)) : '$' + formatNumber(Math.round(totalAct))}
+                ${isKpi && _exchangeRate > 0
+                  ? '₩' + formatNumber(Math.round(totalAct * _exchangeRate / 100000000 * 10) / 10) + '억'
+                  : isKpi ? '$' + formatNumber(Math.round(totalAct))
+                  : '$' + formatNumber(Math.round(totalAct))}
               </div>
-              ${isKpi && _exchangeRate > 0 ? `<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(totalAct))}</div>` : ''}
+              ${isKpi && _exchangeRate > 0 ? `<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(totalAct))} × ${_exchangeRate.toLocaleString()}원</div>` : ''}
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
@@ -625,7 +643,8 @@ Pages.KpiTarget = (() => {
       let sum = 0;
       inputs.forEach(i => { sum += parseFloat(i.value)||0; });
       const rt = row.querySelector('.rolling-rowtotal');
-      if (rt) rt.textContent = sum > 0 ? +sum.toFixed(4)+'' : '—';
+      const dp = _rollingMode === 'kpi' ? 2 : 4;
+      if (rt) rt.textContent = sum > 0 ? +sum.toFixed(dp)+'' : '—';
       Pages.KpiTarget.calcRollingAll();
     },
 
@@ -642,15 +661,16 @@ Pages.KpiTarget = (() => {
           colSums[ci] += v; rowSum += v;
         });
         const rt = row.querySelector('.rolling-rowtotal');
-        if (rt) rt.textContent = rowSum > 0 ? +rowSum.toFixed(4)+'' : '—';
+        const rdp = _rollingMode === 'kpi' ? 2 : 4;
+        if (rt) rt.textContent = rowSum > 0 ? +rowSum.toFixed(rdp)+'' : '—';
       });
       colSums.forEach((v, i) => {
         const el = document.getElementById('rs'+i);
-        if (el) el.textContent = v > 0 ? +v.toFixed(4)+'' : '0';
+        if (el) el.textContent = v > 0 ? +v.toFixed(rdp)+'' : '0';
         grand += v;
       });
       const st = document.getElementById('rstotal');
-      if (st) st.textContent = grand > 0 ? +grand.toFixed(4)+'' : '0';
+      if (st) st.textContent = grand > 0 ? +grand.toFixed(rdp)+'' : '0';
     },
 
     renderRolling() {
@@ -682,7 +702,7 @@ Pages.KpiTarget = (() => {
           <td style="padding:6px 8px;text-align:center;font-size:12px;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd)">${i+1}</td>
           <td style="padding:6px 10px;font-size:12px;font-weight:${r.fixed?'500':'400'};color:${r.fixed?'var(--tx)':'var(--tx3)'};background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap;text-align:center">${r.label}</td>
           ${cells}
-          <td class="rolling-rowtotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">${rowSum>0?+rowSum.toFixed(4):'—'}</td>
+          <td class="rolling-rowtotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">${rowSum>0?+rowSum.toFixed(_rollingMode==='kpi'?2:4):'—'}</td>
         </tr>`;
       }).join('');
 
@@ -693,11 +713,13 @@ Pages.KpiTarget = (() => {
       });
       const grand = colSums.reduce((s,v)=>s+v,0);
       const sumCells = colSums.map((v,i) =>
-        `<td id="rs${i}" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd);font-family:var(--font-mono)">${v>0?+v.toFixed(4):'0'}</td>`
+        `<td id="rs${i}" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd);font-family:var(--font-mono)">${v>0?+v.toFixed(_rollingMode==='kpi'?2:4):'0'}</td>`
       ).join('');
 
       wrap.innerHTML = `
-        <div style="font-size:12px;color:${_rollingMode==='ec'?'#0F6E56':'#E24B4A'};font-weight:500;margin-bottom:12px">Unit: Million USD &nbsp;·&nbsp; ${_rollingMode==='ec'?'EC(예상비용) 기준':'KPI 목표 기준'} · 저장하면 즉시 반영됩니다</div>
+        <div style="font-size:12px;color:${_rollingMode==='ec'?'#0F6E56':'#E24B4A'};font-weight:500;margin-bottom:12px">
+          단위: ${_rollingMode==='ec'?'Million USD':'억원'} &nbsp;·&nbsp; ${_rollingMode==='ec'?'EC(예상비용) 기준':'KPI 목표 기준'} · 저장하면 즉시 반영됩니다
+        </div>
 
         <!-- 붙여넣기 영역 -->
         <div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">
@@ -739,7 +761,7 @@ Pages.KpiTarget = (() => {
               <tr>
                 <td colspan="2" style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd)">합계</td>
                 ${sumCells}
-                <td id="rstotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grand>0?+grand.toFixed(4):'0'}</td>
+                <td id="rstotal" style="padding:6px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grand>0?+grand.toFixed(_rollingMode==='kpi'?2:4):'0'}</td>
               </tr>
             </tfoot>
           </table>
