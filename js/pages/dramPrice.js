@@ -10,7 +10,6 @@ Pages.DramPrice = (() => {
   let _data     = null;
   let _chart    = null;
   let _selProds = new Set();
-  let _selCats  = new Set(['Spot', 'Contract', 'Module', 'Graphics']);
   let _metric   = 'avg';
 
   const COLORS = [
@@ -96,7 +95,6 @@ Pages.DramPrice = (() => {
 
   function _renderTable(rows) {
     const filtered = rows
-      .filter(r => _selCats.size===0 || _selCats.has(r[C.cat]))
       .sort((a,b) => b[C.date].localeCompare(a[C.date]))
       .slice(0, 300);
     if (!filtered.length) return '<div style="padding:20px;text-align:center;color:#999">데이터 없음</div>';
@@ -129,22 +127,6 @@ Pages.DramPrice = (() => {
         b.style.color      = b.dataset.m===m ? '#fff' : '#333';
       });
       _refreshChart();
-    },
-
-    toggleCat(cat) {
-      if (_selCats.has(cat)) _selCats.delete(cat);
-      else _selCats.add(cat);
-      document.querySelectorAll('.dp-cat-btn').forEach(b => {
-        const on = _selCats.has(b.dataset.cat);
-        b.style.opacity    = on ? '1' : '0.3';
-        b.style.fontWeight = on ? '700' : '400';
-      });
-      _selProds.clear(); // 카테고리 바뀌면 제품 선택 초기화
-      document.querySelectorAll('.dp-prod-btn').forEach(b => { b.style.opacity='1'; b.style.fontWeight='400'; });
-      _refreshChart();
-      // 표 업데이트
-      const tableEl = document.getElementById('dp-table');
-      if (tableEl && _data) tableEl.innerHTML = _renderTable(_data.rows);
     },
 
     toggleProduct(prod) {
