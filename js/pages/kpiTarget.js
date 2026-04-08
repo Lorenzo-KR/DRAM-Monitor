@@ -414,6 +414,21 @@ Pages.KpiTarget = (() => {
     loadFromSettings: ()                 => _loadFromSettings(),
 
     /**
+     * 대시보드용 사업별 KPI 요약
+     * @returns {{ tgt, act, pct, hasRate }}
+     */
+    getBizSummary(year, biz) {
+      const hasRate = _exchangeRate > 0;
+      const tgt     = _getTarget(year, biz, 'kpi');           // 원(KRW)
+      if (!tgt) return null;
+      const actUsd  = _getActualProfit(year, biz);
+      const actKrw  = hasRate ? actUsd * _exchangeRate : null;
+      const act     = hasRate ? actKrw : actUsd;
+      const pct     = tgt > 0 ? Math.min(100, Math.round((hasRate ? actKrw : actUsd) / tgt * 100)) : 0;
+      return { tgt, act, pct, hasRate };
+    },
+
+    /**
      * 대시보드용 KPI 요약 반환
      * @returns {{ tgt: number|null, act: number|null, pct: number|null, hasRate: boolean, unit: 'krw'|'usd' }}
      *   tgt/act 단위: hasRate=true → 원(KRW), false → USD
