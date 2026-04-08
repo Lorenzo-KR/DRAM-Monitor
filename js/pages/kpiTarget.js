@@ -376,11 +376,22 @@ Pages.KpiTarget = (() => {
           responsive:true, maintainAspectRatio:false,
           plugins: {
             legend:{display:false},
-            tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: $${Math.round(ctx.raw||0).toLocaleString()}`}}
+            tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>{
+              const v = Math.round(ctx.raw||0);
+              const disp = isKpiT && hasRateT
+                ? (v/100000000).toFixed(2)+'억원'
+                : isKpiT
+                  ? '$'+v.toLocaleString()
+                  : '$'+v.toLocaleString();
+              return ` ${ctx.dataset.label}: ${disp}`;
+            }}}
           },
           scales: {
             x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:12},autoSkip:false}},
-            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:v=>'$'+(v/1000).toFixed(0)+'K'},beginAtZero:true},
+            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:v=>{
+              if (isKpiT && hasRateT) return (v/100000000).toFixed(1)+'억';
+              return '$'+(v/1000).toFixed(0)+'K';
+            }},beginAtZero:true},
           },
           layout:{padding:{top:10}}
         }
@@ -617,8 +628,8 @@ Pages.KpiTarget = (() => {
               ${totalTgt > 0 ? `
               <tfoot><tr style="background:var(--tbl-sum-bg)">
                 <td style="padding:10px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-                <td style="padding:10px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalTgt))}</td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalAct))}</td>
+                <td style="padding:10px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpi ? (totalTgt/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalTgt))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpi && hasRate ? (totalAct/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalAct))}</td>
                 <td style="padding:10px 14px;border-top:0.5px solid var(--bd)">
                   <div style="display:flex;align-items:center;gap:8px">
                     <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
@@ -627,7 +638,7 @@ Pages.KpiTarget = (() => {
                     <span style="font-size:12px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
                   </div>
                 </td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">$${formatNumber(Math.round(totalRem))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">${isKpi ? (totalRem/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalRem))}</td>
               </tr></tfoot>` : ''}
             </table>
           </div>
