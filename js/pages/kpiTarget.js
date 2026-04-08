@@ -62,6 +62,33 @@ Pages.KpiTarget = (() => {
     Api.setSetting('kpi_factors', JSON.stringify(_factors));
   }
 
+  // ── 사업계획 기준환율 (KPI 기준 원화 환산용) ─────────────
+  let _exchangeRate = parseFloat(localStorage.getItem('kpi_exchange_rate') || '0') || 0;
+
+  function _saveExchangeRate(rate) {
+    _exchangeRate = rate;
+    localStorage.setItem('kpi_exchange_rate', String(rate));
+    Api.setSetting('kpi_exchange_rate', String(rate));
+  }
+
+  function _loadExchangeRate() {
+    const raw = Store.getSetting('kpi_exchange_rate');
+    if (raw && raw.value) {
+      _exchangeRate = parseFloat(raw.value) || 0;
+      localStorage.setItem('kpi_exchange_rate', String(_exchangeRate));
+    }
+  }
+
+  // USD → 원화 환산
+  function _toKRW(usd) { return _exchangeRate > 0 ? usd * _exchangeRate : null; }
+  function _fmtKRW(usd) {
+    const krw = _toKRW(usd);
+    if (!krw) return null;
+    if (krw >= 1e8) return (krw / 1e8).toFixed(2) + '억';
+    if (krw >= 1e4) return Math.round(krw / 1e4) + '만';
+    return Math.round(krw).toLocaleString();
+  }
+
   function _loadFactors() {
     const raw = Store.getSetting('kpi_factors');
     if (!raw) return;
@@ -155,6 +182,7 @@ Pages.KpiTarget = (() => {
       } catch(e) {}
     }
     _loadFactors();
+    _loadExchangeRate();
   }
 
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
@@ -383,11 +411,17 @@ Pages.KpiTarget = (() => {
               ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:6px">×${factor}</span>` : ''}
             </td>
             <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600">
-              ${tgt > 0 ? '$' + formatNumber(Math.round(tgt)) : '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'}
+              ${tgt > 0
+                ? (isKpi && _exchangeRate > 0
+                  ? `<div>₩${formatNumber(Math.round(tgt * _exchangeRate))}</div><div style="font-size:10px;color:#888;font-weight:400">$${formatNumber(Math.round(tgt))}</div>`
+                  : '$' + formatNumber(Math.round(tgt)))
+                : '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'}
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">
-              ${act > 0 ? '$' + formatNumber(Math.round(act)) : '—'}
-              ${isKpi && rawAct > 0 ? `<div style="font-size:10px;color:#888">매출 $${formatNumber(Math.round(rawAct))}</div>` : ''}
+              ${act > 0 ? (isKpi && _exchangeRate > 0
+                ? `<div style="font-weight:600">₩${formatNumber(Math.round(act * _exchangeRate))}</div><div style="font-size:10px;color:#888">$${formatNumber(Math.round(act))}</div>`
+                : '$' + formatNumber(Math.round(act))) : '—'}
+              ${isKpi && rawAct > 0 ? `<div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>` : ''}
             </td>
             <td style="padding:12px 14px;min-width:160px">
               ${tgt>0?`<div style="display:flex;align-items:center;gap:8px">
@@ -398,7 +432,11 @@ Pages.KpiTarget = (() => {
               </div>`:'<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 필요</span>'}
             </td>
             <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">
-              ${tgt>0?'$'+formatNumber(Math.round(rem)):'—'}
+              ${tgt > 0
+                ? (isKpi && _exchangeRate > 0
+                  ? `<div>₩${formatNumber(Math.round(rem * _exchangeRate))}</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(rem))}</div>`
+                  : '$' + formatNumber(Math.round(rem)))
+                : '—'}
             </td>
           </tr>`;
       }).join('');
@@ -441,19 +479,32 @@ Pages.KpiTarget = (() => {
 
           <!-- ① KPI/EC 기준 선택 + 롤링 입력 버튼 (최상단) -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:12px;color:var(--tx2);font-weight:500">기준 선택:</span>
-              <div style="display:flex;border:1.5px solid #CCC;border-radius:7px;overflow:hidden">
-                <button id="kpi-mode-kpi" onclick="Pages.KpiTarget.setMode('kpi')"
-                  style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
-                         background:${mode==='kpi'?'#1D1D1F':'#fff'};color:${mode==='kpi'?'#fff':'#555'};
-                         font-family:Pretendard,sans-serif">KPI 기준</button>
-                <button id="kpi-mode-ec" onclick="Pages.KpiTarget.setMode('ec')"
-                  style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
-                         background:${mode==='ec'?'#0F6E56':'#fff'};color:${mode==='ec'?'#fff':'#555'};
-                         font-family:Pretendard,sans-serif">EC 기준</button>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:12px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">기준 선택:</span>
+                <div style="display:flex;border:1.5px solid #CCC;border-radius:7px;overflow:hidden">
+                  <button id="kpi-mode-kpi" onclick="Pages.KpiTarget.setMode('kpi')"
+                    style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
+                           background:${mode==='kpi'?'#1D1D1F':'#fff'};color:${mode==='kpi'?'#fff':'#555'};
+                           font-family:Pretendard,sans-serif">KPI 기준</button>
+                  <button id="kpi-mode-ec" onclick="Pages.KpiTarget.setMode('ec')"
+                    style="padding:6px 16px;border:none;font-size:12px;font-weight:600;cursor:pointer;
+                           background:${mode==='ec'?'#0F6E56':'#fff'};color:${mode==='ec'?'#fff':'#555'};
+                           font-family:Pretendard,sans-serif">EC 기준</button>
+                </div>
               </div>
-              <span style="font-size:11px;color:${modeColor};font-weight:600;padding:3px 8px;border:1px solid ${modeColor};border-radius:4px">${modeLabel}</span>
+              ${isKpi ? `
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:12px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">사업계획 기준환율:</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="font-size:12px;color:#555;font-family:Pretendard,sans-serif">$1 =</span>
+                  <input type="number" id="kpi-exchange-input" value="${_exchangeRate || ''}" placeholder="예: 1450"
+                    style="width:90px;padding:5px 8px;border:1.5px solid #185FA5;border-radius:6px;font-size:13px;text-align:right;font-family:'DM Mono',monospace;color:#1D1D1F"
+                    oninput="Pages.KpiTarget.updateExchangeRate(this.value)">
+                  <span style="font-size:12px;color:#555;font-family:Pretendard,sans-serif">원</span>
+                </div>
+                ${_exchangeRate > 0 ? `<span style="font-size:11px;color:#185FA5;font-weight:600;padding:2px 7px;border:1px solid #185FA5;border-radius:4px">₩ 환산 적용중</span>` : `<span style="font-size:11px;color:#999;font-family:Pretendard,sans-serif">입력하면 원화 환산 표시</span>`}
+              </div>` : ''}
             </div>
             <div style="display:flex;gap:6px">
               <button onclick="Pages.KpiTarget.openRolling('kpi')"
@@ -483,12 +534,19 @@ Pages.KpiTarget = (() => {
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${modeLabel})</div>
-              <div style="font-size:18px;font-weight:600;color:${modeColor}">$${formatNumber(Math.round(totalTgt))}</div>
-              <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">롤링 데이터 합계</div>
+              <div style="font-size:18px;font-weight:600;color:${modeColor}">
+                ${isKpi && _exchangeRate > 0 ? '₩' + formatNumber(Math.round(totalTgt * _exchangeRate)) : '$' + formatNumber(Math.round(totalTgt))}
+              </div>
+              <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">
+                ${isKpi && _exchangeRate > 0 ? '($' + formatNumber(Math.round(totalTgt)) + ' × ' + _exchangeRate.toLocaleString() + ')' : '롤링 데이터 합계'}
+              </div>
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">누적 달성</div>
-              <div style="font-size:18px;font-weight:600;color:var(--tx)">$${formatNumber(Math.round(totalAct))}</div>
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpi ? '누적 매출이익' : '누적 달성'}</div>
+              <div style="font-size:18px;font-weight:600;color:var(--tx)">
+                ${isKpi && _exchangeRate > 0 ? '₩' + formatNumber(Math.round(totalAct * _exchangeRate)) : '$' + formatNumber(Math.round(totalAct))}
+              </div>
+              ${isKpi && _exchangeRate > 0 ? `<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(totalAct))}</div>` : ''}
             </div>
             <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
@@ -737,6 +795,13 @@ Pages.KpiTarget = (() => {
       if (el) el.style.display = 'none';
       if (ov) ov.style.display = 'none';
       document.body.style.overflow = '';
+    },
+
+    updateExchangeRate(val) {
+      const rate = parseFloat(val) || 0;
+      _saveExchangeRate(rate);
+      // 표만 실시간 갱신
+      Pages.KpiTarget.render();
     },
 
     saveFactors() {
