@@ -3,6 +3,8 @@ crawl_dram_price.py
 TrendForce DRAM Spot Price 크롤링 → Google Sheets 저장
 - DRAM Spot Price 섹션만 수집 (7개 제품)
 - Last Update 시간 포함
+- 날짜별 누적 저장 (같은 날 중복 저장 방지)
+- 헤더 불일치 시 clear() 절대 안 함 → 누적 데이터 보호
 컬럼: Date | Last Update | Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | Source
 """
 
@@ -42,11 +44,11 @@ def get_sheet():
         ws = sh.worksheet('spot_prices')
         first = ws.row_values(1)
         if first != HEADERS:
-            ws.clear()
-            ws.append_row(HEADERS)
-            print('[Sheet] Headers reset')
+            # ★ clear() 절대 금지 — 1행만 덮어쓰기
+            ws.update('A1', [HEADERS])
+            print('[Sheet] Headers updated (data preserved)')
     except gspread.WorksheetNotFound:
-        ws = sh.add_worksheet('spot_prices', rows=5000, cols=15)
+        ws = sh.add_worksheet('spot_prices', rows=10000, cols=15)
         ws.append_row(HEADERS)
         print('[Sheet] Created spot_prices')
     return ws
@@ -57,14 +59,22 @@ def crawl():
     last_update = ''
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36'
+        browser = p.chromium.launch(
+            headless=True,
+            args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
         )
+        ctx = browser.new_context(
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            viewport={'width': 1280, 'height': 800},
+            locale='en-US',
+        )
+        # 봇 감지 우회: webdriver 속성 제거
+        ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         page = ctx.new_page()
         print(f'[Crawl] Loading {TARGET_URL}')
-        page.goto(TARGET_URL, wait_until='networkidle', timeout=90000)
-        time.sleep(6)
+        page.goto(TARGET_URL, wait_until='domcontentloaded', timeout=90000)
+        # JS 렌더링 대기
+        time.sleep(8)
 
         # Last Update 텍스트 추출
         try:
@@ -149,24 +159,28 @@ def crawl():
 
 def save(ws, rows):
     if not rows:
-        print('[Save] No data')
-        return
+        print('[Save] No data to save')
+        return False
     today = datetime.date.today().isoformat()
+    # 오늘 날짜 이미 있으면 스킵 (중복 방지)
     existing = ws.get_all_values()
-    existing_dates = [r[0] for r in existing[1:] if r]
+    existing_dates = {r[0] for r in existing[1:] if r}
     if today in existing_dates:
-        print(f'[Save] {today} already saved, skipping')
-        return
+        print(f'[Save] {today} already exists, skipping')
+        return False
     for row in rows:
-        ws.append_row(row)
+        ws.append_row(row, value_input_option='RAW')
     print(f'[Save] {len(rows)} rows saved for {today}')
+    return True
 
 if __name__ == '__main__':
     if not SHEET_ID or not GCP_CREDS:
         print('[Error] GSHEET_ID or GCP_CREDENTIALS missing')
         exit(1)
     print(f'[Start] {datetime.date.today()}')
-    ws   = get_sheet()
-    rows = crawl()
-    save(ws, rows)
+    ws      = get_sheet()
+    rows    = crawl()
+    saved   = save(ws, rows)
+    if not saved and not rows:
+        exit(1)   # 크롤링 자체 실패 시 액션 실패로 표시
     print('[Done]')

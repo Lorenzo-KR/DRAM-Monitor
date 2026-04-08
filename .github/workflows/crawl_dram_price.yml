@@ -2,12 +2,15 @@ name: DRAM Price Crawler
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 매일 KST 11:00 (UTC 02:00)
+    - cron: '0 2 * * *'   # 매일 KST 11:00 (UTC 02:00)
   workflow_dispatch:
 
 jobs:
   crawl:
-    runs-on: ubuntu-22.04  # 24 대신 22.04 사용 (libasound2 호환)
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write      # 커밋 push 권한
+
     steps:
       - uses: actions/checkout@v4
 
@@ -26,3 +29,14 @@ jobs:
           GSHEET_ID: ${{ secrets.DRAM_PRICE_SHEET_ID }}
           GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
         run: python crawler/crawl_dram_price.py
+
+      # ★ 스케줄 자동 중지 방지 — 실행 날짜를 파일에 기록 후 커밋
+      - name: Keep workflow active (commit timestamp)
+        if: always()
+        run: |
+          echo "Last crawl: $(date -u '+%Y-%m-%d %H:%M UTC')" > crawler/.last_crawl
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add crawler/.last_crawl
+          git diff --cached --quiet || git commit -m "chore: dram price crawl $(date -u '+%Y-%m-%d')"
+          git push
