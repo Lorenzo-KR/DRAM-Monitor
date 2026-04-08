@@ -305,7 +305,7 @@ Pages.KpiTarget = (() => {
         <div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div>
       </div>`;
 
-    const thS = 'padding:9px 12px;font-size:12px;font-weight:500;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd)';
+    const thS = 'padding:9px 12px;font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-tx-body);text-align:center;text-transform:uppercase;letter-spacing:.05em;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd)';
     let cumTA2 = 0, cumAA2 = 0;
     const tableRows = MONTHS.map((m, i) => {
       cumTA2 += monthTargets[i];
@@ -323,10 +323,10 @@ Pages.KpiTarget = (() => {
                    : `<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid #FECACA;color:#dc2626;background:#FEF2F2">-${fmtVal(Math.abs(dif))}</span>`;
       return `<tr style="${isCur?'background:#F0F7FF':''}${!isPast?';opacity:0.38':''}">
         <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">${m}${isCur?' ◀':''}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${monthTargets[i]>0?fmtVal(monthTargets[i]):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px">${act!==null?fmtVal(act):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tbl-tx-body)">${cumTA2>0?fmtVal(cumTA2):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?fmtVal(cumAVal):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tbl-tx-body)">${monthTargets[i]>0?fmtVal(monthTargets[i]):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px">${act!==null?fmtVal(act):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tbl-tx-body)">${cumTA2>0?fmtVal(cumTA2):'—'}</td>
+        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?fmtVal(cumAVal):'—'}</td>
         <td style="padding:9px 12px;min-width:130px">
           ${pct!==null?`<div style="display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden">
@@ -343,15 +343,15 @@ Pages.KpiTarget = (() => {
       ${cards}
       ${chartHtml}
       <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:8px">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Pretendard,sans-serif">
           <thead><tr>
-            <th style="${thS};text-align:left">월</th>
-            <th style="${thS};text-align:right">월 목표</th>
-            <th style="${thS};text-align:right">월 실적</th>
-            <th style="${thS};text-align:right">누적 목표</th>
-            <th style="${thS};text-align:right">누적 실적</th>
+            <th style="${thS}">월</th>
+            <th style="${thS}">월 목표</th>
+            <th style="${thS}">월 실적</th>
+            <th style="${thS}">누적 목표</th>
+            <th style="${thS}">누적 실적</th>
             <th style="${thS};min-width:130px">달성률</th>
-            <th style="${thS};text-align:right">누적 차이</th>
+            <th style="${thS}">누적 차이</th>
           </tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
@@ -511,22 +511,22 @@ Pages.KpiTarget = (() => {
 
         return `
           <tr style="border-top:1px solid var(--tbl-row-bd)">
-            <td style="padding:12px 14px">
-              <span style="font-size:12px;font-weight:500;color:${color}">${CONFIG.BIZ_LABELS[b]}</span>
-              ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:5px">×${factor}</span>` : ''}
+            <td style="padding:12px 14px;font-family:Pretendard,sans-serif;font-size:12px">
+              <span style="font-size:12px;font-weight:500;color:${color};font-family:Pretendard,sans-serif">${CONFIG.BIZ_LABELS[b]}</span>
+              ${isKpi ? `<span style="font-size:10px;color:#888;margin-left:5px;font-family:Pretendard,sans-serif">×${factor}</span>` : ''}
             </td>
-            <td style="padding:12px 14px;font-family:var(--font-mono);font-size:12px">${fmtTgt()}</td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx)">${fmtAct()}</td>
+            <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px">${fmtTgt()}</td>
+            <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tx)">${fmtAct()}</td>
             <td style="padding:12px 14px;min-width:160px">
               ${tgt > 0 && (hasRate || !isKpi) ? `
                 <div style="display:flex;align-items:center;gap:8px">
                   <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
                     <div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div>
                   </div>
-                  <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right">${pct}%</span>
-                </div>` : isKpi ? '<span style="font-size:11px;color:#999">환율 입력 필요</span>' : '<span style="font-size:12px;color:var(--tbl-tx-body)">롤링 필요</span>'}
+                  <span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right;font-family:Pretendard,sans-serif">${pct}%</span>
+                </div>` : isKpi ? '<span style="font-size:11px;color:#999;font-family:Pretendard,sans-serif">환율 입력 필요</span>' : '<span style="font-size:12px;color:var(--tbl-tx-body);font-family:Pretendard,sans-serif">롤링 필요</span>'}
             </td>
-            <td style="padding:12px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">${fmtRem()}</td>
+            <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:${rem>0?'#BA7517':'var(--tx3)'}">${fmtRem()}</td>
           </tr>`;
       }).join('');
 
@@ -551,8 +551,9 @@ Pages.KpiTarget = (() => {
           ${active?'background:#1D1D1F;color:#fff;border-color:#1D1D1F':'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
       }).join('');
 
-      const TH  = l => `<th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
-      const THR = l => `<th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd)">${l}</th>`;
+      const TH  = l => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
+      const THR = l => `<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
+      // KPI: (억원), EC: (USD) — (USD)(USD) 중복 없이
       const actHeader = isKpi ? '누적 매출이익 (억원)' : '누적 실적 (USD)';
       const tgtHeader = isKpi ? '목표 매출이익 (억원)' : '목표 매출 (USD)';
 
@@ -661,13 +662,13 @@ Pages.KpiTarget = (() => {
 
           <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
             <table style="width:100%;border-collapse:collapse">
-              <thead><tr>${TH('사업')}${TH(tgtHeader + ' (USD)')}${THR(actHeader)}${TH('달성률')}${THR('잔여')}</tr></thead>
+              <thead><tr>${TH('사업')}${THR(tgtHeader)}${THR(actHeader)}${TH('달성률')}${THR('잔여')}</tr></thead>
               <tbody>${bizRows}</tbody>
               ${totalTgt > 0 ? `
               <tfoot><tr style="background:var(--tbl-sum-bg)">
-                <td style="padding:10px 14px;font-size:12px;font-weight:500;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-                <td style="padding:10px 14px;font-family:var(--font-mono);font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpi ? (totalTgt/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalTgt))}</td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpi && hasRate ? (totalAct/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalAct))}</td>
+                <td style="padding:10px 14px;font-size:12px;font-weight:500;font-family:Pretendard,sans-serif;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
+                <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpi ? (totalTgt/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalTgt))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpi && hasRate ? (totalAct/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalAct))}</td>
                 <td style="padding:10px 14px;border-top:0.5px solid var(--bd)">
                   <div style="display:flex;align-items:center;gap:8px">
                     <div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
@@ -676,7 +677,7 @@ Pages.KpiTarget = (() => {
                     <span style="font-size:12px;font-weight:600;color:${totalClr};min-width:32px;text-align:right">${totalPct}%</span>
                   </div>
                 </td>
-                <td style="padding:10px 14px;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">${isKpi ? (totalRem/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalRem))}</td>
+                <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:${totalRem>0?'#BA7517':'var(--tx3)'};border-top:0.5px solid var(--bd)">${isKpi ? (totalRem/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(totalRem))}</td>
               </tr></tfoot>` : ''}
             </table>
           </div>
