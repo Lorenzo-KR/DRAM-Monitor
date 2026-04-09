@@ -63,7 +63,7 @@ Pages.KpiTarget = (() => {
   }
 
   // ── 사업계획 기준환율 (KPI 기준 원화 환산용) ─────────────
-  let _exchangeRate = parseFloat(localStorage.getItem('kpi_exchange_rate') || '0') || 0;
+  let _exchangeRate = parseFloat(localStorage.getItem('kpi_exchange_rate') || '0') || 1395;
 
   function _saveExchangeRate(rate) {
     _exchangeRate = rate;
@@ -74,9 +74,14 @@ Pages.KpiTarget = (() => {
   function _loadExchangeRate() {
     const raw = Store.getSetting('kpi_exchange_rate');
     if (raw && raw.value) {
-      _exchangeRate = parseFloat(raw.value) || 0;
-      localStorage.setItem('kpi_exchange_rate', String(_exchangeRate));
+      const parsed = parseFloat(raw.value);
+      if (parsed > 0) {
+        _exchangeRate = parsed;
+        localStorage.setItem('kpi_exchange_rate', String(_exchangeRate));
+      }
     }
+    // 서버값도 없고 localStorage도 없으면 기본값 1395 유지
+    if (!_exchangeRate || _exchangeRate <= 0) _exchangeRate = 1395;
   }
 
   // USD → 원화 환산
@@ -594,9 +599,10 @@ Pages.KpiTarget = (() => {
                 <span style="font-size:12px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">사업계획 기준환율:</span>
                 <div style="display:flex;align-items:center;gap:4px">
                   <span style="font-size:12px;color:#555;font-family:Pretendard,sans-serif">$1 =</span>
-                  <input type="number" id="kpi-exchange-input" value="${_exchangeRate || ''}" placeholder="예: 1450"
+                  <input type="number" id="kpi-exchange-input" value="${_exchangeRate || 1395}" placeholder="예: 1395"
                     style="width:90px;padding:5px 8px;border:1.5px solid #185FA5;border-radius:6px;font-size:13px;text-align:right;font-family:'DM Mono',monospace;color:#1D1D1F"
-                    oninput="Pages.KpiTarget.updateExchangeRate(this.value)">
+                    onkeydown="if(event.key==='Enter'){Pages.KpiTarget.updateExchangeRate(this.value);this.blur();}"
+                    onblur="Pages.KpiTarget.updateExchangeRate(this.value)">
                   <span style="font-size:12px;color:#555;font-family:Pretendard,sans-serif">원</span>
                 </div>
                 ${_exchangeRate > 0 ? `<span style="font-size:11px;color:#185FA5;font-weight:600;padding:2px 7px;border:1px solid #185FA5;border-radius:4px">₩ 환산 적용중</span>` : `<span style="font-size:11px;color:#999;font-family:Pretendard,sans-serif">입력하면 원화 환산 표시</span>`}
