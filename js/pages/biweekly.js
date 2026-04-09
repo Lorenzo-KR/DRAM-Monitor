@@ -267,7 +267,7 @@ Pages.Biweekly = (() => {
         <div style="width:100%">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
             <div>
-              <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;color:#1D1D1F">Bi-Weekly</div>
+              <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;color:#1D1D1F">월별 처리량/매출액</div>
               <div style="font-size:12px;color:#86868B;margin-top:2px">${curYear}년 운영 현황</div>
             </div>
             <div style="font-size:12px;color:#86868B">${curYear}년 ${curMonth}월 기준</div>
