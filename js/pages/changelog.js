@@ -13,10 +13,31 @@ Pages.Changelog = (() => {
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
     {
+      version: 'v54',
+      date:    '2026-04-09',
+      title:   '대시보드 개선 · KPI탭 표 정비 · DRAM Price 수정 · 탭 이름 변경',
+      latest:  true,
+      items: [
+        { type: 'fix',     text: 'DRAM Price 탭 데이터 표시 안 되는 버그 수정 (C.cat undefined 필터 오류)' },
+        { type: 'fix',     text: 'DRAM Price 크롤러 누적 저장 보호 — 헤더 불일치 시 ws.clear() 제거, 1행만 수정으로 변경' },
+        { type: 'improve', text: 'DRAM Price GitHub Actions 스케줄 자동 중지 방지 — 매 실행마다 .last_crawl 커밋' },
+        { type: 'improve', text: '대시보드 Active 표 입고일 역순 정렬 (최신 입고일이 위)' },
+        { type: 'improve', text: '대시보드 지연 상태 배지 — 진행중(초록) + 지연(빨강) 두 개 표시' },
+        { type: 'improve', text: '대시보드 KPI 달성률 카드 — KPI목표설정탭과 동일한 계산값 연동 (원화 단위)' },
+        { type: 'improve', text: '대시보드 KPI 목표달성 바 차드 — 사업별 달성률 getBizSummary 기반으로 KPI탭과 통일' },
+        { type: 'fix',     text: '대시보드 Completed 표 합계 행 테두리 두께 통일 (border-top: 2px), Pretendard 폰트 적용' },
+        { type: 'improve', text: 'KPI 목표설정 차트 y축/tooltip 달러 → 원화(억원) 표시로 변경' },
+        { type: 'improve', text: 'KPI 목표설정 사업별 합계 행 달러 → KPI/EC 분기 원화 표시' },
+        { type: 'improve', text: 'KPI 목표설정 표 헤더 전부 가운데 정렬, Pretendard 폰트 통일' },
+        { type: 'fix',     text: 'KPI 목표설정 헤더 (USD) 중복 제거 — 목표 매출이익 (억원)(USD) → (억원)' },
+        { type: 'improve', text: 'KPI 목표설정 금액 열 오른쪽 정렬 (회계 기준)' },
+        { type: 'improve', text: '월별 처리량/매출액 탭 이름 변경 (Bi-Weekly → 월별 처리량/매출액)' },
+      ],
+    },
+    {
       version: 'v53',
       date:    '2026-04-05',
       title:   'Pretendard 폰트 · 엑셀 표 스타일 · 셀 너비 최적화',
-      latest:  true,
       items: [
         { type: 'improve', text: 'Pretendard 폰트 전체 적용 (LOT진행현황, 매출현황)' },
         { type: 'improve', text: 'LOT 진행현황 엑셀 기본 표 스타일 적용 — 헤더 #D9D9D9, 테두리 #999, 짝수행 #F2F2F2' },
