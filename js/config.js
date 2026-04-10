@@ -6,7 +6,7 @@
 
 const CONFIG = {
   // Google Apps Script 배포 URL
-  API_URL: 'https://script.google.com/macros/s/AKfycbwulKszrg5RNpLcN3sshgDdRvnkvRLpptpWk-KO3gSPWp_oG4hG6pko2aRixV04vjqh/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwcAC6qk5bHeVALTnoPl39nStSR0hj52nATSMxOK7-cK0i8IKOgUGbjMjVEIhj1yo93/exec',
 
   // 로그인 비밀번호는 Apps Script 서버에서만 관리됩니다.
   // 코드에 비밀번호를 저장하지 않습니다.
