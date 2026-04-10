@@ -669,43 +669,95 @@ Pages.KpiTarget = (() => {
     },
 
     parsePasteRolling() {
-      const ta=document.getElementById('rolling-paste-area'); if (!ta) return;
-      const msg=document.getElementById('rolling-paste-msg');
-      const raw=ta.value.trim(); if (!raw) return;
-      const BIZ_MAP=[
-        {key:'DRAM',keywords:['dram','디램']},{key:'SSD',keywords:['ssd']},
-        {key:'MID',keywords:['mid','mobile ink','모바일','ink die']},{key:'SCR',keywords:['scr','scrap','스크랩','자재']},
-        {key:'RMA',keywords:['rma']},{key:'SUS',keywords:['sus','sustainability','컨설팅','지속']},
-        {key:'MOD',keywords:['mod','모듈','module']},
+      const ta  = document.getElementById('rolling-paste-area'); if (!ta) return;
+      const msg = document.getElementById('rolling-paste-msg');
+      const raw = ta.value.trim(); if (!raw) return;
+
+      // 숫자 또는 '-' 변환 (-, —, ― 모두 0)
+      function parseVal(s) {
+        const t = String(s).replace(/,/g,'').trim();
+        if (!t || /^[-—―\u2013\u2014]+$/.test(t)) return 0;
+        const n = parseFloat(t); return isNaN(n) ? 0 : n;
+      }
+
+      const BIZ_MAP = [
+        { key:'DRAM', pattern:'DRAM Test',            keywords:['dram'] },
+        { key:'SSD',  pattern:'SSD Test',             keywords:['ssd'] },
+        { key:'MID',  pattern:'Mobile Ink Die',       keywords:['mobile ink','mobile','ink die','mid'] },
+        { key:'SCR',  pattern:'Scrap\\s*자재',        keywords:['scrap','자재','scr'] },
+        { key:'RMA',  pattern:'RMA\\s*운영',          keywords:['rma'] },
+        { key:'SUS',  pattern:'Sustainability',       keywords:['sustainability','컨설팅','sus'] },
+        { key:'MOD',  pattern:'모듈\\s*세일즈',       keywords:['모듈','module','mod'] },
       ];
-      function matchBiz(name) {
-        const lower=name.toLowerCase().replace(/\s+/g,' ').trim();
-        for (const b of BIZ_MAP) { if (b.keywords.some(k=>lower.includes(k))) return b.key; }
+
+      function matchBizByName(name) {
+        const lower = name.toLowerCase().replace(/\s+/g,' ').trim();
+        for (const b of BIZ_MAP) {
+          if (b.keywords.some(k => lower.includes(k))) return b.key;
+        }
         return null;
       }
-      const lines=raw.split('\n').filter(l=>l.trim());
-      let matched=0,skipped=0;
-      for (const line of lines) {
-        const cols=line.split(/\t/).map(c=>c.trim());
-        if (cols.length<2) continue;
-        if (!isNaN(parseFloat(cols[0]))&&cols[0]!=='') { skipped++; continue; }
-        const bizKey=matchBiz(cols[0]);
+
+      // 사업명 패턴으로 분리 (한 줄로 붙어있는 경우 대응)
+      const splitPattern = new RegExp(
+        '(?=' + BIZ_MAP.map(b => b.pattern).join('|') + ')', 'i'
+      );
+
+      // 줄바꿈이 있으면 줄로, 없으면 패턴으로 분리
+      const rawLines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+      let segments = [];
+
+      if (rawLines.length >= 2) {
+        // 여러 줄인 경우: 각 줄을 세그먼트로
+        segments = rawLines;
+      } else {
+        // 한 줄로 붙어있는 경우: 사업명 패턴으로 분리
+        segments = raw.split(splitPattern).filter(s => s.trim());
+      }
+
+      const ROWS = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
+      let matched = 0, skipped = 0;
+
+      for (const seg of segments) {
+        const trimmed = seg.trim();
+        if (!trimmed) continue;
+
+        // 헤더 행 스킵 (월로 시작)
+        if (/^[0-9]월|^1[0-2]월/.test(trimmed)) { skipped++; continue; }
+
+        // 사업명 추출: 첫 번째 숫자/- 나오기 전까지
+        const nameMatch = trimmed.match(/^([A-Za-z가-힣\s]+?)(?=\s{2,}|\s+[-—―\d])/);
+        const name = nameMatch ? nameMatch[1].trim() : '';
+
+        if (!name) { skipped++; continue; }
+
+        const bizKey = matchBizByName(name);
         if (!bizKey) { skipped++; continue; }
-        const nums=[];
-        for (let i=1;i<cols.length&&nums.length<12;i++) { const v=cols[i].replace(/,/g,''); nums.push(isNaN(parseFloat(v))?0:parseFloat(v)); }
-        while (nums.length<12) nums.push(0);
-        const body=document.getElementById('rolling-tbody'); if (!body) continue;
-        const ROWS=['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
-        const rowIdx=ROWS.indexOf(bizKey); if (rowIdx<0) continue;
-        const tr=body.querySelectorAll('tr')[rowIdx]; if (!tr) continue;
-        const inputs=tr.querySelectorAll('input[type=number]');
-        inputs.forEach((inp,i)=>{inp.value=nums[i]||'';});
+
+        // 사업명 이후의 숫자/-  추출 (최대 12개)
+        const dataStr = trimmed.slice(name.length);
+        const tokens  = dataStr.match(/[-—―]+|[\d]+\.?[\d]*/g) || [];
+        const nums    = tokens.slice(0,12).map(parseVal);
+        while (nums.length < 12) nums.push(0);
+
+        // DOM에 값 입력
+        const body = document.getElementById('rolling-tbody'); if (!body) continue;
+        const rowIdx = ROWS.indexOf(bizKey); if (rowIdx < 0) continue;
+        const tr = body.querySelectorAll('tr')[rowIdx]; if (!tr) continue;
+        const inputs = tr.querySelectorAll('input[type=number]');
+        inputs.forEach((inp, i) => { inp.value = nums[i] > 0 ? nums[i] : ''; });
         matched++;
       }
+
       Pages.KpiTarget.calcRollingAll();
       if (msg) {
-        msg.textContent=matched>0?`✓ ${matched}개 사업 적용 완료${skipped>0?` (${skipped}행 스킵)`:''}` :'매칭된 사업이 없습니다.';
-        msg.style.color=matched>0?'#1A6B3A':'#A32D2D';
+        if (matched > 0) {
+          msg.textContent = `✓ ${matched}개 사업 적용 완료${skipped>0?` (${skipped}행 스킵)`:''}`;
+          msg.style.color = '#1A6B3A';
+        } else {
+          msg.textContent = '매칭 실패. 사업명이 포함된 데이터를 붙여넣어 주세요.';
+          msg.style.color = '#A32D2D';
+        }
       }
     },
 
