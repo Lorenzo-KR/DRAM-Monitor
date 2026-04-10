@@ -189,151 +189,236 @@ Pages.KpiTarget = (() => {
     return 'KPI롤링(67억)';
   }
 
+  // ── 단위 상태 ─────────────────────────────────────────────
+  // ── 단위 상태 ─────────────────────────────────────────────
+  let _trackingUnit = 'usd'; // 'usd' | 'krw'
+
   // ── 월별 트래킹 렌더 ──────────────────────────────────────
   function _renderTracking() {
     const el = document.getElementById('kpi-tracking-wrap'); if (!el) return;
-    const year    = _year;
-    const isAll   = _bizSet.has('all');
-    const bizList = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b=>_bizSet.has(b));
-    const mode    = _rollingMode;
-    const isKpiM  = _isKpi(mode);
-    const hasRateT = isKpiM && _exchangeRate > 0;
+    const year     = _year;
+    const isAll    = _bizSet.has('all');
+    const bizList  = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
+    const mode     = _rollingMode;
+    const isKpiM   = _isKpi(mode);
+    const hasRate  = isKpiM && _exchangeRate > 0;
+    const useKrw   = _trackingUnit === 'krw' && hasRate;
 
-    const totalTgt = bizList.reduce((s,b)=>s+_getTarget(year,b,mode),0);
+    const now       = new Date();
+    const curMonIdx = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
+    const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const BIZ_LABELS_MAP = CONFIG.BIZ_LABELS || {};
+
+    // 사업별 월별 목표(USD)
+    const tgtByBiz = {};
+    bizList.forEach(b => {
+      tgtByBiz[b] = MONTHS.map((_, i) => _getMonthlyTarget(year, b, i + 1, mode));
+    });
+
+    // 사업별 월별 실적(USD: KPI=매출이익, EC=매출)
+    const actByBiz = {};
+    bizList.forEach(b => {
+      actByBiz[b] = MONTHS.map((_, i) => {
+        if (i > curMonIdx) return null;
+        if (isKpiM) return _getActualMonth(year, b, i + 1) * _getFactor(b);
+        return _getActualMonth(year, b, i + 1);
+      });
+    });
+
+    // 월별 합계
+    const tgtSum = MONTHS.map((_, i) => bizList.reduce((s, b) => s + tgtByBiz[b][i], 0));
+    const actSum = MONTHS.map((_, i) => {
+      if (i > curMonIdx) return null;
+      return bizList.reduce((s, b) => s + (actByBiz[b][i] || 0), 0);
+    });
+
+    // 누적
+    let cT = 0, cA = 0;
+    const tgtCum = [], actCum = [];
+    MONTHS.forEach((_, i) => {
+      cT += tgtSum[i]; tgtCum.push(cT);
+      if (i <= curMonIdx) { cA += (actSum[i] || 0); actCum.push(cA); } else actCum.push(null);
+    });
+
+    const totalTgt   = tgtSum.reduce((s, v) => s + v, 0);
     if (totalTgt === 0) {
-      el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>`;
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>';
       return;
     }
 
-    const now       = new Date();
-    const curMonIdx = now.getFullYear()===year ? now.getMonth() : (now.getFullYear()>year?11:-1);
-    const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    const fmtVal    = v => isKpiM
-      ? (hasRateT ? (v/100000000).toFixed(2)+'억원' : '$'+formatNumber(Math.round(v)))
-      : '$'+formatNumber(Math.round(v));
-
-    const monthTargets = MONTHS.map((_,i)=>bizList.reduce((s,b)=>s+_getMonthlyTarget(year,b,i+1,mode),0));
-    const monthActuals = MONTHS.map((_,i)=>{
-      if (i>curMonIdx) return null;
-      if (isKpiM && hasRateT) return bizList.reduce((s,b)=>s+_getActualMonth(year,b,i+1)*_getFactor(b)*_exchangeRate,0);
-      return bizList.reduce((s,b)=>s+_getActualMonth(year,b,i+1),0);
-    });
-
-    let cumT=0, cumA=0;
-    const cumTargets=[], cumActuals=[];
-    MONTHS.forEach((_,i)=>{
-      cumT+=monthTargets[i]; cumTargets.push(cumT);
-      if (i<=curMonIdx) { cumA+=(monthActuals[i]||0); cumActuals.push(cumA); } else cumActuals.push(null);
-    });
-
-    const curCumA=cumActuals[curMonIdx]??0, curCumT=cumTargets[curMonIdx]??0;
-    const overallPct=curCumT>0?Math.round(curCumA/curCumT*100):0;
-    const diff=curCumA-curCumT;
-    const bizLabel=isAll?'전체':bizList.map(b=>CONFIG.BIZ_LABELS[b]).join(' + ');
-    const periodLabel=`1~${curMonIdx+1}월`;
+    const curCumA    = actCum[curMonIdx] ?? 0;
+    const curCumT    = tgtCum[curMonIdx] ?? 0;
+    const overallPct = curCumT > 0 ? Math.round(curCumA / curCumT * 100) : 0;
+    const diffTotal  = curCumA - curCumT;
+    const bizLabel   = isAll ? '전체' : bizList.map(b => BIZ_LABELS_MAP[b]).join(' + ');
+    const periodLabel = '1~' + (curMonIdx + 1) + '월';
     const mc = _modeColor(mode);
 
-    const cards=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-      <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
-        <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ${bizLabel}</div>
-        <div style="font-size:18px;font-weight:600">${fmtVal(totalTgt)}</div>
-        <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?'목표 매출이익':'롤링 데이터 기준'}</div>
-      </div>
-      <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
-        <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">${isKpiM?'누적 매출이익':'누적 실적'} (${periodLabel})</div>
-        <div style="font-size:18px;font-weight:600;color:var(--tx)">${fmtVal(curCumA)}</div>
-        <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 ${fmtVal(curCumT)}</div>
-      </div>
-      <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
-        <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (${periodLabel})</div>
-        <div style="font-size:18px;font-weight:600;color:${overallPct>=100?'#085041':overallPct>=70?'#0C447C':'#A32D2D'}">${overallPct}%</div>
-        <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?(hasRateT?'원화 기준':'환율 미입력'):'USD 기준'}</div>
-      </div>
-      <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">
-        <div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (${periodLabel})</div>
-        <div style="font-size:18px;font-weight:600;color:${diff>=0?'#085041':'#A32D2D'}">${diff>=0?'+':'-'}${fmtVal(Math.abs(diff))}</div>
-        <div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">${diff>=0?'목표 초과':'목표 미달'}</div>
-      </div>
-    </div>`;
+    // 값 포맷 (USD 원본값 → 표시 단위로)
+    function fmtV(v) {
+      if (v === null || v === undefined) return '—';
+      if (useKrw) return Math.round(v * _exchangeRate).toLocaleString('ko-KR');
+      return Math.round(v).toLocaleString('en-US');
+    }
+    function fmtCard(v) {
+      if (useKrw) return (Math.round(v * _exchangeRate) / 100000000).toFixed(2) + '억원';
+      return '$' + formatNumber(Math.round(v));
+    }
 
-    const chartHtml=`<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">
-      <div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;align-items:center">
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>
-        <span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">${_modeLabel(mode)}</span>
-      </div>
-      <div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div>
-    </div>`;
+    const pctColor = function(p) { return p >= 100 ? '#085041' : p >= 70 ? '#0C447C' : '#A32D2D'; };
+    const pctBg    = function(p) { return p >= 100 ? '#E8F5F0' : p >= 70 ? '#EBF2FB' : '#FEF2F2'; };
+    const unitLabel = useKrw ? ('원화 (₩, 환율 ' + _exchangeRate.toLocaleString() + ')') : 'USD ($)';
 
-    const thS='padding:9px 12px;font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-tx-body);text-align:center;text-transform:uppercase;letter-spacing:.05em;background:var(--tbl-sum-bg);border-top:1px solid var(--tbl-row-bd)';
-    let cumTA2=0, cumAA2=0;
-    const tableRows=MONTHS.map((m,i)=>{
-      cumTA2+=monthTargets[i];
-      const isPast=i<=curMonIdx, isCur=i===curMonIdx;
-      const act=isPast?(monthActuals[i]||0):null;
-      if (isPast) cumAA2+=(monthActuals[i]||0);
-      const cumAVal=isPast?cumAA2:null;
-      const pct=cumTA2>0&&cumAVal!==null?Math.round(cumAVal/cumTA2*100):null;
-      const dif=cumTA2>0&&cumAVal!==null?cumAVal-cumTA2:null;
-      const barC=pct===null?'#e5e7eb':pct>=100?'#1D9E75':pct>=70?'#185FA5':'#E24B4A';
-      const pctC=pct===null?'var(--tx3)':pct>=100?'#085041':pct>=70?'#0C447C':'#791F1F';
-      const difBadge=dif===null?'—'
-        :dif>=0?`<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid var(--bd);color:var(--tx2);background:transparent">+${fmtVal(dif)}</span>`
-              :`<span style="display:inline-flex;font-size:12px;font-weight:500;padding:2px 7px;border-radius:3px;border:1px solid #FECACA;color:#dc2626;background:#FEF2F2">-${fmtVal(Math.abs(dif))}</span>`;
-      return `<tr style="${isCur?'background:#F0F7FF':''}${!isPast?';opacity:0.38':''}">
-        <td style="padding:9px 12px;font-weight:${isCur?'600':'400'};color:${isCur?'#0C447C':'var(--tx)'}">${m}${isCur?' ◀':''}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tbl-tx-body)">${monthTargets[i]>0?fmtVal(monthTargets[i]):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px">${act!==null?fmtVal(act):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tbl-tx-body)">${cumTA2>0?fmtVal(cumTA2):'—'}</td>
-        <td style="padding:9px 12px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:${isPast?'500':'400'};color:var(--tx)">${cumAVal!==null?fmtVal(cumAVal):'—'}</td>
-        <td style="padding:9px 12px;min-width:130px">${pct!==null?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barC};width:${Math.min(100,pct)}%"></div></div><span style="font-size:12px;font-weight:500;color:${pctC};min-width:36px;text-align:right">${pct}%</span></div>`:`<span style="font-size:12px;color:var(--tbl-tx-body)">—</span>`}</td>
-        <td style="padding:9px 12px;text-align:right">${difBadge}</td>
-      </tr>`;
+    // 요약 카드
+    const cards = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
+      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ' + bizLabel + '</div><div style="font-size:18px;font-weight:600">' + fmtCard(totalTgt) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + (isKpiM ? '목표 매출이익' : '롤링 기준') + '</div></div>'
+      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">' + (isKpiM ? '누적 매출이익' : '누적 실적') + ' (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:var(--tx)">' + fmtCard(curCumA) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 ' + fmtCard(curCumT) + '</div></div>'
+      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:' + pctColor(overallPct) + '">' + overallPct + '%</div></div>'
+      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:' + (diffTotal >= 0 ? '#085041' : '#A32D2D') + '">' + (diffTotal >= 0 ? '+' : '-') + fmtCard(Math.abs(diffTotal)) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + (diffTotal >= 0 ? '목표 초과' : '목표 미달') + '</div></div>'
+      + '</div>';
+
+    const chartHtml = '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">'
+      + '<div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;align-items:center">'
+      + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>'
+      + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>'
+      + '<span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">' + _modeLabel(mode) + '</span>'
+      + '</div><div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div></div>';
+
+    // 표 공통 스타일
+    var thS  = 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap';
+    var tdS  = 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF';
+    var tdLS = 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap';
+    var tdSS = 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2';
+    var tdSub= 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap';
+
+    var mthHdr = MONTHS.map(function(m){ return '<th style="' + thS + '">' + m + '</th>'; }).join('');
+
+    // ── 예상(목표) 표 ─────────────────────────────────────
+    var tgtRows = bizList.map(function(b) {
+      var cells = MONTHS.map(function(_, i) {
+        var v = tgtByBiz[b][i];
+        var isPast = i <= curMonIdx;
+        return '<td style="' + tdS + ((!isPast) ? ';color:#BBB' : '') + '">' + (v > 0 ? fmtV(v) : '—') + '</td>';
+      }).join('');
+      var total = tgtByBiz[b].reduce(function(s, v) { return s + v; }, 0);
+      return '<tr><td style="' + tdLS + ';font-weight:500">' + (BIZ_LABELS_MAP[b] || b) + '</td><td style="' + tdSub + '">예상(매출)</td>' + cells + '<td style="' + tdSS + '">' + (total > 0 ? fmtV(total) : '—') + '</td></tr>';
     }).join('');
 
-    el.innerHTML=`${cards}${chartHtml}
-      <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:8px">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Pretendard,sans-serif">
-          <thead><tr>
-            <th style="${thS}">월</th><th style="${thS}">월 목표</th><th style="${thS}">월 실적</th>
-            <th style="${thS}">누적 목표</th><th style="${thS}">누적 실적</th>
-            <th style="${thS};min-width:130px">달성률</th><th style="${thS}">누적 차이</th>
-          </tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </div>`;
+    var tgtSumCells = MONTHS.map(function(_, i) { return '<td style="' + tdSS + '">' + (tgtSum[i] > 0 ? fmtV(tgtSum[i]) : '—') + '</td>'; }).join('');
+    var tgtCumCells = MONTHS.map(function(_, i) { return '<td style="' + tdSS + ';background:#E8E4D8">' + fmtV(tgtCum[i]) + '</td>'; }).join('');
+    var tgtTotal    = tgtSum.reduce(function(s, v) { return s + v; }, 0);
 
-    setTimeout(()=>{
-      const canvas=document.getElementById('cv-kpi-monthly'); if (!canvas) return;
-      if (window._kpiChart) { window._kpiChart.destroy(); window._kpiChart=null; }
-      window._kpiChart=new Chart(canvas,{
-        type:'line',
-        data:{labels:MONTHS,datasets:[
-          {label:'목표 누적',data:cumTargets,borderColor:'#85B7EB',borderWidth:2,borderDash:[5,3],pointRadius:3,pointBackgroundColor:'#85B7EB',fill:false,tension:0},
-          {label:'실적 누적',data:cumActuals,borderColor:'#1D9E75',borderWidth:2.5,pointRadius:cumActuals.map(v=>v!==null?4:0),pointBackgroundColor:'#1D9E75',fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'},tension:0.2},
+    // ── 실적 표 ────────────────────────────────────────────
+    var actRows = bizList.map(function(b) {
+      var cells = MONTHS.map(function(_, i) {
+        var v = actByBiz[b][i];
+        var isPast = i <= curMonIdx;
+        return '<td style="' + tdS + ((!isPast) ? ';color:#BBB' : '') + '">' + (v !== null && v > 0 ? fmtV(v) : (isPast ? '—' : '')) + '</td>';
+      }).join('');
+      var total = MONTHS.reduce(function(s, _, i) { return s + (actByBiz[b][i] || 0); }, 0);
+      return '<tr><td style="' + tdLS + ';font-weight:500">' + (BIZ_LABELS_MAP[b] || b) + '</td><td style="' + tdSub + '">실적(매출)</td>' + cells + '<td style="' + tdSS + '">' + (total > 0 ? fmtV(total) : '—') + '</td></tr>';
+    }).join('');
+
+    var actSumCells = MONTHS.map(function(_, i) {
+      var v = actSum[i];
+      return '<td style="' + tdSS + '">' + (v !== null && v > 0 ? fmtV(v) : (i <= curMonIdx ? '—' : '')) + '</td>';
+    }).join('');
+    var actCumCells = MONTHS.map(function(_, i) {
+      var v = actCum[i];
+      return '<td style="' + tdSS + ';background:#E8E4D8">' + (v !== null ? fmtV(v) : '') + '</td>';
+    }).join('');
+    var actTotal = MONTHS.reduce(function(s, _, i) { return s + (actSum[i] || 0); }, 0);
+
+    // 실적-예상(월별)
+    var diffMonCells = MONTHS.map(function(_, i) {
+      if (i > curMonIdx) return '<td style="' + tdS + '"></td>';
+      var d = (actSum[i] || 0) - tgtSum[i];
+      return '<td style="' + tdS + ';color:' + (d >= 0 ? '#085041' : '#A32D2D') + ';font-weight:500">' + fmtV(d) + '</td>';
+    }).join('');
+    var diffMonTotal = MONTHS.reduce(function(s, _, i) { return s + ((actSum[i] || 0) - tgtSum[i]); }, 0);
+
+    // 실적-예상(누적)
+    var diffCumCells = MONTHS.map(function(_, i) {
+      if (i > curMonIdx) return '<td style="' + tdS + '"></td>';
+      var d = (actCum[i] || 0) - tgtCum[i];
+      return '<td style="' + tdS + ';color:' + (d >= 0 ? '#085041' : '#A32D2D') + ';font-weight:500">' + fmtV(d) + '</td>';
+    }).join('');
+    var diffCumFinal = (actCum[curMonIdx] || 0) - tgtCum[curMonIdx];
+
+    // 달성률(누적)
+    var pctCumCells = MONTHS.map(function(_, i) {
+      if (i > curMonIdx || !tgtCum[i]) return '<td style="' + tdS + '"></td>';
+      var p = Math.round((actCum[i] || 0) / tgtCum[i] * 100);
+      return '<td style="' + tdS + ';color:' + pctColor(p) + ';background:' + pctBg(p) + ';font-weight:600">' + p + '%</td>';
+    }).join('');
+    var pctCumFinal = tgtCum[curMonIdx] > 0 ? Math.round((actCum[curMonIdx] || 0) / tgtCum[curMonIdx] * 100) : null;
+
+    var tableBlock = '<div style="overflow-x:auto;margin-bottom:6px">'
+      + '<table style="border-collapse:collapse;width:100%;min-width:900px">'
+      + '<thead><tr><th style="' + thS + ';min-width:90px">Biz</th><th style="' + thS + ';min-width:70px">구분</th>' + mthHdr + '<th style="' + thS + ';min-width:80px">합계</th></tr></thead>'
+      + '<tbody>'
+      + tgtRows
+      + '<tr style="background:#F2F2F2"><td colspan="2" style="' + tdSS + ';text-align:center">합계</td>' + tgtSumCells + '<td style="' + tdSS + '">' + (tgtTotal > 0 ? fmtV(tgtTotal) : '—') + '</td></tr>'
+      + '<tr style="background:#E8E4D8"><td colspan="2" style="' + tdSS + ';text-align:center;background:#E8E4D8">합계(누적)</td>' + tgtCumCells + '<td style="' + tdSS + ';background:#E8E4D8">' + fmtV(tgtTotal) + '</td></tr>'
+      + '</tbody></table></div>'
+
+      + '<div style="overflow-x:auto;margin-bottom:4px">'
+      + '<table style="border-collapse:collapse;width:100%;min-width:900px">'
+      + '<thead><tr><th style="' + thS + ';min-width:90px">Biz</th><th style="' + thS + ';min-width:70px">구분</th>' + mthHdr + '<th style="' + thS + ';min-width:80px">합계</th></tr></thead>'
+      + '<tbody>'
+      + actRows
+      + '<tr style="background:#F2F2F2"><td colspan="2" style="' + tdSS + ';text-align:center">합계</td>' + actSumCells + '<td style="' + tdSS + '">' + (actTotal > 0 ? fmtV(actTotal) : '—') + '</td></tr>'
+      + '<tr style="background:#E8E4D8"><td colspan="2" style="' + tdSS + ';text-align:center;background:#E8E4D8">합계(누적)</td>' + actCumCells + '<td style="' + tdSS + ';background:#E8E4D8">' + (actTotal > 0 ? fmtV(actTotal) : '—') + '</td></tr>'
+      + '<tr><td colspan="2" style="' + tdLS + '">실적-예상 (월별)</td>' + diffMonCells + '<td style="' + tdSS + ';color:' + (diffMonTotal >= 0 ? '#085041' : '#A32D2D') + '">' + fmtV(diffMonTotal) + '</td></tr>'
+      + '<tr><td colspan="2" style="' + tdLS + '">실적-예상 (누적)</td>' + diffCumCells + '<td style="' + tdSS + ';color:' + (diffCumFinal >= 0 ? '#085041' : '#A32D2D') + '">' + fmtV(diffCumFinal) + '</td></tr>'
+      + '<tr><td colspan="2" style="' + tdLS + '">달성률 (누적)</td>' + pctCumCells
+      + '<td style="' + tdSS + ';color:' + (pctCumFinal !== null ? pctColor(pctCumFinal) : 'var(--tx3)') + ';background:' + (pctCumFinal !== null ? pctBg(pctCumFinal) : 'transparent') + ';font-weight:600">' + (pctCumFinal !== null ? pctCumFinal + '%' : '—') + '</td></tr>'
+      + '</tbody></table></div>';
+
+    // 단위 버튼
+    var unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
+      + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">USD ($)</button>'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>원화 (₩)</button>'
+      + '</div>'
+      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">' + unitLabel + '</span>'
+      + '</div>';
+
+    el.innerHTML = cards + chartHtml + unitBtns + tableBlock;
+
+    setTimeout(function() {
+      var canvas = document.getElementById('cv-kpi-monthly'); if (!canvas) return;
+      if (window._kpiChart) { window._kpiChart.destroy(); window._kpiChart = null; }
+      window._kpiChart = new Chart(canvas, {
+        type: 'line',
+        data: { labels: MONTHS, datasets: [
+          { label:'목표 누적', data: tgtCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
+          { label:'실적 누적', data: actCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:actCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
         ]},
-        options:{
-          responsive:true,maintainAspectRatio:false,
-          plugins:{
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins: {
             legend:{display:false},
-            tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>{
-              const v=Math.round(ctx.raw||0);
-              const disp=isKpiM&&hasRateT?(v/100000000).toFixed(2)+'억원':'$'+v.toLocaleString();
-              return ` ${ctx.dataset.label}: ${disp}`;
+            tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){
+              var v = ctx.raw || 0;
+              var disp = useKrw ? Math.round(v*_exchangeRate).toLocaleString('ko-KR')+'원' : '$'+Math.round(v).toLocaleString();
+              return ' ' + ctx.dataset.label + ': ' + disp;
             }}}
           },
           scales:{
             x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:12},autoSkip:false}},
-            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:v=>{
-              if (isKpiM&&hasRateT) return (v/100000000).toFixed(1)+'억';
+            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:function(v){
+              if (useKrw) return (v*_exchangeRate/100000000).toFixed(1)+'억';
               return '$'+(v/1000).toFixed(0)+'K';
             }},beginAtZero:true},
           },
           layout:{padding:{top:10}}
         }
       });
-    },50);
+    }, 50);
   }
+
 
   // ── 메인 렌더 ─────────────────────────────────────────────
   return {
@@ -365,7 +450,6 @@ Pages.KpiTarget = (() => {
     },
 
     render() {
-      _loadFromSettings();
       const el = document.getElementById('kpitarget-body'); if (!el) return;
       const year = _year;
       const mode = _rollingMode;
@@ -776,6 +860,8 @@ Pages.KpiTarget = (() => {
     },
 
     setMode(mode) { _rollingMode=mode; Pages.KpiTarget.render(); },
+
+    setTrackingUnit(unit) { _trackingUnit = unit; _renderTracking(); },
 
     openFactorPanel() {
       const el=document.getElementById('kpi-factor-panel');

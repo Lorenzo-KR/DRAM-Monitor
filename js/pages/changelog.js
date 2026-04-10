@@ -13,10 +13,23 @@ Pages.Changelog = (() => {
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
     {
+      version: 'v55',
+      date:    '2026-04-11',
+      title:   'KPI목표설정 표 개편 · 롤링 저장 버그 수정',
+      latest:  true,
+      items: [
+        { type: 'new',     text: 'KPI목표설정 월별 트래킹 표 전면 개편 — Biz별 × 월별 예상/실적 매트릭스 형태로 변경' },
+        { type: 'new',     text: '단위 선택 버튼 추가 — USD($) / 원화(₩) 전환, 사업계획 기준환율 적용' },
+        { type: 'improve', text: '실적-예상(월별/누적), 달성률(누적) 요약 3행 표 하단에 추가' },
+        { type: 'fix',     text: 'KPI롤링 저장 후 render() 재호출 시 loadFromSettings()가 덮어씌우는 버그 수정' },
+        { type: 'fix',     text: 'KPI롤링 붙여넣기 파싱 개선 — 한 줄 붙여넣기, 공백구분, 대시(-) 0 처리' },
+        { type: 'new',     text: 'KPI목표설정 기준 3개로 확장 — KPI기준(67억) / KPI기준(103억) / EC 기준' },
+      ],
+    },
+    {
       version: 'v54',
       date:    '2026-04-09',
       title:   '대시보드 개선 · KPI탭 표 정비 · DRAM Price 수정 · 탭 이름 변경',
-      latest:  true,
       items: [
         { type: 'fix',     text: 'DRAM Price 탭 데이터 표시 안 되는 버그 수정 (C.cat undefined 필터 오류)' },
         { type: 'fix',     text: 'DRAM Price 크롤러 누적 저장 보호 — 헤더 불일치 시 ws.clear() 제거, 1행만 수정으로 변경' },
