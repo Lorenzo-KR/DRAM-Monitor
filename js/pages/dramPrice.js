@@ -1,10 +1,11 @@
 /**
  * pages/dramPrice.js
  * DRAM Price Tracking (TrendForce)
- * 3개 카테고리: DRAM Spot / DRAM Contract / Module Spot
- * 컬럼: Date | Last Update | Category | Item |
- *        Daily High | Daily Low | Session High | Session Low |
- *        Session Average | Session Change | Source
+ *
+ * 시트 컬럼:
+ *   Date(Last Update날짜) | Last Update | Category | Item |
+ *   Col1(Daily/Weekly High) | Col2(Daily/Weekly Low) |
+ *   Session High | Session Low | Session Average | Session Change | Source
  */
 Pages.DramPrice = (() => {
 
@@ -21,13 +22,24 @@ Pages.DramPrice = (() => {
     { key: 'module',   label: 'Module Spot',   color: '#6A3D7C' },
   ];
 
+  // Col1/Col2 레이블 (카테고리별로 다름)
+  const COL_LABELS = {
+    spot:     { col1: 'Daily High',  col2: 'Daily Low'  },
+    contract: { col1: '',            col2: ''           },
+    module:   { col1: 'Weekly High', col2: 'Weekly Low' },
+    all:      { col1: 'High',        col2: 'Low'        },
+  };
+
   const COLORS = [
     '#1B4F8A','#0F6E56','#6A3D7C','#B45309','#0C6B8A',
     '#2D7D46','#8B3A3A','#555','#C05621','#1A6B3A','#7B3F00','#003366',
   ];
 
   // 컬럼 인덱스: Date | Last Update | Category | Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | Source
-  const C = { date:0, lastUpdate:1, cat:2, item:3, dHigh:4, dLow:5, sHigh:6, sLow:7, sAvg:8, sChg:9 };
+  const C = {
+    date:0, lastUpdate:1, cat:2, item:3,
+    dHigh:4, dLow:5, sHigh:6, sLow:7, sAvg:8, sChg:9
+  };
 
   let _allData  = { spot: [], contract: [], module: [] };
   let _selCat   = 'all';
@@ -37,54 +49,29 @@ Pages.DramPrice = (() => {
 
   const pn = s => { const n = parseFloat(String(s||'').replace(/[^0-9.-]/g,'')); return isNaN(n) ? null : n; };
 
-  // ── 단일 시트 fetch (GAS getAll action 사용) ──────────────
+  // ── fetch 단일 시트 (getDramPrices action + sheet 파라미터) ──
   async function _fetchSheet(sheetName) {
     try {
-      const token = Auth.getToken();
-      const url   = `${CONFIG.API_URL}?action=getAll&sheet=${encodeURIComponent(sheetName)}&token=${encodeURIComponent(token)}`;
-      const res   = await fetch(url);
+      const res  = await fetch(`${CONFIG.API_URL}?action=getDramPrices&sheet=${encodeURIComponent(sheetName)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json  = await res.json();
-      if (!json || json.error) throw new Error(json?.error || 'unknown');
+      const json = await res.json();
+      if (!json || json.error) throw new Error(json?.error || 'unknown error');
+      if (!Array.isArray(json)) return [];
 
-      // GAS getAll 응답 구조: { headers:[], rows:[[],[],…] } 또는 배열
-      let rawRows = [];
-      if (Array.isArray(json)) {
-        // 배열 형태 (getDramPrices 스타일)
-        const KEYS = ['Date','Last Update','Category','Item',
-                      'Daily High','Daily Low','Session High','Session Low',
-                      'Session Average','Session Change','Source'];
-        rawRows = json.map(obj => KEYS.map(k => obj[k] || ''));
-      } else if (json.rows) {
-        // { headers, rows } 형태
-        const hdrs = json.headers || [];
-        rawRows = (json.rows || []).map(row => {
-          // 헤더 순서에 맞게 재배열 → C 인덱스 기준으로
-          const KEYS = ['Date','Last Update','Category','Item',
-                        'Daily High','Daily Low','Session High','Session Low',
-                        'Session Average','Session Change','Source'];
-          return KEYS.map(k => {
-            const hi = hdrs.indexOf(k);
-            return hi >= 0 ? (row[hi] || '') : '';
-          });
-        });
-      }
-      return rawRows.filter(r => r[C.date]);
+      const KEYS = ['Date','Last Update','Category','Item',
+                    'Daily High','Daily Low',
+                    'Session High','Session Low','Session Average','Session Change','Source'];
+      return json
+        .map(obj => KEYS.map(k => obj[k] || ''))
+        .filter(r => r[C.date]);
     } catch (e) {
-      console.warn(`[DramPrice] fetchSheet(${sheetName}) error:`, e.message);
+      console.warn(`[DramPrice] fetch(${sheetName}) error:`, e.message);
       return [];
     }
   }
 
-  // ── 현재 카테고리 rows ────────────────────────────────────
   function _currentRows() {
-    if (_selCat === 'all') {
-      return [
-        ..._allData.spot,
-        ..._allData.contract,
-        ..._allData.module,
-      ];
-    }
+    if (_selCat === 'all') return [..._allData.spot, ..._allData.contract, ..._allData.module];
     return _allData[_selCat] || [];
   }
 
@@ -93,12 +80,13 @@ Pages.DramPrice = (() => {
   }
 
   // ── 차트 ──────────────────────────────────────────────────
-  function _buildChart(rows) {
+  function _buildChartData(rows) {
     const items    = _getItems(rows);
     const filtered = items.filter(i => _selProds.size === 0 || _selProds.has(i));
     const byDate   = {};
     rows.forEach(r => {
       const d = r[C.date], item = r[C.item];
+      if (!d || !item) return;
       if (!byDate[d]) byDate[d] = {};
       byDate[d][item] = _metric === 'high' ? pn(r[C.dHigh])
                       : _metric === 'low'  ? pn(r[C.dLow])
@@ -110,7 +98,9 @@ Pages.DramPrice = (() => {
       data:            dates.map(d => byDate[d][item] ?? null),
       borderColor:     COLORS[i % COLORS.length],
       backgroundColor: COLORS[i % COLORS.length] + '18',
-      tension: 0.3, pointRadius: dates.length > 30 ? 2 : 4, spanGaps: true,
+      tension: 0.3,
+      pointRadius: dates.length > 30 ? 2 : 4,
+      spanGaps: true,
     }));
     return { labels: dates, datasets };
   }
@@ -122,7 +112,8 @@ Pages.DramPrice = (() => {
     const rows = _currentRows().filter(r => _selProds.size === 0 || _selProds.has(r[C.item]));
     if (!rows.length) return;
     _chart = new Chart(canvas, {
-      type: 'line', data: _buildChart(rows),
+      type: 'line',
+      data: _buildChartData(rows),
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
@@ -172,27 +163,38 @@ Pages.DramPrice = (() => {
     const CAT_COLOR = { 'DRAM Spot': '#1B4F8A', 'DRAM Contract': '#0F6E56', 'Module Spot': '#6A3D7C' };
     const chgColor  = s => s && s.includes('▲') ? '#1A6B3A' : s && s.includes('▼') ? '#A32D2D' : '#555';
     const showCat   = _selCat === 'all';
-    const FS = "font-family:Pretendard,sans-serif;font-size:12px";
-    const FM = "font-family:'DM Mono',monospace;font-size:12px";
+    const labels    = COL_LABELS[_selCat] || COL_LABELS.all;
+
+    const FS  = "font-family:Pretendard,sans-serif;font-size:12px";
+    const FM  = "font-family:'DM Mono',monospace;font-size:12px";
     const thS = `padding:7px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`;
     const tdB = `padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8`;
 
     const trs = rows.map((r, i) => {
-      const cc = CAT_COLOR[r[C.cat]] || '#555';
+      const cc      = CAT_COLOR[r[C.cat]] || '#555';
       const catCell = showCat
         ? `<td style="${tdB}"><span style="padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;${FS};color:${cc};border:1px solid ${cc}22;background:${cc}11">${r[C.cat]}</span></td>`
         : '';
+      const col1Cell = r[C.dHigh] ? `<td style="${tdB};${FM};text-align:right">${r[C.dHigh]}</td>` : '';
+      const col2Cell = r[C.dLow]  ? `<td style="${tdB};${FM};text-align:right">${r[C.dLow]}</td>`  : '';
       return `<tr style="${i%2===1 ? 'background:#FAFAFA' : ''}">
         <td style="${tdB};${FS};color:#888;white-space:nowrap">${r[C.date]}</td>
         <td style="${tdB};${FS};color:#aaa;white-space:nowrap;font-size:11px">${r[C.lastUpdate]||'—'}</td>
         ${catCell}
         <td style="${tdB};${FS};white-space:nowrap">${r[C.item]}</td>
-        <td style="${tdB};${FM};text-align:right">${r[C.dHigh]||'—'}</td>
-        <td style="${tdB};${FM};text-align:right">${r[C.dLow]||'—'}</td>
+        ${col1Cell}
+        ${col2Cell}
+        <td style="${tdB};${FM};text-align:right">${r[C.sHigh]||'—'}</td>
+        <td style="${tdB};${FM};text-align:right">${r[C.sLow]||'—'}</td>
         <td style="${tdB};${FM};text-align:right;font-weight:600">${r[C.sAvg]||'—'}</td>
         <td style="${tdB};${FM};text-align:center;color:${chgColor(r[C.sChg])};font-weight:600">${r[C.sChg]||'—'}</td>
       </tr>`;
     }).join('');
+
+    // 헤더 (Col1/Col2는 카테고리에 따라 표시)
+    const showCol1 = _selCat !== 'contract';
+    const col1Th   = showCol1 ? `<th style="${thS}">${labels.col1 || 'High'}</th>` : '';
+    const col2Th   = showCol1 ? `<th style="${thS}">${labels.col2 || 'Low'}</th>` : '';
 
     el.innerHTML = `<div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse">
@@ -201,22 +203,22 @@ Pages.DramPrice = (() => {
           <th style="${thS}">Last Update</th>
           ${showCat ? `<th style="${thS}">카테고리</th>` : ''}
           <th style="${thS}">제품</th>
-          <th style="${thS}">Daily High</th>
-          <th style="${thS}">Daily Low</th>
+          ${col1Th}${col2Th}
+          <th style="${thS}">Session High</th>
+          <th style="${thS}">Session Low</th>
           <th style="${thS}">Session Avg</th>
-          <th style="${thS}">Session Change</th>
+          <th style="${thS}">Change</th>
         </tr></thead>
         <tbody>${trs}</tbody>
       </table></div>`;
   }
 
-  // ── 카테고리 탭 버튼 스타일 업데이트 ─────────────────────
   function _updateCatTabs() {
     document.querySelectorAll('.dp-cat-btn').forEach(b => {
       const cat  = CATEGORIES.find(c => c.key === b.dataset.cat);
       const isOn = b.dataset.cat === _selCat;
-      b.style.background  = isOn ? (cat ? cat.color : '#1D1D1F') : '#fff';
-      b.style.color       = isOn ? '#fff' : (cat ? cat.color : '#333');
+      b.style.background = isOn ? (cat ? cat.color : '#1D1D1F') : '#fff';
+      b.style.color      = isOn ? '#fff' : (cat ? cat.color : '#333');
     });
   }
 
@@ -254,7 +256,6 @@ Pages.DramPrice = (() => {
       if (!el) return;
       el.innerHTML = `<div class="page-wrap"><div style="padding:40px;text-align:center;color:#999;font-family:Pretendard,sans-serif">데이터 불러오는 중...</div></div>`;
 
-      // 3개 시트 병렬 fetch
       const [spotRows, contractRows, moduleRows] = await Promise.all([
         _fetchSheet(SHEET_MAP.spot),
         _fetchSheet(SHEET_MAP.contract),
@@ -266,18 +267,27 @@ Pages.DramPrice = (() => {
       const allRows   = [...spotRows, ...contractRows, ...moduleRows];
       const sorted    = [...allRows].sort((a, b) => b[C.date].localeCompare(a[C.date]));
       const lastDate  = sorted.length ? sorted[0][C.date] : '—';
-      const totalDays = new Set(allRows.map(r => r[C.date])).size;
+      const totalDays = new Set(spotRows.map(r => r[C.date])).size;  // Spot 기준
+
+      // 카테고리별 Last Update 표시
+      const lastUpdates = {
+        spot:     spotRows.length     ? [...spotRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
+        contract: contractRows.length ? [...contractRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
+        module:   moduleRows.length   ? [...moduleRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
+      };
 
       const catBtns = CATEGORIES.map(c => {
-        const data = c.key === 'all' ? allRows : (_allData[c.key] || []);
-        const days = new Set(data.map(r => r[C.date])).size;
-        const isOn = c.key === _selCat;
+        const data  = c.key === 'all' ? allRows : (_allData[c.key] || []);
+        const days  = new Set(data.map(r => r[C.date])).size;
+        const isOn  = c.key === _selCat;
+        const lu    = c.key !== 'all' ? lastUpdates[c.key] : lastDate;
         return `<button class="dp-cat-btn" data-cat="${c.key}"
           onclick="Pages.DramPrice.selectCat('${c.key}')"
-          style="padding:5px 16px;border:1.5px solid ${c.color};border-radius:7px;
+          style="padding:6px 16px;border:1.5px solid ${c.color};border-radius:7px;
                  font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;cursor:pointer;
-                 background:${isOn ? c.color : '#fff'};color:${isOn ? '#fff' : c.color};transition:.15s">
-          ${c.label}&nbsp;<span style="font-size:10px;opacity:.7">(${days}일)</span>
+                 background:${isOn ? c.color : '#fff'};color:${isOn ? '#fff' : c.color};transition:.15s;text-align:left">
+          <div>${c.label}</div>
+          <div style="font-size:10px;opacity:.7;font-weight:400;margin-top:1px">${days}일 · ${lu}</div>
         </button>`;
       }).join('');
 
@@ -286,14 +296,16 @@ Pages.DramPrice = (() => {
           <div class="ph-row">
             <div class="ph">
               <h1>DRAM Price Tracking</h1>
-              <p>TrendForce · 최근 수집일: ${lastDate} · 총 ${totalDays}일 누적 · 3개 카테고리</p>
+              <p>TrendForce · ${totalDays}일 누적 데이터 · Last Update 날짜 기준 저장</p>
             </div>
           </div>
 
+          <!-- 카테고리 탭 -->
           <div class="page-card" style="margin-bottom:12px;padding:12px 16px">
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${catBtns}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch">${catBtns}</div>
           </div>
 
+          <!-- 필터 -->
           <div class="page-card" style="margin-bottom:12px">
             <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
               <div>
@@ -302,9 +314,9 @@ Pages.DramPrice = (() => {
                   <button class="dp-metric-btn" data-m="avg" onclick="Pages.DramPrice.setMetric('avg')"
                     style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#1D1D1F;color:#fff">Session Avg</button>
                   <button class="dp-metric-btn" data-m="high" onclick="Pages.DramPrice.setMetric('high')"
-                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">Daily High</button>
+                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">High</button>
                   <button class="dp-metric-btn" data-m="low" onclick="Pages.DramPrice.setMetric('low')"
-                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">Daily Low</button>
+                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">Low</button>
                 </div>
               </div>
               <div style="flex:1;min-width:200px">
@@ -314,10 +326,12 @@ Pages.DramPrice = (() => {
             </div>
           </div>
 
+          <!-- 차트 -->
           <div class="page-card" style="margin-bottom:12px">
             <div style="position:relative;height:420px"><canvas id="dp-chart"></canvas></div>
           </div>
 
+          <!-- 표 -->
           <div class="page-card" style="padding:0;overflow:hidden">
             <div style="padding:10px 14px;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;border-bottom:1px solid #E8E8E8">
               데이터 (최근 500건)
