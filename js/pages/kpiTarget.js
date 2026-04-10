@@ -191,226 +191,457 @@ Pages.KpiTarget = (() => {
 
   // ── 단위 상태 ─────────────────────────────────────────────
   // ── 단위 상태 ─────────────────────────────────────────────
+
+  // ================================================================
+  // 월별 트래킹 — 단위 상태
+  // ================================================================
   let _trackingUnit = 'usd'; // 'usd' | 'krw'
 
-  // ── 월별 트래킹 렌더 ──────────────────────────────────────
+  // ================================================================
+  // _renderTracking
+  // 그래프 아래 두 개의 매트릭스 표를 렌더링
+  //   - 상단: 예상(목표) Biz × 12개월
+  //   - 하단: 실적      Biz × 12개월
+  //   - 하단 요약 3행: 차이(월별) / 차이(누적) / 달성률(누적)
+  // ================================================================
   function _renderTracking() {
-    const el = document.getElementById('kpi-tracking-wrap'); if (!el) return;
-    const year     = _year;
-    const isAll    = _bizSet.has('all');
-    const bizList  = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
-    const mode     = _rollingMode;
-    const isKpiM   = _isKpi(mode);
-    const hasRate  = isKpiM && _exchangeRate > 0;
-    const useKrw   = _trackingUnit === 'krw' && hasRate;
+    const el = document.getElementById('kpi-tracking-wrap');
+    if (!el) return;
+
+    // ── 기본 컨텍스트 ────────────────────────────────────────
+    const year      = _year;
+    const mode      = _rollingMode;
+    const isKpiMode = _isKpi(mode);          // KPI67 or KPI103
+    const isEcMode  = mode === 'ec';
+    const hasRate   = isKpiMode && _exchangeRate > 0;
+    const useKrw    = _trackingUnit === 'krw' && isKpiMode;  // EC는 항상 USD
 
     const now       = new Date();
-    const curMonIdx = now.getFullYear() === year ? now.getMonth() : (now.getFullYear() > year ? 11 : -1);
+    const curMonIdx = now.getFullYear() === year
+      ? now.getMonth()
+      : (now.getFullYear() > year ? 11 : -1);
+
     const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-    const BIZ_LABELS_MAP = CONFIG.BIZ_LABELS || {};
+    const isAll     = _bizSet.has('all');
+    const bizList   = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
 
-    // 사업별 월별 목표(USD)
-    const tgtByBiz = {};
+    // ── 단위 설정 ────────────────────────────────────────────
+    // KPI: 롤링 입력값은 '억원' 단위 → 표시도 억원(소수2자리) or M USD
+    // EC:  롤링 입력값은 'Million USD' 단위 → 표시도 M USD(소수2자리)
+    const UNIT = {
+      // 예상(목표) 값 표시 — 롤링 원본값 그대로 사용
+      // KPI: 억원 단위로 저장돼있음 (이미 소수)
+      // EC:  Million USD 단위로 저장돼있음
+      tgtLabel:   isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD'),
+      actLabel:   isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD'),
+      // 실적 변환 함수: USD 원본 → 표시 단위
+      //   KPI+원화: USD 실적 × Factor × 환율 → 원 → 억원
+      //   KPI+USD:  USD 실적 × Factor → M USD
+      //   EC:       USD 실적 → M USD
+    };
+
+    // 값 포맷 헬퍼
+    function fmtRolling(v) {
+      // 롤링 저장값(억원 or M USD) 그대로 소수2자리
+      if (v === null || v === undefined) return '—';
+      const n = parseFloat(v) || 0;
+      return n === 0 ? '—' : n.toFixed(2);
+    }
+
+    function fmtActual(usdVal) {
+      // 실적 USD 원본 → 표시 단위로 변환
+      if (usdVal === null || usdVal === undefined) return null;
+      if (isEcMode) {
+        // EC: USD → M USD
+        return (usdVal / 1000000).toFixed(2);
+      }
+      if (useKrw) {
+        // KPI+원화: USD × 환율 → 원 → 억원
+        return (usdVal * _exchangeRate / 100000000).toFixed(2);
+      }
+      // KPI+USD: USD → M USD
+      return (usdVal / 1000000).toFixed(2);
+    }
+
+    function fmtDiff(v) {
+      if (v === null || v === undefined) return '—';
+      const n = parseFloat(v);
+      if (isNaN(n)) return '—';
+      return (n >= 0 ? '+' : '') + n.toFixed(2);
+    }
+
+    function fmtPct(p) {
+      if (p === null) return '—';
+      return Math.round(p) + '%';
+    }
+
+    // ── 데이터 계산 ──────────────────────────────────────────
+
+    // 예상(목표): 롤링 원본값 (억원 or M USD)
+    // _getRollingMonths는 내부적으로 원(KRW) or USD로 변환하므로
+    // 여기서는 롤링 raw 값을 직접 읽어야 함
+    function getRollingRaw(biz, mon) {
+      const store = _getRollingStore(mode);
+      const vals  = store[year]?.[biz] || Array(12).fill(0);
+      return parseFloat(vals[mon]) || 0;
+      // KPI: 억원 단위, EC: M USD 단위
+    }
+
+    // 실적: USD 원본값 (KPI=매출×Factor, EC=매출)
+    function getActualUsd(biz, mon) {
+      if (mon > curMonIdx) return null;
+      const rawUsd = _getActualMonth(year, biz, mon + 1);
+      return isEcMode ? rawUsd : rawUsd * _getFactor(biz);
+    }
+
+    // Biz별 12개월 데이터 빌드
+    const tgtByBiz = {}; // 롤링 원본값 (억원 or M USD)
+    const actByBiz = {}; // 실적 USD 원본
     bizList.forEach(b => {
-      tgtByBiz[b] = MONTHS.map((_, i) => _getMonthlyTarget(year, b, i + 1, mode));
+      tgtByBiz[b] = MONTHS.map((_, i) => getRollingRaw(b, i));
+      actByBiz[b] = MONTHS.map((_, i) => getActualUsd(b, i));
     });
 
-    // 사업별 월별 실적(USD: KPI=매출이익, EC=매출)
-    const actByBiz = {};
-    bizList.forEach(b => {
-      actByBiz[b] = MONTHS.map((_, i) => {
-        if (i > curMonIdx) return null;
-        if (isKpiM) return _getActualMonth(year, b, i + 1) * _getFactor(b);
-        return _getActualMonth(year, b, i + 1);
-      });
-    });
-
-    // 월별 합계
-    const tgtSum = MONTHS.map((_, i) => bizList.reduce((s, b) => s + tgtByBiz[b][i], 0));
-    const actSum = MONTHS.map((_, i) => {
+    // 월별 합계 (표시 단위로 변환된 값)
+    const tgtSumRaw = MONTHS.map((_, i) =>
+      bizList.reduce((s, b) => s + tgtByBiz[b][i], 0)
+    );
+    const actSumUsd = MONTHS.map((_, i) => {
       if (i > curMonIdx) return null;
       return bizList.reduce((s, b) => s + (actByBiz[b][i] || 0), 0);
     });
 
-    // 누적
+    // 누적 (raw 단위로 계산)
     let cT = 0, cA = 0;
-    const tgtCum = [], actCum = [];
+    const tgtCumRaw = [], actCumUsd = [];
     MONTHS.forEach((_, i) => {
-      cT += tgtSum[i]; tgtCum.push(cT);
-      if (i <= curMonIdx) { cA += (actSum[i] || 0); actCum.push(cA); } else actCum.push(null);
+      cT += tgtSumRaw[i];
+      tgtCumRaw.push(cT);
+      if (i <= curMonIdx) { cA += actSumUsd[i] || 0; actCumUsd.push(cA); }
+      else actCumUsd.push(null);
     });
 
-    const totalTgt   = tgtSum.reduce((s, v) => s + v, 0);
-    if (totalTgt === 0) {
+    // 차트용 누적 (내부 단위: KPI=원, EC=USD)
+    const chartTgtCum = MONTHS.map((_, i) => {
+      const v = _getMonthlyTarget(year, bizList[0], i + 1, mode); // 전체합
+      return bizList.reduce((s, b) => s + _getMonthlyTarget(year, b, i + 1, mode), 0);
+    });
+    let chartCT = 0;
+    const chartTgtCumArr = MONTHS.map((_, i) => {
+      chartCT += chartTgtCum[i]; return chartCT;
+    });
+    const chartActCumArr = MONTHS.map((_, i) => {
+      if (i > curMonIdx) return null;
+      return bizList.reduce((s, b) => {
+        const rawUsd = _getActualMonth(year, b, i + 1);
+        return s + (isEcMode ? rawUsd : rawUsd * _getFactor(b));
+      }, 0) * (isEcMode ? 1 : (useKrw ? _exchangeRate : 1));
+    });
+    // 누적
+    let chartCA = 0;
+    const chartActCum = MONTHS.map((_, i) => {
+      if (chartActCumArr[i] === null) return null;
+      chartCA = i === 0 ? chartActCumArr[i] : chartCA + chartActCumArr[i];
+      return chartCA;
+    });
+
+    const totalTgtRaw = tgtSumRaw.reduce((s, v) => s + v, 0);
+    if (totalTgtRaw === 0) {
       el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>';
       return;
     }
 
-    const curCumA    = actCum[curMonIdx] ?? 0;
-    const curCumT    = tgtCum[curMonIdx] ?? 0;
-    const overallPct = curCumT > 0 ? Math.round(curCumA / curCumT * 100) : 0;
-    const diffTotal  = curCumA - curCumT;
-    const bizLabel   = isAll ? '전체' : bizList.map(b => BIZ_LABELS_MAP[b]).join(' + ');
-    const periodLabel = '1~' + (curMonIdx + 1) + '월';
+    // 요약 카드용 값
+    const curActUsd  = actCumUsd[curMonIdx] ?? 0;
+    const curTgtRaw  = tgtCumRaw[curMonIdx] ?? 0;
+    // 달성률: 표시 단위가 같아야 비교 가능
+    // KPI: 목표(억원), 실적(USD→억원 or USD→M USD) → 같은 단위로
+    const curActDisp = parseFloat(fmtActual(curActUsd)) || 0;
+    const overallPct = curTgtRaw > 0 ? Math.round(curActDisp / curTgtRaw * 100) : 0;
+    const diffCumFinal = curActDisp - curTgtRaw;
+    const periodLabel  = '1~' + (curMonIdx + 1) + '월';
+    const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD');
+
+    // ── 색상 규칙 ────────────────────────────────────────────
+    // 차이: 음수=파랑(목표초과), 양수=빨강(미달) — 요구사항 4번
+    // 달성률: 100% 미만=파랑, 100% 이상=빨강
+    const diffColor = d => {
+      if (d === null || isNaN(d)) return 'inherit';
+      return d < 0 ? '#1B4F8A' : (d > 0 ? '#dc2626' : 'inherit');
+    };
+    const pctColor = p => {
+      if (p === null) return 'inherit';
+      return p < 100 ? '#1B4F8A' : '#dc2626';
+    };
+    const pctBg = p => {
+      if (p === null) return 'transparent';
+      return p < 100 ? '#EBF2FB' : '#FEF2F2';
+    };
+
+    // ── 요약 카드 ────────────────────────────────────────────
     const mc = _modeColor(mode);
+    const cards = [
+      { label: '연간 목표', value: totalTgtRaw.toFixed(2) + ' ' + unitLabel, sub: _modeLabel(mode) },
+      { label: '누적 실적 (' + periodLabel + ')', value: (parseFloat(fmtActual(curActUsd))||0).toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtRaw.toFixed(2) + ' ' + unitLabel },
+      { label: '누적 달성률 (' + periodLabel + ')', value: overallPct + '%', color: pctColor(overallPct), sub: unitLabel + ' 기준' },
+      { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
+    ].map(c =>
+      '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">'
+      + '<div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">' + c.label + '</div>'
+      + '<div style="font-size:18px;font-weight:600;' + (c.color ? 'color:' + c.color : '') + '">' + c.value + '</div>'
+      + '<div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + c.sub + '</div>'
+      + '</div>'
+    ).join('');
 
-    // 값 포맷 (USD 원본값 → 표시 단위로)
-    function fmtV(v) {
-      if (v === null || v === undefined) return '—';
-      if (useKrw) return Math.round(v * _exchangeRate).toLocaleString('ko-KR');
-      return Math.round(v).toLocaleString('en-US');
-    }
-    function fmtCard(v) {
-      if (useKrw) return (Math.round(v * _exchangeRate) / 100000000).toFixed(2) + '억원';
-      return '$' + formatNumber(Math.round(v));
-    }
-
-    const pctColor = function(p) { return p >= 100 ? '#085041' : p >= 70 ? '#0C447C' : '#A32D2D'; };
-    const pctBg    = function(p) { return p >= 100 ? '#E8F5F0' : p >= 70 ? '#EBF2FB' : '#FEF2F2'; };
-    const unitLabel = useKrw ? ('원화 (₩, 환율 ' + _exchangeRate.toLocaleString() + ')') : 'USD ($)';
-
-    // 요약 카드
-    const cards = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
-      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">연간 목표 · ' + bizLabel + '</div><div style="font-size:18px;font-weight:600">' + fmtCard(totalTgt) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + (isKpiM ? '목표 매출이익' : '롤링 기준') + '</div></div>'
-      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">' + (isKpiM ? '누적 매출이익' : '누적 실적') + ' (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:var(--tx)">' + fmtCard(curCumA) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">목표 ' + fmtCard(curCumT) + '</div></div>'
-      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 달성률 (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:' + pctColor(overallPct) + '">' + overallPct + '%</div></div>'
-      + '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px"><div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">누적 차이 (' + periodLabel + ')</div><div style="font-size:18px;font-weight:600;color:' + (diffTotal >= 0 ? '#085041' : '#A32D2D') + '">' + (diffTotal >= 0 ? '+' : '-') + fmtCard(Math.abs(diffTotal)) + '</div><div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + (diffTotal >= 0 ? '목표 초과' : '목표 미달') + '</div></div>'
-      + '</div>';
-
+    // ── 차트 HTML ────────────────────────────────────────────
     const chartHtml = '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">'
       + '<div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;align-items:center">'
       + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>'
       + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>'
-      + '<span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">' + _modeLabel(mode) + '</span>'
+      + '<span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">' + _modeLabel(mode) + ' · ' + unitLabel + '</span>'
       + '</div><div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div></div>';
 
-    // 표 공통 스타일
-    var thS  = 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap';
-    var tdS  = 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF';
-    var tdLS = 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap';
-    var tdSS = 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2';
-    var tdSub= 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap';
+    // ── 표 스타일 상수 ───────────────────────────────────────
+    const TS = {
+      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
+      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
+      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
+      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
+      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
+      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
+      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
+      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
+      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
+      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
+    };
 
-    var mthHdr = MONTHS.map(function(m){ return '<th style="' + thS + '">' + m + '</th>'; }).join('');
+    // 공통 헤더 행 (두 표 동일)
+    function buildHeader() {
+      return '<thead><tr>'
+        + '<th style="' + TS.thBiz + '">Biz</th>'
+        + '<th style="' + TS.thSub + '">구분</th>'
+        + MONTHS.map(m => '<th style="' + TS.thMon + '">' + m + '</th>').join('')
+        + '<th style="' + TS.thSum + '">합계</th>'
+        + '</tr></thead>';
+    }
 
-    // ── 예상(목표) 표 ─────────────────────────────────────
-    var tgtRows = bizList.map(function(b) {
-      var cells = MONTHS.map(function(_, i) {
-        var v = tgtByBiz[b][i];
-        var isPast = i <= curMonIdx;
-        return '<td style="' + tdS + ((!isPast) ? ';color:#BBB' : '') + '">' + (v > 0 ? fmtV(v) : '—') + '</td>';
+    // ── 상단 표: 예상(목표) 롤링값 ──────────────────────────
+    const tgtDataRows = bizList.map(b => {
+      const cells = MONTHS.map((_, i) => {
+        const v   = tgtByBiz[b][i];
+        const dim = i > curMonIdx ? ';color:#BBB' : '';
+        return '<td style="' + TS.td + dim + '">' + (v > 0 ? fmtRolling(v) : '—') + '</td>';
       }).join('');
-      var total = tgtByBiz[b].reduce(function(s, v) { return s + v; }, 0);
-      return '<tr><td style="' + tdLS + ';font-weight:500">' + (BIZ_LABELS_MAP[b] || b) + '</td><td style="' + tdSub + '">예상(매출)</td>' + cells + '<td style="' + tdSS + '">' + (total > 0 ? fmtV(total) : '—') + '</td></tr>';
+      const total = tgtByBiz[b].reduce((s, v) => s + v, 0);
+      return '<tr>'
+        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+        + '<td style="' + TS.tdSub + '">예상(매출)</td>'
+        + cells
+        + '<td style="' + TS.tdSum + '">' + (total > 0 ? fmtRolling(total) : '—') + '</td>'
+        + '</tr>';
     }).join('');
 
-    var tgtSumCells = MONTHS.map(function(_, i) { return '<td style="' + tdSS + '">' + (tgtSum[i] > 0 ? fmtV(tgtSum[i]) : '—') + '</td>'; }).join('');
-    var tgtCumCells = MONTHS.map(function(_, i) { return '<td style="' + tdSS + ';background:#E8E4D8">' + fmtV(tgtCum[i]) + '</td>'; }).join('');
-    var tgtTotal    = tgtSum.reduce(function(s, v) { return s + v; }, 0);
+    const tgtSumRow = '<tr style="background:#F2F2F2">'
+      + '<td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>'
+      + MONTHS.map((_, i) => '<td style="' + TS.tdSum + '">' + (tgtSumRaw[i] > 0 ? fmtRolling(tgtSumRaw[i]) : '—') + '</td>').join('')
+      + '<td style="' + TS.tdSum + '">' + fmtRolling(totalTgtRaw) + '</td>'
+      + '</tr>';
 
-    // ── 실적 표 ────────────────────────────────────────────
-    var actRows = bizList.map(function(b) {
-      var cells = MONTHS.map(function(_, i) {
-        var v = actByBiz[b][i];
-        var isPast = i <= curMonIdx;
-        return '<td style="' + tdS + ((!isPast) ? ';color:#BBB' : '') + '">' + (v !== null && v > 0 ? fmtV(v) : (isPast ? '—' : '')) + '</td>';
+    const tgtCumRow = '<tr style="background:#E8E4D8">'
+      + '<td colspan="2" style="' + TS.tdCum + ';text-align:center">합계(누적)</td>'
+      + MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + fmtRolling(tgtCumRaw[i]) + '</td>').join('')
+      + '<td style="' + TS.tdCum + '">' + fmtRolling(totalTgtRaw) + '</td>'
+      + '</tr>';
+
+    // ── 하단 표: 실적 ────────────────────────────────────────
+    const actDataRows = bizList.map(b => {
+      const cells = MONTHS.map((_, i) => {
+        const v   = actByBiz[b][i];
+        const disp = fmtActual(v);
+        const isPast = i <= curMonIdx;
+        const dim  = !isPast ? ';color:#BBB' : '';
+        return '<td style="' + TS.td + dim + '">' + (disp !== null && parseFloat(disp) !== 0 ? disp : (isPast ? '—' : '')) + '</td>';
       }).join('');
-      var total = MONTHS.reduce(function(s, _, i) { return s + (actByBiz[b][i] || 0); }, 0);
-      return '<tr><td style="' + tdLS + ';font-weight:500">' + (BIZ_LABELS_MAP[b] || b) + '</td><td style="' + tdSub + '">실적(매출)</td>' + cells + '<td style="' + tdSS + '">' + (total > 0 ? fmtV(total) : '—') + '</td></tr>';
+      const totalUsd = MONTHS.reduce((s, _, i) => s + (actByBiz[b][i] || 0), 0);
+      const totalDisp = fmtActual(totalUsd);
+      return '<tr>'
+        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+        + '<td style="' + TS.tdSub + '">실적(매출)</td>'
+        + cells
+        + '<td style="' + TS.tdSum + '">' + (parseFloat(totalDisp) > 0 ? totalDisp : '—') + '</td>'
+        + '</tr>';
     }).join('');
 
-    var actSumCells = MONTHS.map(function(_, i) {
-      var v = actSum[i];
-      return '<td style="' + tdSS + '">' + (v !== null && v > 0 ? fmtV(v) : (i <= curMonIdx ? '—' : '')) + '</td>';
-    }).join('');
-    var actCumCells = MONTHS.map(function(_, i) {
-      var v = actCum[i];
-      return '<td style="' + tdSS + ';background:#E8E4D8">' + (v !== null ? fmtV(v) : '') + '</td>';
-    }).join('');
-    var actTotal = MONTHS.reduce(function(s, _, i) { return s + (actSum[i] || 0); }, 0);
+    const actSumDispArr = MONTHS.map((_, i) => {
+      const v = actSumUsd[i];
+      return v !== null ? fmtActual(v) : null;
+    });
+    const actTotalUsd  = MONTHS.reduce((s, _, i) => s + (actSumUsd[i] || 0), 0);
+    const actTotalDisp = fmtActual(actTotalUsd);
 
-    // 실적-예상(월별)
-    var diffMonCells = MONTHS.map(function(_, i) {
-      if (i > curMonIdx) return '<td style="' + tdS + '"></td>';
-      var d = (actSum[i] || 0) - tgtSum[i];
-      return '<td style="' + tdS + ';color:' + (d >= 0 ? '#085041' : '#A32D2D') + ';font-weight:500">' + fmtV(d) + '</td>';
-    }).join('');
-    var diffMonTotal = MONTHS.reduce(function(s, _, i) { return s + ((actSum[i] || 0) - tgtSum[i]); }, 0);
+    const actSumRow = '<tr style="background:#F2F2F2">'
+      + '<td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>'
+      + MONTHS.map((_, i) => {
+          const d = actSumDispArr[i];
+          return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>';
+        }).join('')
+      + '<td style="' + TS.tdSum + '">' + (parseFloat(actTotalDisp) > 0 ? actTotalDisp : '—') + '</td>'
+      + '</tr>';
+
+    const actCumDispArr = MONTHS.map((_, i) => {
+      return actCumUsd[i] !== null ? fmtActual(actCumUsd[i]) : null;
+    });
+    const actCumRow = '<tr style="background:#E8E4D8">'
+      + '<td colspan="2" style="' + TS.tdCum + ';text-align:center">합계(누적)</td>'
+      + MONTHS.map((_, i) => {
+          const d = actCumDispArr[i];
+          return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
+        }).join('')
+      + '<td style="' + TS.tdCum + '">' + (actCumDispArr[curMonIdx] !== null ? actCumDispArr[curMonIdx] : '—') + '</td>'
+      + '</tr>';
+
+    // ── 요약 3행 ─────────────────────────────────────────────
+
+    // 실적-예상(월별): 실적표시값 - 목표값
+    const diffMonRow = '<tr>'
+      + '<td colspan="2" style="' + TS.tdL + '">실적-예상 (월별)</td>'
+      + MONTHS.map((_, i) => {
+          if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
+          const tgt  = tgtSumRaw[i];
+          const act  = parseFloat(actSumDispArr[i]) || 0;
+          const d    = act - tgt;
+          const col  = diffColor(d);
+          return '<td style="' + TS.td + ';color:' + col + ';font-weight:600">' + fmtDiff(d) + '</td>';
+        }).join('')
+      + (function() {
+          const tgt = totalTgtRaw;
+          const act = parseFloat(actTotalDisp) || 0;
+          const d   = act - tgt;
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
+        })()
+      + '</tr>';
 
     // 실적-예상(누적)
-    var diffCumCells = MONTHS.map(function(_, i) {
-      if (i > curMonIdx) return '<td style="' + tdS + '"></td>';
-      var d = (actCum[i] || 0) - tgtCum[i];
-      return '<td style="' + tdS + ';color:' + (d >= 0 ? '#085041' : '#A32D2D') + ';font-weight:500">' + fmtV(d) + '</td>';
-    }).join('');
-    var diffCumFinal = (actCum[curMonIdx] || 0) - tgtCum[curMonIdx];
+    const diffCumRow = '<tr>'
+      + '<td colspan="2" style="' + TS.tdL + '">실적-예상 (누적)</td>'
+      + MONTHS.map((_, i) => {
+          if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
+          const tgt = tgtCumRaw[i];
+          const act = parseFloat(actCumDispArr[i]) || 0;
+          const d   = act - tgt;
+          const col = diffColor(d);
+          return '<td style="' + TS.td + ';color:' + col + ';font-weight:600">' + fmtDiff(d) + '</td>';
+        }).join('')
+      + (function() {
+          const d = diffCumFinal;
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
+        })()
+      + '</tr>';
 
     // 달성률(누적)
-    var pctCumCells = MONTHS.map(function(_, i) {
-      if (i > curMonIdx || !tgtCum[i]) return '<td style="' + tdS + '"></td>';
-      var p = Math.round((actCum[i] || 0) / tgtCum[i] * 100);
-      return '<td style="' + tdS + ';color:' + pctColor(p) + ';background:' + pctBg(p) + ';font-weight:600">' + p + '%</td>';
-    }).join('');
-    var pctCumFinal = tgtCum[curMonIdx] > 0 ? Math.round((actCum[curMonIdx] || 0) / tgtCum[curMonIdx] * 100) : null;
+    const pctCumRow = '<tr>'
+      + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적)</td>'
+      + MONTHS.map((_, i) => {
+          if (i > curMonIdx || !tgtCumRaw[i]) return '<td style="' + TS.td + '"></td>';
+          const tgt = tgtCumRaw[i];
+          const act = parseFloat(actCumDispArr[i]) || 0;
+          const p   = Math.round(act / tgt * 100);
+          return '<td style="' + TS.td + ';color:' + pctColor(p) + ';background:' + pctBg(p) + ';font-weight:600">' + fmtPct(p) + '</td>';
+        }).join('')
+      + (function() {
+          const p = pctCumFinal !== null ? Math.round(pctCumFinal) : null;
+          return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + fmtPct(p) + '</td>';
+        })()
+      + '</tr>';
 
-    var tableBlock = '<div style="overflow-x:auto;margin-bottom:6px">'
-      + '<table style="border-collapse:collapse;width:100%;min-width:900px">'
-      + '<thead><tr><th style="' + thS + ';min-width:90px">Biz</th><th style="' + thS + ';min-width:70px">구분</th>' + mthHdr + '<th style="' + thS + ';min-width:80px">합계</th></tr></thead>'
-      + '<tbody>'
-      + tgtRows
-      + '<tr style="background:#F2F2F2"><td colspan="2" style="' + tdSS + ';text-align:center">합계</td>' + tgtSumCells + '<td style="' + tdSS + '">' + (tgtTotal > 0 ? fmtV(tgtTotal) : '—') + '</td></tr>'
-      + '<tr style="background:#E8E4D8"><td colspan="2" style="' + tdSS + ';text-align:center;background:#E8E4D8">합계(누적)</td>' + tgtCumCells + '<td style="' + tdSS + ';background:#E8E4D8">' + fmtV(tgtTotal) + '</td></tr>'
-      + '</tbody></table></div>'
+    // 달성률 합계 셀 값
+    const pctCumFinal = curTgtRaw > 0 ? curActDisp / curTgtRaw * 100 : null;
 
-      + '<div style="overflow-x:auto;margin-bottom:4px">'
-      + '<table style="border-collapse:collapse;width:100%;min-width:900px">'
-      + '<thead><tr><th style="' + thS + ';min-width:90px">Biz</th><th style="' + thS + ';min-width:70px">구분</th>' + mthHdr + '<th style="' + thS + ';min-width:80px">합계</th></tr></thead>'
-      + '<tbody>'
-      + actRows
-      + '<tr style="background:#F2F2F2"><td colspan="2" style="' + tdSS + ';text-align:center">합계</td>' + actSumCells + '<td style="' + tdSS + '">' + (actTotal > 0 ? fmtV(actTotal) : '—') + '</td></tr>'
-      + '<tr style="background:#E8E4D8"><td colspan="2" style="' + tdSS + ';text-align:center;background:#E8E4D8">합계(누적)</td>' + actCumCells + '<td style="' + tdSS + ';background:#E8E4D8">' + (actTotal > 0 ? fmtV(actTotal) : '—') + '</td></tr>'
-      + '<tr><td colspan="2" style="' + tdLS + '">실적-예상 (월별)</td>' + diffMonCells + '<td style="' + tdSS + ';color:' + (diffMonTotal >= 0 ? '#085041' : '#A32D2D') + '">' + fmtV(diffMonTotal) + '</td></tr>'
-      + '<tr><td colspan="2" style="' + tdLS + '">실적-예상 (누적)</td>' + diffCumCells + '<td style="' + tdSS + ';color:' + (diffCumFinal >= 0 ? '#085041' : '#A32D2D') + '">' + fmtV(diffCumFinal) + '</td></tr>'
-      + '<tr><td colspan="2" style="' + tdLS + '">달성률 (누적)</td>' + pctCumCells
-      + '<td style="' + tdSS + ';color:' + (pctCumFinal !== null ? pctColor(pctCumFinal) : 'var(--tx3)') + ';background:' + (pctCumFinal !== null ? pctBg(pctCumFinal) : 'transparent') + ';font-weight:600">' + (pctCumFinal !== null ? pctCumFinal + '%' : '—') + '</td></tr>'
-      + '</tbody></table></div>';
-
-    // 단위 버튼
-    var unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
+    // ── 단위 전환 버튼 ───────────────────────────────────────
+    const unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위 표시:</span>'
       + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">USD ($)</button>'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>원화 (₩)</button>'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;'
+      + 'background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">'
+      + (isEcMode ? 'M USD' : 'M USD ($)') + '</button>'
+      + (isKpiMode
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" '
+          + 'style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;'
+          + 'background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';'
+          + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"'
+          + (!hasRate ? ' disabled' : '') + '>억원 (₩)</button>'
+        : '')
       + '</div>'
-      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">' + unitLabel + '</span>'
+      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">단위: ' + unitLabel + (useKrw && hasRate ? ' · 환율 ' + _exchangeRate.toLocaleString() : '') + '</span>'
       + '</div>';
 
-    el.innerHTML = cards + chartHtml + unitBtns + tableBlock;
+    // ── 두 표를 같은 col 구조로 묶어서 렌더 ─────────────────
+    // colgroup을 공유하는 방식으로 너비 동기화
+    const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
+      + MONTHS.map(() => '<col style="width:62px">').join('')
+      + '<col style="width:70px"></colgroup>';
 
+    const tgtTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+      + colgroup + buildHeader()
+      + '<tbody>' + tgtDataRows + tgtSumRow + tgtCumRow + '</tbody></table>';
+
+    const actTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+      + colgroup + buildHeader()
+      + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + '</tbody></table>';
+
+    // ── 최종 렌더 ────────────────────────────────────────────
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
+      + chartHtml
+      + unitBtns
+      + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>';
+
+    // ── 차트 렌더 ────────────────────────────────────────────
     setTimeout(function() {
-      var canvas = document.getElementById('cv-kpi-monthly'); if (!canvas) return;
+      var canvas = document.getElementById('cv-kpi-monthly');
+      if (!canvas) return;
       if (window._kpiChart) { window._kpiChart.destroy(); window._kpiChart = null; }
+
+      // 차트 데이터: 내부 단위(원 or USD)로 누적
+      var tgtChartCum = [], actChartCum = [];
+      var ct = 0, ca = 0;
+      MONTHS.forEach(function(_, i) {
+        ct += chartTgtCum[i]; tgtChartCum.push(ct);
+        if (i <= curMonIdx) {
+          var actMon = bizList.reduce(function(s, b) {
+            var rawUsd = _getActualMonth(year, b, i + 1);
+            return s + (isEcMode ? rawUsd : rawUsd * _getFactor(b));
+          }, 0);
+          ca += actMon; actChartCum.push(ca);
+        } else {
+          actChartCum.push(null);
+        }
+      });
+
       window._kpiChart = new Chart(canvas, {
         type: 'line',
         data: { labels: MONTHS, datasets: [
-          { label:'목표 누적', data: tgtCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
-          { label:'실적 누적', data: actCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:actCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
+          { label:'목표 누적', data:tgtChartCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
+          { label:'실적 누적', data:actChartCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:actChartCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
         ]},
         options: {
           responsive:true, maintainAspectRatio:false,
-          plugins: {
+          plugins:{
             legend:{display:false},
             tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){
               var v = ctx.raw || 0;
-              var disp = useKrw ? Math.round(v*_exchangeRate).toLocaleString('ko-KR')+'원' : '$'+Math.round(v).toLocaleString();
+              var disp = isEcMode
+                ? (v/1000000).toFixed(2) + ' M USD'
+                : (useKrw ? (v*_exchangeRate/100000000).toFixed(2)+'억원' : (v/1000000).toFixed(2)+' M USD');
               return ' ' + ctx.dataset.label + ': ' + disp;
             }}}
           },
           scales:{
             x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:12},autoSkip:false}},
             y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:function(v){
-              if (useKrw) return (v*_exchangeRate/100000000).toFixed(1)+'억';
-              return '$'+(v/1000).toFixed(0)+'K';
+              return isEcMode
+                ? (v/1000000).toFixed(1)+'M'
+                : (useKrw ? (v*_exchangeRate/100000000).toFixed(1)+'억' : (v/1000000).toFixed(1)+'M');
             }},beginAtZero:true},
           },
           layout:{padding:{top:10}}
@@ -418,7 +649,6 @@ Pages.KpiTarget = (() => {
       });
     }, 50);
   }
-
 
   // ── 메인 렌더 ─────────────────────────────────────────────
   return {
