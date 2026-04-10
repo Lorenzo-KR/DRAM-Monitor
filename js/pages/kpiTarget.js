@@ -208,6 +208,16 @@ Pages.KpiTarget = (() => {
     const el = document.getElementById('kpi-tracking-wrap');
     if (!el) return;
 
+    try {
+      _renderTrackingInner(el);
+    } catch(err) {
+      console.error('[KpiTarget] _renderTracking error:', err);
+      el.innerHTML = '<div style="padding:20px;color:#A32D2D;font-family:Pretendard,sans-serif;font-size:12px">표 렌더링 오류: ' + err.message + '</div>';
+    }
+  }
+
+  function _renderTrackingInner(el) {
+
     // ── 기본 컨텍스트 ────────────────────────────────────────
     const year      = _year;
     const mode      = _rollingMode;
@@ -351,14 +361,16 @@ Pages.KpiTarget = (() => {
       return;
     }
 
+    // curMonIdx가 -1이면 미래 연도 — 실적 없음
+    const safeMonIdx = Math.max(0, Math.min(curMonIdx, 11));
+
     // 요약 카드용 값
-    const curActUsd  = actCumUsd[curMonIdx] ?? 0;
-    const curTgtRaw  = tgtCumRaw[curMonIdx] ?? 0;
-    // 달성률: 표시 단위가 같아야 비교 가능
-    // KPI: 목표(억원), 실적(USD→억원 or USD→M USD) → 같은 단위로
-    const curActDisp = parseFloat(fmtActual(curActUsd)) || 0;
-    const overallPct = curTgtRaw > 0 ? Math.round(curActDisp / curTgtRaw * 100) : 0;
+    const curActUsd    = curMonIdx >= 0 ? (actCumUsd[curMonIdx] ?? 0) : 0;
+    const curTgtRaw    = tgtCumRaw[safeMonIdx] ?? 0;
+    const curActDisp   = parseFloat(fmtActual(curActUsd)) || 0;
+    const overallPct   = curTgtRaw > 0 ? Math.round(curActDisp / curTgtRaw * 100) : 0;
     const diffCumFinal = curActDisp - curTgtRaw;
+    const pctCumFinal  = curTgtRaw > 0 ? curActDisp / curTgtRaw * 100 : null;  // ★ 먼저 선언
     const periodLabel  = '1~' + (curMonIdx + 1) + '월';
     const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD');
 
@@ -553,9 +565,6 @@ Pages.KpiTarget = (() => {
           return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + fmtPct(p) + '</td>';
         })()
       + '</tr>';
-
-    // 달성률 합계 셀 값
-    const pctCumFinal = curTgtRaw > 0 ? curActDisp / curTgtRaw * 100 : null;
 
     // ── 단위 전환 버튼 ───────────────────────────────────────
     const unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
