@@ -340,30 +340,6 @@ Pages.KpiTarget = (() => {
       else actCumUsd.push(null);
     });
 
-    // 차트용 누적 (내부 단위: KPI=원, EC=USD)
-    const chartTgtCum = MONTHS.map((_, i) => {
-      const v = _getMonthlyTarget(year, bizList[0], i + 1, mode); // 전체합
-      return bizList.reduce((s, b) => s + _getMonthlyTarget(year, b, i + 1, mode), 0);
-    });
-    let chartCT = 0;
-    const chartTgtCumArr = MONTHS.map((_, i) => {
-      chartCT += chartTgtCum[i]; return chartCT;
-    });
-    const chartActCumArr = MONTHS.map((_, i) => {
-      if (i > curMonIdx) return null;
-      return bizList.reduce((s, b) => {
-        const rawUsd = _getActualMonth(year, b, i + 1);
-        return s + (isEcMode ? rawUsd : rawUsd * _getFactor(b));
-      }, 0) * (isEcMode ? 1 : (useKrw ? _exchangeRate : 1));
-    });
-    // 누적
-    let chartCA = 0;
-    const chartActCum = MONTHS.map((_, i) => {
-      if (chartActCumArr[i] === null) return null;
-      chartCA = i === 0 ? chartActCumArr[i] : chartCA + chartActCumArr[i];
-      return chartCA;
-    });
-
     const totalTgtRaw = tgtSumRaw.reduce((s, v) => s + v, 0);
     if (totalTgtRaw === 0) {
       el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--tbl-tx-body);font-size:12px">롤링 데이터를 먼저 입력해주세요</div>';
