@@ -252,10 +252,19 @@ Pages.KpiTarget = (() => {
 
     // 값 포맷 헬퍼
     function fmtRolling(v) {
-      // 롤링 저장값(억원 or M USD) 그대로 소수2자리
+      // 롤링 저장값 표시:
+      //   KPI+억원 모드: 억원 그대로 소수2자리
+      //   KPI+USD  모드: 억원 → M USD 역환산 (÷환율÷1억 × 100만)
+      //   EC        모드: M USD 그대로 소수2자리
       if (v === null || v === undefined) return '—';
       const n = parseFloat(v) || 0;
-      return n === 0 ? '—' : n.toFixed(2);
+      if (n === 0) return '—';
+      if (isKpiMode && !useKrw && hasRate) {
+        // 억원 → USD → M USD: n억원 ÷ 환율 × 1억 ÷ 1백만
+        const mUsd = (n * 100000000 / _exchangeRate) / 1000000;
+        return mUsd.toFixed(2);
+      }
+      return n.toFixed(2);
     }
 
     function fmtActual(usdVal) {
@@ -405,184 +414,50 @@ Pages.KpiTarget = (() => {
       + '</div>'
     ).join('');
 
-    // ── 차트 HTML ────────────────────────────────────────────
-    const chartHtml = '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">'
-      + '<div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;align-items:center">'
-      + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#85B7EB;display:inline-block;border-radius:2px;border-top:2px dashed #85B7EB"></span>목표 누적</span>'
-      + '<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:3px;background:#1D9E75;display:inline-block;border-radius:2px"></span>실적 누적</span>'
-      + '<span style="font-size:12px;color:var(--tbl-tx-body);margin-left:auto">' + _modeLabel(mode) + ' · ' + unitLabel + '</span>'
-      + '</div><div style="position:relative;height:210px"><canvas id="cv-kpi-monthly"></canvas></div></div>';
 
-    // ── 표 스타일 상수 ───────────────────────────────────────
-    const TS = {
-      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
-      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
-      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
-      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
-      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
-      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
-      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
-      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
-      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
-      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
-    };
+    // ================================================================
+    // 차트 HTML 영역 (3개 차트)
+    // 1. EBIT 누적 (KPI롤링 목표 vs 실적)
+    // 2. 매출 월별 (계획 vs 실적)
+    // ================================================================
 
-    // 공통 헤더 행 (두 표 동일)
-    function buildHeader() {
-      return '<thead><tr>'
-        + '<th style="' + TS.thBiz + '">Biz</th>'
-        + '<th style="' + TS.thSub + '">구분</th>'
-        + MONTHS.map(m => '<th style="' + TS.thMon + '">' + m + '</th>').join('')
-        + '<th style="' + TS.thSum + '">합계</th>'
-        + '</tr></thead>';
+    function makeChartCard(canvasId, title, legendItems) {
+      var legendHtml = legendItems.map(function(item) {
+        var lineStyle = item.dashed
+          ? 'border-top:2px dashed ' + item.color + ';background:transparent'
+          : 'background:' + item.color;
+        return '<span style="display:flex;align-items:center;gap:5px">'
+          + '<span style="width:12px;height:3px;display:inline-block;border-radius:2px;' + lineStyle + '"></span>'
+          + '<span style="font-size:11px;font-family:Pretendard,sans-serif;color:var(--tx2)">' + item.label + '</span>'
+          + '</span>';
+      }).join('');
+      return '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        + '<span style="font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tx)">' + title + '</span>'
+        + '<div style="display:flex;gap:12px">' + legendHtml + '</div>'
+        + '</div>'
+        + '<div style="position:relative;height:200px"><canvas id="' + canvasId + '"></canvas></div>'
+        + '</div>';
     }
 
-    // ── 상단 표: 예상(목표) 롤링값 ──────────────────────────
-    const tgtDataRows = bizList.map(b => {
-      const cells = MONTHS.map((_, i) => {
-        const v   = tgtByBiz[b][i];
-        const dim = i > curMonIdx ? ';color:#BBB' : '';
-        return '<td style="' + TS.td + dim + '">' + (v > 0 ? fmtRolling(v) : '—') + '</td>';
-      }).join('');
-      const total = tgtByBiz[b].reduce((s, v) => s + v, 0);
-      return '<tr>'
-        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-        + '<td style="' + TS.tdSub + '">예상(매출)</td>'
-        + cells
-        + '<td style="' + TS.tdSum + '">' + (total > 0 ? fmtRolling(total) : '—') + '</td>'
-        + '</tr>';
-    }).join('');
+    // 차트 1: EBIT 누적 (기존)
+    var chart1Title = _modeLabel(mode) + ' · EBIT 누적 · ' + unitLabel;
+    var chart1Html = makeChartCard('cv-ebit-cum', chart1Title, [
+      { label: 'EBIT 목표 누적', color: '#85B7EB', dashed: true },
+      { label: 'EBIT 실적 누적', color: '#1D9E75', dashed: false },
+    ]);
 
-    const tgtSumRow = '<tr style="background:#F2F2F2">'
-      + '<td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>'
-      + MONTHS.map((_, i) => '<td style="' + TS.tdSum + '">' + (tgtSumRaw[i] > 0 ? fmtRolling(tgtSumRaw[i]) : '—') + '</td>').join('')
-      + '<td style="' + TS.tdSum + '">' + fmtRolling(totalTgtRaw) + '</td>'
-      + '</tr>';
+    // 차트 2: EBIT 월별
+    var chart2Html = makeChartCard('cv-ebit-mon', 'EBIT 월별 · ' + unitLabel, [
+      { label: 'EBIT 목표', color: '#85B7EB', dashed: true },
+      { label: 'EBIT 실적', color: '#1D9E75', dashed: false },
+    ]);
 
-    const tgtCumRow = '<tr style="background:#E8E4D8">'
-      + '<td colspan="2" style="' + TS.tdCum + ';text-align:center">합계(누적)</td>'
-      + MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + fmtRolling(tgtCumRaw[i]) + '</td>').join('')
-      + '<td style="' + TS.tdCum + '">' + fmtRolling(totalTgtRaw) + '</td>'
-      + '</tr>';
-
-    // ── 하단 표: 실적 ────────────────────────────────────────
-    const actDataRows = bizList.map(b => {
-      const cells = MONTHS.map((_, i) => {
-        const v   = actByBiz[b][i];
-        const disp = fmtActual(v);
-        const isPast = i <= curMonIdx;
-        const dim  = !isPast ? ';color:#BBB' : '';
-        return '<td style="' + TS.td + dim + '">' + (disp !== null && parseFloat(disp) !== 0 ? disp : (isPast ? '—' : '')) + '</td>';
-      }).join('');
-      const totalUsd = MONTHS.reduce((s, _, i) => s + (actByBiz[b][i] || 0), 0);
-      const totalDisp = fmtActual(totalUsd);
-      return '<tr>'
-        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-        + '<td style="' + TS.tdSub + '">실적(매출)</td>'
-        + cells
-        + '<td style="' + TS.tdSum + '">' + (parseFloat(totalDisp) > 0 ? totalDisp : '—') + '</td>'
-        + '</tr>';
-    }).join('');
-
-    const actSumDispArr = MONTHS.map((_, i) => {
-      const v = actSumUsd[i];
-      return v !== null ? fmtActual(v) : null;
-    });
-    const actTotalUsd  = MONTHS.reduce((s, _, i) => s + (actSumUsd[i] || 0), 0);
-    const actTotalDisp = fmtActual(actTotalUsd);
-
-    const actSumRow = '<tr style="background:#F2F2F2">'
-      + '<td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>'
-      + MONTHS.map((_, i) => {
-          const d = actSumDispArr[i];
-          return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>';
-        }).join('')
-      + '<td style="' + TS.tdSum + '">' + (parseFloat(actTotalDisp) > 0 ? actTotalDisp : '—') + '</td>'
-      + '</tr>';
-
-    const actCumDispArr = MONTHS.map((_, i) => {
-      return actCumUsd[i] !== null ? fmtActual(actCumUsd[i]) : null;
-    });
-    const actCumRow = '<tr style="background:#E8E4D8">'
-      + '<td colspan="2" style="' + TS.tdCum + ';text-align:center">합계(누적)</td>'
-      + MONTHS.map((_, i) => {
-          const d = actCumDispArr[i];
-          return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
-        }).join('')
-      + '<td style="' + TS.tdCum + '">' + (actCumDispArr[curMonIdx] !== null ? actCumDispArr[curMonIdx] : '—') + '</td>'
-      + '</tr>';
-
-    // ── 요약 3행 ─────────────────────────────────────────────
-
-    // 실적-예상(월별): 실적표시값 - 목표값
-    const diffMonRow = '<tr>'
-      + '<td colspan="2" style="' + TS.tdL + '">실적-예상 (월별)</td>'
-      + MONTHS.map((_, i) => {
-          if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          const tgt  = tgtSumRaw[i];
-          const act  = parseFloat(actSumDispArr[i]) || 0;
-          const d    = act - tgt;
-          const col  = diffColor(d);
-          return '<td style="' + TS.td + ';color:' + col + ';font-weight:600">' + fmtDiff(d) + '</td>';
-        }).join('')
-      + (function() {
-          const tgt = totalTgtRaw;
-          const act = parseFloat(actTotalDisp) || 0;
-          const d   = act - tgt;
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
-        })()
-      + '</tr>';
-
-    // 실적-예상(누적)
-    const diffCumRow = '<tr>'
-      + '<td colspan="2" style="' + TS.tdL + '">실적-예상 (누적)</td>'
-      + MONTHS.map((_, i) => {
-          if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          const tgt = tgtCumRaw[i];
-          const act = parseFloat(actCumDispArr[i]) || 0;
-          const d   = act - tgt;
-          const col = diffColor(d);
-          return '<td style="' + TS.td + ';color:' + col + ';font-weight:600">' + fmtDiff(d) + '</td>';
-        }).join('')
-      + (function() {
-          const d = diffCumFinal;
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
-        })()
-      + '</tr>';
-
-    // 달성률(누적)
-    const pctCumRow = '<tr>'
-      + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적)</td>'
-      + MONTHS.map((_, i) => {
-          if (i > curMonIdx || !tgtCumRaw[i]) return '<td style="' + TS.td + '"></td>';
-          const tgt = tgtCumRaw[i];
-          const act = parseFloat(actCumDispArr[i]) || 0;
-          const p   = Math.round(act / tgt * 100);
-          return '<td style="' + TS.td + ';color:' + pctColor(p) + ';background:' + pctBg(p) + ';font-weight:600">' + fmtPct(p) + '</td>';
-        }).join('')
-      + (function() {
-          const p = pctCumFinal !== null ? Math.round(pctCumFinal) : null;
-          return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + fmtPct(p) + '</td>';
-        })()
-      + '</tr>';
-
-    // ── 단위 전환 버튼 ───────────────────────────────────────
-    const unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위 표시:</span>'
-      + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;'
-      + 'background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">'
-      + (isEcMode ? 'M USD' : 'M USD ($)') + '</button>'
-      + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" '
-          + 'style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;'
-          + 'background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';'
-          + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"'
-          + (!hasRate ? ' disabled' : '') + '>억원 (₩)</button>'
-        : '')
-      + '</div>'
-      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">단위: ' + unitLabel + (useKrw && hasRate ? ' · 환율 ' + _exchangeRate.toLocaleString() : '') + '</span>'
-      + '</div>';
+    // 차트 3: 매출 월별 (계획 vs 실적)
+    var chart3Html = makeChartCard('cv-rev-mon', '매출 월별 · ' + unitLabel, [
+      { label: '매출 계획', color: '#B45309', dashed: true },
+      { label: '매출 실적', color: '#6A3D7C', dashed: false },
+    ]);
 
     // ── 두 표를 같은 col 구조로 묶어서 렌더 ─────────────────
     // colgroup을 공유하는 방식으로 너비 동기화
@@ -600,62 +475,147 @@ Pages.KpiTarget = (() => {
 
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
-      + chartHtml
+      + chart1Html
+      + chart2Html
+      + chart3Html
       + unitBtns
       + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>';
 
-    // ── 차트 렌더 ────────────────────────────────────────────
+    // ================================================================
+    // 차트 렌더 (3개)
+    // ================================================================
     setTimeout(function() {
-      var canvas = document.getElementById('cv-kpi-monthly');
-      if (!canvas) return;
-      if (window._kpiChart) { window._kpiChart.destroy(); window._kpiChart = null; }
 
-      // 차트 데이터: 내부 단위(원 or USD)로 누적
-      var tgtChartCum = [], actChartCum = [];
-      var ct = 0, ca = 0;
+      // ── 공통 유틸 ──────────────────────────────────────────
+      // 값 → 표시 단위 변환 (차트 tick/tooltip용)
+      function toDisp(v) {
+        if (v === null) return null;
+        if (isEcMode)  return v / 1000000;
+        if (useKrw)    return v * _exchangeRate / 100000000;
+        return v / 1000000;
+      }
+      function fmtTick(v) {
+        if (isEcMode || !useKrw) return v.toFixed(1) + 'M';
+        return v.toFixed(1) + '억';
+      }
+      function fmtTooltip(v, label) {
+        var unit = (isEcMode || !useKrw) ? ' M USD' : '억원';
+        return ' ' + label + ': ' + v.toFixed(2) + unit;
+      }
+
+      function makeChartOptions(tooltipFn, tickFn) {
+        return {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { mode:'index', intersect:false, callbacks:{ label: tooltipFn } }
+          },
+          scales: {
+            x: { grid:{display:false}, ticks:{color:'#9aa0ad',font:{size:11},autoSkip:false} },
+            y: { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:11},callback:tickFn}, beginAtZero:true }
+          },
+          layout: { padding:{top:8} }
+        };
+      }
+
+      function destroyAndCreate(id, config) {
+        var key = '_chart_' + id;
+        if (window[key]) { window[key].destroy(); window[key] = null; }
+        var canvas = document.getElementById(id);
+        if (!canvas) return;
+        window[key] = new Chart(canvas, config);
+      }
+
+      // ── 차트 1: EBIT 누적 ────────────────────────────────
+      // 목표: 롤링값(억원/M USD) 누적
+      // 실적: 실제 EBIT (USD × Factor) → 표시단위 변환
+      var ebitTgtCum = [], ebitActCum = [];
+      var et = 0, ea = 0;
       MONTHS.forEach(function(_, i) {
-        ct += chartTgtCum[i]; tgtChartCum.push(ct);
+        // 목표 누적: 롤링 원본(억원 or M USD) → 내부단위(원 or USD)
+        var tgtRaw = tgtSumRaw[i]; // 억원 or M USD
+        var tgtInternal = isEcMode ? tgtRaw * 1000000 : tgtRaw * 100000000;
+        et += tgtInternal;
+        ebitTgtCum.push(toDisp(et));
+
+        // 실적 누적: EBIT USD × Factor → 표시단위
         if (i <= curMonIdx) {
-          var actMon = bizList.reduce(function(s, b) {
-            var rawUsd = _getActualMonth(year, b, i + 1);
-            return s + (isEcMode ? rawUsd : rawUsd * _getFactor(b));
+          var actEbitUsd = bizList.reduce(function(s, b) {
+            return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
           }, 0);
-          ca += actMon; actChartCum.push(ca);
+          ea += actEbitUsd;
+          ebitActCum.push(toDisp(isEcMode ? ea : ea));
         } else {
-          actChartCum.push(null);
+          ebitActCum.push(null);
         }
       });
 
-      window._kpiChart = new Chart(canvas, {
+      destroyAndCreate('cv-ebit-cum', {
         type: 'line',
         data: { labels: MONTHS, datasets: [
-          { label:'목표 누적', data:tgtChartCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
-          { label:'실적 누적', data:actChartCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:actChartCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
+          { label:'EBIT 목표 누적', data:ebitTgtCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
+          { label:'EBIT 실적 누적', data:ebitActCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:ebitActCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
         ]},
-        options: {
-          responsive:true, maintainAspectRatio:false,
-          plugins:{
-            legend:{display:false},
-            tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){
-              var v = ctx.raw || 0;
-              var disp = isEcMode
-                ? (v/1000000).toFixed(2) + ' M USD'
-                : (useKrw ? (v*_exchangeRate/100000000).toFixed(2)+'억원' : (v/1000000).toFixed(2)+' M USD');
-              return ' ' + ctx.dataset.label + ': ' + disp;
-            }}}
-          },
-          scales:{
-            x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:12},autoSkip:false}},
-            y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{color:'#9aa0ad',font:{size:12},callback:function(v){
-              return isEcMode
-                ? (v/1000000).toFixed(1)+'M'
-                : (useKrw ? (v*_exchangeRate/100000000).toFixed(1)+'억' : (v/1000000).toFixed(1)+'M');
-            }},beginAtZero:true},
-          },
-          layout:{padding:{top:10}}
-        }
+        options: makeChartOptions(
+          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
+          function(v)   { return fmtTick(v); }
+        )
       });
+
+      // ── 차트 2: EBIT 월별 ────────────────────────────────
+      var ebitTgtMon = MONTHS.map(function(_, i) {
+        var raw = tgtSumRaw[i];
+        return toDisp(isEcMode ? raw * 1000000 : raw * 100000000);
+      });
+      var ebitActMon = MONTHS.map(function(_, i) {
+        if (i > curMonIdx) return null;
+        var actUsd = bizList.reduce(function(s, b) {
+          return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
+        }, 0);
+        return toDisp(actUsd);
+      });
+
+      destroyAndCreate('cv-ebit-mon', {
+        type: 'bar',
+        data: { labels: MONTHS, datasets: [
+          { label:'EBIT 목표', data:ebitTgtMon, backgroundColor:'rgba(133,183,235,0.4)', borderColor:'#85B7EB', borderWidth:1.5, borderRadius:3 },
+          { label:'EBIT 실적', data:ebitActMon, backgroundColor:'rgba(29,158,117,0.5)', borderColor:'#1D9E75', borderWidth:1.5, borderRadius:3 },
+        ]},
+        options: makeChartOptions(
+          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
+          function(v)   { return fmtTick(v); }
+        )
+      });
+
+      // ── 차트 3: 매출 월별 (계획 vs 실적) ─────────────────
+      // 계획: 롤링값 그대로 (EBIT와 같은 값, Factor 미적용 전)
+      // 실적: 실제 매출 USD (Factor 미적용)
+      var revTgtMon = MONTHS.map(function(_, i) {
+        var raw = tgtSumRaw[i];
+        // KPI: 롤링은 EBIT기준이므로 매출로 역산 불가 → 롤링값 그대로 표시 (참고용)
+        return toDisp(isEcMode ? raw * 1000000 : raw * 100000000);
+      });
+      var revActMon = MONTHS.map(function(_, i) {
+        if (i > curMonIdx) return null;
+        var revUsd = bizList.reduce(function(s, b) {
+          return s + _getActualMonth(year, b, i + 1); // Factor 미적용 = 순수 매출
+        }, 0);
+        return toDisp(revUsd);
+      });
+
+      destroyAndCreate('cv-rev-mon', {
+        type: 'bar',
+        data: { labels: MONTHS, datasets: [
+          { label:'매출 계획', data:revTgtMon, backgroundColor:'rgba(180,83,9,0.3)', borderColor:'#B45309', borderWidth:1.5, borderRadius:3 },
+          { label:'매출 실적', data:revActMon, backgroundColor:'rgba(106,61,124,0.4)', borderColor:'#6A3D7C', borderWidth:1.5, borderRadius:3 },
+        ]},
+        options: makeChartOptions(
+          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
+          function(v)   { return fmtTick(v); }
+        )
+      });
+
     }, 50);
   }
 
@@ -762,8 +722,8 @@ Pages.KpiTarget = (() => {
 
       const TH  = l=>`<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
       const THR = l=>`<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
-      const actHeader = isKpiM ? '누적 매출이익 (억원)' : '누적 실적 (USD)';
-      const tgtHeader = isKpiM ? '목표 매출이익 (억원)' : '목표 매출 (USD)';
+      const actHeader = isKpiM ? '누적 EBIT (억원)' : '누적 실적 (USD)';
+      const tgtHeader = isKpiM ? '목표 EBIT (억원)' : '목표 매출 (USD)';
 
       const bizBtns=[{key:'all',label:'전체',color:'#1B4F8A'},...CONFIG.BIZ_LIST.map(b=>({key:b,label:CONFIG.BIZ_LABELS[b],color:CONFIG.BIZ_COLORS[b]}))].map(({key,label,color})=>{
         const on=_bizSet.has(key);
@@ -830,10 +790,10 @@ Pages.KpiTarget = (() => {
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${ml})</div>
             <div style="font-size:18px;font-weight:600;color:${mc}">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</div>
-            <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?'목표 매출이익 (롤링 합계)':'롤링 데이터 합계'}</div>
+            <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?'목표 EBIT (롤링 합계)':'롤링 데이터 합계'}</div>
           </div>
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpiM?'누적 매출이익':'누적 달성'}</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpiM?'누적 EBIT':'누적 달성'}</div>
             <div style="font-size:18px;font-weight:600;color:var(--tx)">${isKpiM&&hasRate?(totalActKrw/100000000).toFixed(2)+'억원':isKpiM?'$'+formatNumber(Math.round(totalActKrw)):'$'+formatNumber(Math.round(totalActUsd))}</div>
             ${isKpiM&&hasRate?`<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0)))} × ${_exchangeRate.toLocaleString()}원</div>`:''}
           </div>
@@ -1115,7 +1075,7 @@ Pages.KpiTarget = (() => {
         </tr>`;
       }).join('');
       document.getElementById('kpi-factor-inner').innerHTML=`
-        <div style="font-size:12px;color:#888;margin-bottom:14px;font-family:Pretendard,sans-serif">Factor = 매출이익 / 매출 · 예) 매출 100, Factor 0.9 → 매출이익 90</div>
+        <div style="font-size:12px;color:#888;margin-bottom:14px;font-family:Pretendard,sans-serif">Factor = EBIT / 매출 · 예) 매출 100, Factor 0.9 → EBIT 90</div>
         <table style="border-collapse:collapse;width:100%">
           <thead><tr>
             <th style="padding:8px 12px;text-align:left;font-size:12px;font-weight:700;background:#F0F0F0;border-bottom:2px solid #CCC;font-family:Pretendard,sans-serif">사업</th>
