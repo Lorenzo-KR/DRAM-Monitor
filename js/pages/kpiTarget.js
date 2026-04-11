@@ -325,10 +325,10 @@ Pages.KpiTarget = (() => {
     }
 
     function fmtDiff(v) {
-      if (v === null || v === undefined) return '—';
+      if (v === null || v === undefined || isNaN(parseFloat(v))) return '—';
       const n = parseFloat(v);
-      if (isNaN(n)) return '—';
-      return (n >= 0 ? '+' : '') + n.toFixed(2);
+      // 부호를 여기서만 붙임 (호출부에서 sign 추가 금지)
+      return (n > 0 ? '+' : '') + n.toFixed(2);
     }
 
     function fmtPct(p) {
@@ -550,7 +550,7 @@ Pages.KpiTarget = (() => {
 
     var tgtCumRow = '<tr style="background:#E8E4D8">'
       + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
-      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + '">' + tgtSubLabel + '</td>'
+      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + ';background:#E8E4D8">' + tgtSubLabel + '</td>'
       + tgtCumVals.map(function(v) { return '<td style="' + TS.tdCum + '">' + fmtRolling(v) + '</td>'; }).join('')
       + '<td style="' + TS.tdCum + '">' + fmtRolling(tgtTotalAll) + '</td>'
       + '</tr>';
@@ -596,7 +596,7 @@ Pages.KpiTarget = (() => {
 
     var actCumRow = '<tr style="background:#E8E4D8">'
       + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
-      + '<td style="' + TS.tdSub + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
+      + '<td style="' + TS.tdSub + ';color:' + actSubColor + ';background:#E8E4D8">' + actSubLabel + '</td>'
       + MONTHS.map(function(_, i) {
           var d = actCumDispView[i];
           return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
@@ -605,8 +605,12 @@ Pages.KpiTarget = (() => {
       + '</tr>';
 
     // ── 요약 3행 (선택된 뷰 기준) ──────────────────────────
-    var tgtSumDispArr = tgtVals;
-    var tgtCumDispArr = tgtCumVals;
+    // 실적-계획 비교용: 목표를 표시 단위로 변환 (실적과 단위 통일)
+    // fmtRolling: 억원 raw → 표시(억원 or M USD)
+    var tgtSumFmt = tgtVals.map(function(v) { return parseFloat(fmtRolling(v)) || 0; });
+    var tgtCumFmt = tgtCumVals.map(function(v) { return parseFloat(fmtRolling(v)) || 0; });
+    var tgtSumDispArr = tgtSumFmt;  // 달성률 계산에도 사용
+    var tgtCumDispArr = tgtCumFmt;
     var actSumRef     = actSumDispView;
     var actCumRef     = actCumDispView;
 
@@ -615,19 +619,17 @@ Pages.KpiTarget = (() => {
       + '<td colspan="2" style="' + TS.tdL + '">실적-계획 (월별)</td>'
       + MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          var d = (parseFloat(actSumRef[i]) || 0) - tgtSumDispArr[i];
-          var sign = d > 0 ? '+' : '';
-          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + sign + fmtDiff(d) + '</td>';
+          var d = (parseFloat(actSumRef[i]) || 0) - tgtSumFmt[i];
+          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
           var aSum = 0, tSum = 0;
           for (var i = 0; i <= curMonIdx && i < 12; i++) {
             aSum += parseFloat(actSumRef[i]) || 0;
-            tSum += tgtSumDispArr[i];
+            tSum += tgtSumFmt[i];
           }
           var d = aSum - tSum;
-          var sign = d > 0 ? '+' : '';
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + sign + fmtDiff(d) + '</td>';
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
 
@@ -636,14 +638,12 @@ Pages.KpiTarget = (() => {
       + '<td colspan="2" style="' + TS.tdL + '">실적-계획 (누적)</td>'
       + MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          var d = (parseFloat(actCumRef[i]) || 0) - tgtCumDispArr[i];
-          var sign = d > 0 ? '+' : '';
-          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + sign + fmtDiff(d) + '</td>';
+          var d = (parseFloat(actCumRef[i]) || 0) - tgtCumFmt[i];
+          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
-          var d = diffCumFinal;
-          var sign = d > 0 ? '+' : '';
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + sign + fmtDiff(d) + '</td>';
+          var d = (parseFloat(actCumRef[curMonIdx]) || 0) - tgtCumFmt[curMonIdx];
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
 
@@ -683,8 +683,18 @@ Pages.KpiTarget = (() => {
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
       + unitBtns
+      + '<div style="margin-bottom:4px">'
+      + '<div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em">'
+      + '① ' + (showEbit ? 'EBIT 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
+      + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>';
+      + '</div>'
+      + '<div style="margin-bottom:4px">'
+      + '<div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em">'
+      + '② ' + (showEbit ? 'EBIT 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
+      + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
+      + '</div>';
 
     // ================================================================
     // 차트 렌더 — EBIT 누적 1개
@@ -730,34 +740,41 @@ Pages.KpiTarget = (() => {
       }
 
       // ── EBIT 누적 차트 ─────────────────────────────────────
-      // 목표: 롤링 EBIT raw(억원) → 내부단위(원) → toDisp
-      // 실적: 인보이스 매출 × Factor = EBIT(USD) → toDisp
+      // 목표: 롤링 EBIT raw(억원 or M USD) → 표시 단위로 직접 변환
+      // 실적: 매출(USD) × Factor = EBIT(USD) → 표시 단위로 변환
+      // 표시 단위: KPI+억원 → 억원, KPI+M USD → M USD, EC → M USD
       var ebitTgtCum = [], ebitActCum = [];
       var et = 0, ea = 0;
 
       MONTHS.forEach(function(_, i) {
-        // 목표 누적
-        var tgtRaw      = ebitSumRaw[i]; // 억원 or M USD
-        var tgtInternal = isEcMode ? tgtRaw * 1000000 : tgtRaw * 100000000;
-        et += tgtInternal;
-        ebitTgtCum.push(toDisp(et));
+        // 목표 누적: raw 단위(억원 or M USD)로 누적 후 표시
+        et += ebitSumRaw[i]; // 억원 or M USD
+        if (useKrw || isEcMode) {
+          ebitTgtCum.push(et); // 억원(KPI+억원) or M USD(EC) 그대로
+        } else {
+          // KPI+M USD: 억원 → M USD 역환산
+          ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate / 1000000 : et);
+        }
 
-        // 실적 누적 (EBIT = 매출 × Factor)
+        // 실적 누적: USD → 표시 단위 변환
         if (i <= curMonIdx) {
           var actUsd = bizList.reduce(function(s, b) {
             return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
           }, 0);
           ea += actUsd;
-          ebitActCum.push(toDisp(ea));
+          // USD → 표시 단위
+          if (isEcMode)   ebitActCum.push(ea / 1000000);                       // M USD
+          else if (useKrw) ebitActCum.push(ea * _exchangeRate / 100000000);    // 억원
+          else             ebitActCum.push(ea / 1000000);                       // M USD
         } else {
           ebitActCum.push(null);
         }
       });
 
-      // y축 최대값: 목표 최대값 × 1.3 (너무 크게 안 되도록)
-      var tgtMax = Math.max.apply(null, ebitTgtCum.filter(function(v) { return v !== null; }));
-      var actMax = Math.max.apply(null, ebitActCum.filter(function(v) { return v !== null; }));
-      var yMax   = Math.max(tgtMax, actMax) * 1.3 || null;
+      // y축: 데이터 최대값 기준으로 적절한 최대값 설정
+      var allVals = ebitTgtCum.concat(ebitActCum).filter(function(v) { return v !== null && v > 0; });
+      var dataMax = allVals.length > 0 ? Math.max.apply(null, allVals) : 10;
+      var yMax    = dataMax * 1.3;
 
       destroyAndCreate('cv-ebit-cum', {
         type: 'line',
