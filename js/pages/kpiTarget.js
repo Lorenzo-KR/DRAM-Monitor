@@ -420,14 +420,19 @@ Pages.KpiTarget = (() => {
     // curMonIdx가 -1이면 미래 연도 — 실적 없음
     const safeMonIdx = Math.max(0, Math.min(curMonIdx, 11));
 
-    // 요약 카드용 값
+    // ── 요약 카드 계산 (모두 현재월 기준) ──────────────────
+    // 실적 누적(USD) — 현재월까지
     const curActUsd    = curMonIdx >= 0 ? (actCumUsd[curMonIdx] ?? 0) : 0;
-    const curTgtRaw    = tgtCumRaw[safeMonIdx] ?? 0;
+    // 목표 누적(raw: 억원 or M USD) — 현재월까지
+    const curTgtRaw    = curMonIdx >= 0 ? (tgtCumRaw[curMonIdx] ?? 0) : 0;
+    // 표시 단위로 변환
     const curActDisp   = parseFloat(fmtActual(curActUsd)) || 0;
-    const overallPct   = curTgtRaw > 0 ? Math.round(curActDisp / curTgtRaw * 100) : 0;
-    const diffCumFinal = curActDisp - curTgtRaw;
-    const pctCumFinal  = curTgtRaw > 0 ? curActDisp / curTgtRaw * 100 : null;  // ★ 먼저 선언
-    const periodLabel  = '1~' + (curMonIdx + 1) + '월';
+    // fmtRolling으로 목표도 표시 단위로 변환 (동일 단위로 비교)
+    const curTgtDisp   = parseFloat(fmtRolling(curTgtRaw)) || 0;
+    const overallPct   = curTgtDisp > 0 ? curActDisp / curTgtDisp * 100 : 0;
+    const diffCumFinal = curActDisp - curTgtDisp;
+    const pctCumFinal  = curTgtDisp > 0 ? curActDisp / curTgtDisp * 100 : null;
+    const periodLabel  = curMonIdx >= 0 ? '1~' + (curMonIdx + 1) + '월' : '—';
     const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD');
 
     // ── 색상 규칙 ────────────────────────────────────────────
@@ -457,8 +462,8 @@ Pages.KpiTarget = (() => {
     const mc = _modeColor(mode);
     const cards = [
       { label: '연간 목표', value: totalTgtRaw.toFixed(2) + ' ' + unitLabel, sub: _modeLabel(mode) },
-      { label: '누적 실적 (' + periodLabel + ')', value: (parseFloat(fmtActual(curActUsd))||0).toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtRaw.toFixed(2) + ' ' + unitLabel },
-      { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(overallPct), sub: '계획대비 · ' + unitLabel + ' 기준' },
+      { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
+      { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
       { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
     ].map(c =>
       '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">'
@@ -632,10 +637,25 @@ Pages.KpiTarget = (() => {
     // fmtRolling: 억원 raw → 표시(억원 or M USD)
     var tgtSumFmt = tgtVals.map(function(v) { return parseFloat(fmtRolling(v)) || 0; });
     var tgtCumFmt = tgtCumVals.map(function(v) { return parseFloat(fmtRolling(v)) || 0; });
-    var tgtSumDispArr = tgtSumFmt;  // 달성률 계산에도 사용
+    var tgtSumDispArr = tgtSumFmt;
     var tgtCumDispArr = tgtCumFmt;
     var actSumRef     = actSumDispView;
     var actCumRef     = actCumDispView;
+
+    // 합계 셀용 raw 누적 (오차 없이 raw로 합산 후 한 번만 포맷)
+    var actSumRawTotal  = 0; // 현재월까지 실적 raw(USD) 합산
+    var tgtSumRawTotal  = 0; // 현재월까지 목표 raw(억원/M USD) 합산
+    for (var _i = 0; _i <= curMonIdx && _i < 12; _i++) {
+      actSumRawTotal += actSumUsdView[_i] || 0;
+      tgtSumRawTotal += tgtVals[_i] || 0;
+    }
+    var actSumTotalDisp = parseFloat(fmtActual(actSumRawTotal)) || 0;
+    var tgtSumTotalDisp = parseFloat(fmtRolling(tgtSumRawTotal)) || 0;
+    // 현재월 누적 raw
+    var actCumRawCur = actCumUsdView[curMonIdx] !== null ? (actCumUsdView[curMonIdx] || 0) : 0;
+    var tgtCumRawCur = tgtCumVals[curMonIdx] || 0;
+    var actCumTotalDisp = parseFloat(fmtActual(actCumRawCur)) || 0;
+    var tgtCumTotalDisp = parseFloat(fmtRolling(tgtCumRawCur)) || 0;
 
     // 실적-계획 (월별)
     var diffMonRow = '<tr>'
@@ -646,12 +666,8 @@ Pages.KpiTarget = (() => {
           return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
-          var aSum = 0, tSum = 0;
-          for (var i = 0; i <= curMonIdx && i < 12; i++) {
-            aSum += parseFloat(actSumRef[i]) || 0;
-            tSum += tgtSumFmt[i];
-          }
-          var d = aSum - tSum;
+          // raw 합산 후 한 번만 포맷 → 0.01 오차 없음
+          var d = actSumTotalDisp - tgtSumTotalDisp;
           return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
@@ -665,7 +681,7 @@ Pages.KpiTarget = (() => {
           return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
-          var d = (parseFloat(actCumRef[curMonIdx]) || 0) - tgtCumFmt[curMonIdx];
+          var d = actCumTotalDisp - tgtCumTotalDisp;
           return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
@@ -966,8 +982,8 @@ Pages.KpiTarget = (() => {
           + `</div>
           <!-- 관리자 전용: 심플 -->
           <div style="display:flex;gap:5px;align-items:center;opacity:0.7">
-            <button onclick="Pages.KpiTarget.openRolling('${mode}')" style="${adminBtnStyle}">롤링 입력</button>
-            ${mode==='kpi67'?`<button onclick="Pages.KpiTarget.openRolling('kpi103')" style="${adminBtnStyle}">103억</button>`:''}
+            <button onclick="Pages.KpiTarget.openRolling('${mode}')" style="${adminBtnStyle}">${mode==='ec'?'롤링(EC)':mode==='kpi103'?'롤링(103)':'롤링(67)'}</button>
+            ${mode==='kpi67'?`<button onclick="Pages.KpiTarget.openRolling('kpi103')" style="${adminBtnStyle}">롤링(103)</button>`:''}
             ${isKpiM?`<button onclick="Pages.KpiTarget.openFactorPanel()" style="${adminBtnStyle}">Factor</button>`:''}
           </div>
         </div>
