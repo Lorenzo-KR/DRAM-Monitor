@@ -477,7 +477,29 @@ Pages.KpiTarget = (() => {
       + MONTHS.map(() => '<col style="width:62px">').join('')
       + '<col style="width:70px"></colgroup>';
 
-    // ── 포맷 헬퍼 ────────────────────────────────────────────
+    // ── 표 스타일 상수 (한 곳에서 수정하면 전체 반영) ────────
+    const TS = {
+      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
+      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
+      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
+      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
+      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
+      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
+      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
+      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
+      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
+      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
+    };
+
+    // 공통 헤더 행 (두 표 동일 → 컬럼 너비 자동 동기화)
+    function buildHeader() {
+      return '<thead><tr>'
+        + '<th style="' + TS.thBiz + '">Biz</th>'
+        + '<th style="' + TS.thSub + '">구분</th>'
+        + MONTHS.map(m => '<th style="' + TS.thMon + '">' + m + '</th>').join('')
+        + '<th style="' + TS.thSum + '">합계</th>'
+        + '</tr></thead>';
+    }
     // 롤링 raw(억원 or M USD) → 표시
     function fmtRolling(v) {
       if (!v || v === 0) return '—';
