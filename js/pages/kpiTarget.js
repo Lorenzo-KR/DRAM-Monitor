@@ -213,6 +213,7 @@ Pages.KpiTarget = (() => {
   // 월별 트래킹 — 단위 상태
   // ================================================================
   let _trackingUnit = 'usd'; // 'usd' | 'krw'
+  let _tableView    = 'ebit'; // 'ebit' | 'rev' — 표 보기 모드
 
   // ================================================================
   // _renderTracking
@@ -266,6 +267,30 @@ Pages.KpiTarget = (() => {
       //   KPI+USD:  USD 실적 × Factor → M USD
       //   EC:       USD 실적 → M USD
     };
+
+    // ── 표 스타일 상수 ───────────────────────────────────────
+    const TS = {
+      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
+      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
+      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
+      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
+      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
+      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
+      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
+      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
+      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
+      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
+    };
+
+    // 공통 헤더 (두 표 동일 → 컬럼 너비 자동 동기화)
+    function buildHeader() {
+      return '<thead><tr>'
+        + '<th style="' + TS.thBiz + '">Biz</th>'
+        + '<th style="' + TS.thSub + '">구분</th>'
+        + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
+        + '<th style="' + TS.thSum + '">합계</th>'
+        + '</tr></thead>';
+    }
 
     // 값 포맷 헬퍼
     function fmtRolling(v) {
@@ -427,10 +452,9 @@ Pages.KpiTarget = (() => {
     ).join('');
 
 
+
     // ================================================================
-    // 차트 HTML 영역 (3개 차트)
-    // 1. EBIT 누적 (KPI롤링 목표 vs 실적)
-    // 2. 매출 월별 (계획 vs 실적)
+    // 차트 HTML (EBIT 누적 1개만 유지)
     // ================================================================
 
     function makeChartCard(canvasId, title, legendItems) {
@@ -452,267 +476,200 @@ Pages.KpiTarget = (() => {
         + '</div>';
     }
 
-    // 차트 1: EBIT 누적 (기존)
+    // 차트: EBIT 누적만 유지
     var chart1Title = _modeLabel(mode) + ' · EBIT 누적 · ' + unitLabel;
-    var chart1Html = makeChartCard('cv-ebit-cum', chart1Title, [
-      { label: 'EBIT 목표 누적', color: '#85B7EB', dashed: true },
+    var chart1Html  = makeChartCard('cv-ebit-cum', chart1Title, [
+      { label: 'EBIT 목표 누적', color: '#85B7EB', dashed: true  },
       { label: 'EBIT 실적 누적', color: '#1D9E75', dashed: false },
     ]);
 
-    // 차트 2: EBIT 월별
-    var chart2Html = makeChartCard('cv-ebit-mon', 'EBIT 월별 · ' + unitLabel, [
-      { label: 'EBIT 목표', color: '#85B7EB', dashed: true },
-      { label: 'EBIT 실적', color: '#1D9E75', dashed: false },
-    ]);
+    // ── 단위 전환 버튼 + 표 뷰 전환 버튼 ─────────────────────
+    var showEbit = (_tableView === 'ebit');
 
-    // 차트 3: 매출 월별 (계획 vs 실적)
-    var chart3Html = makeChartCard('cv-rev-mon', '매출 월별 · ' + unitLabel, [
-      { label: '매출 계획', color: '#B45309', dashed: true },
-      { label: '매출 실적', color: '#6A3D7C', dashed: false },
-    ]);
+    var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;flex-wrap:wrap">'
+      // 단위 전환
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
+      + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">M USD</button>'
+      + (isKpiMode
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원 (₩)</button>'
+        : '')
+      + '</div>'
+      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">' + unitLabel + (useKrw && hasRate ? ' · 환율 ' + _exchangeRate.toLocaleString() : '') + '</span>'
+      + '</div>'
+      // 표 뷰 전환 (KPI 모드에서만)
+      + (isKpiMode
+        ? '<div style="display:flex;align-items:center;gap:8px">'
+          + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">표 보기:</span>'
+          + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#0F6E56' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#185FA5' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
+          + '</div>'
+          + '</div>'
+        : '')
+      + '</div>';
 
-    // ── 두 표를 같은 col 구조로 묶어서 렌더 ─────────────────
-    // colgroup을 공유하는 방식으로 너비 동기화
-    const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
-      + MONTHS.map(() => '<col style="width:62px">').join('')
-      + '<col style="width:70px"></colgroup>';
+    // ── 표: EBIT or 매출 선택 뷰 ─────────────────────────────
+    // showEbit=true  → EBIT(계획)/EBIT(실적) 행만 표시
+    // showEbit=false → 매출(계획)/매출(실적) 행만 표시
+    // EC 모드는 항상 EBIT(=M USD) 표시
 
-    // ── 표 스타일 상수 (한 곳에서 수정하면 전체 반영) ────────
-    const TS = {
-      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
-      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
-      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
-      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
-      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
-      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
-      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
-      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
-      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
-      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
-    };
-
-    // 공통 헤더 행 (두 표 동일 → 컬럼 너비 자동 동기화)
-    function buildHeader() {
-      return '<thead><tr>'
-        + '<th style="' + TS.thBiz + '">Biz</th>'
-        + '<th style="' + TS.thSub + '">구분</th>'
-        + MONTHS.map(m => '<th style="' + TS.thMon + '">' + m + '</th>').join('')
-        + '<th style="' + TS.thSum + '">합계</th>'
-        + '</tr></thead>';
-    }
-    // 롤링 raw(억원 or M USD) → 표시
-    function fmtRolling(v) {
-      if (!v || v === 0) return '—';
-      const n = parseFloat(v) || 0;
-      if (n === 0) return '—';
-      if (isKpiMode && !useKrw && hasRate) {
-        // KPI+USD 모드: 억원 → M USD 역환산
-        return (n * 100000000 / _exchangeRate / 1000000).toFixed(2);
-      }
-      return n.toFixed(2);
-    }
-    // 실적 USD → 표시단위
-    function fmtActual(usdVal) {
-      if (usdVal === null || usdVal === undefined) return null;
-      if (isEcMode)  return (usdVal / 1000000).toFixed(2);
-      if (useKrw)    return (usdVal * _exchangeRate / 100000000).toFixed(2);
-      return (usdVal / 1000000).toFixed(2);
-    }
-    function fmtDiff(v) {
-      if (v === null || isNaN(v)) return '—';
-      return (v >= 0 ? '+' : '') + v.toFixed(2);
-    }
-    function fmtPct(p) { return p === null ? '—' : Math.round(p) + '%'; }
-
-    // ── 상단 표: 계획 (매출+EBIT) ────────────────────────────
-    const tgtDataRows = bizList.map(b => {
-      const revCells = MONTHS.map((_, i) => {
-        const v = revByBiz[b][i];
-        const dim = i > curMonIdx ? ';color:#BBB' : '';
+    // 계획 표 데이터 행
+    var tgtDataRows = bizList.map(function(b) {
+      var vals    = showEbit ? ebitByBiz[b] : revByBiz[b];
+      var subLabel = showEbit ? 'EBIT(계획)' : '매출(계획)';
+      var subColor = showEbit ? '#0F6E56'    : '#185FA5';
+      var cells = MONTHS.map(function(_, i) {
+        var v   = vals[i];
+        var dim = i > curMonIdx ? ';color:#BBB' : '';
         return '<td style="' + TS.td + dim + '">' + fmtRolling(v) + '</td>';
       }).join('');
-      const ebitCells = MONTHS.map((_, i) => {
-        const v = ebitByBiz[b][i];
-        const dim = i > curMonIdx ? ';color:#BBB' : '';
-        return '<td style="' + TS.td + dim + '">' + fmtRolling(v) + '</td>';
-      }).join('');
-      const revTotal  = revByBiz[b].reduce((s, v) => s + v, 0);
-      const ebitTotal = ebitByBiz[b].reduce((s, v) => s + v, 0);
-
-      // KPI: 매출+EBIT 2행 / EC: EBIT(=M USD) 1행
-      if (isKpiMode) {
-        return '<tr>'
-          + '<td style="' + TS.tdL + ';font-weight:500;vertical-align:top" rowspan="2">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-          + '<td style="' + TS.tdSub + '">매출(계획)</td>'
-          + revCells
-          + '<td style="' + TS.tdSum + '">' + fmtRolling(revTotal) + '</td>'
-          + '</tr><tr>'
-          + '<td style="' + TS.tdSub + ';color:#185FA5">EBIT(계획)</td>'
-          + ebitCells
-          + '<td style="' + TS.tdSum + ';color:#185FA5">' + fmtRolling(ebitTotal) + '</td>'
-          + '</tr>';
-      } else {
-        return '<tr>'
-          + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-          + '<td style="' + TS.tdSub + '">매출(계획)</td>'
-          + ebitCells
-          + '<td style="' + TS.tdSum + '">' + fmtRolling(ebitTotal) + '</td>'
-          + '</tr>';
-      }
+      var total = vals.reduce(function(s, v) { return s + v; }, 0);
+      return '<tr>'
+        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+        + '<td style="' + TS.tdSub + ';color:' + subColor + '">' + subLabel + '</td>'
+        + cells
+        + '<td style="' + TS.tdSum + ';color:' + subColor + '">' + fmtRolling(total) + '</td>'
+        + '</tr>';
     }).join('');
 
-    // 합계행 (계획)
-    const tgtSumRow = (function() {
-      const revCells  = MONTHS.map((_, i) => '<td style="' + TS.tdSum + '">' + fmtRolling(revSumRaw[i])  + '</td>').join('');
-      const ebitCells = MONTHS.map((_, i) => '<td style="' + TS.tdSum + '">' + fmtRolling(ebitSumRaw[i]) + '</td>').join('');
-      const revTotal  = revSumRaw.reduce((s, v) => s + v, 0);
-      const ebitTotal = ebitSumRaw.reduce((s, v) => s + v, 0);
-      if (isKpiMode) {
-        return '<tr style="background:#F2F2F2">'
-          + '<td style="' + TS.tdSum + ';text-align:center" rowspan="2">합계</td>'
-          + '<td style="' + TS.tdSub + '">매출</td>' + revCells  + '<td style="' + TS.tdSum + '">' + fmtRolling(revTotal)  + '</td></tr>'
-          + '<tr style="background:#F2F2F2"><td style="' + TS.tdSub + ';color:#185FA5">EBIT</td>' + ebitCells + '<td style="' + TS.tdSum + ';color:#185FA5">' + fmtRolling(ebitTotal) + '</td></tr>';
-      }
-      return '<tr style="background:#F2F2F2"><td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>' + ebitCells + '<td style="' + TS.tdSum + '">' + fmtRolling(ebitTotal) + '</td></tr>';
-    })();
+    // 계획 합계행
+    var tgtVals = showEbit ? ebitSumRaw : revSumRaw;
+    var tgtCumVals = showEbit ? ebitCumRaw : revCumRaw;
+    var tgtTotalAll = tgtVals.reduce(function(s, v) { return s + v; }, 0);
+    var tgtSubLabel = showEbit ? 'EBIT' : '매출';
+    var tgtSubColor = showEbit ? '#0F6E56' : '#185FA5';
 
-    // 누적합계행 (계획)
-    const tgtCumRow = (function() {
-      const revCells  = MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + fmtRolling(revCumRaw[i])  + '</td>').join('');
-      const ebitCells = MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + fmtRolling(ebitCumRaw[i]) + '</td>').join('');
-      const revTotal  = revSumRaw.reduce((s, v) => s + v, 0);
-      const ebitTotal = ebitSumRaw.reduce((s, v) => s + v, 0);
-      if (isKpiMode) {
-        return '<tr style="background:#E8E4D8">'
-          + '<td style="' + TS.tdCum + ';text-align:center" rowspan="2">누적</td>'
-          + '<td style="' + TS.tdSub + '">매출</td>' + revCells  + '<td style="' + TS.tdCum + '">' + fmtRolling(revTotal)  + '</td></tr>'
-          + '<tr style="background:#E8E4D8"><td style="' + TS.tdSub + ';color:#185FA5">EBIT</td>' + ebitCells + '<td style="' + TS.tdCum + ';color:#185FA5">' + fmtRolling(ebitTotal) + '</td></tr>';
-      }
-      return '<tr style="background:#E8E4D8"><td colspan="2" style="' + TS.tdCum + ';text-align:center">누적</td>' + ebitCells + '<td style="' + TS.tdCum + '">' + fmtRolling(ebitTotal) + '</td></tr>';
-    })();
+    var tgtSumRow = '<tr style="background:#F2F2F2">'
+      + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
+      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + '">' + tgtSubLabel + '</td>'
+      + tgtVals.map(function(v) { return '<td style="' + TS.tdSum + '">' + fmtRolling(v) + '</td>'; }).join('')
+      + '<td style="' + TS.tdSum + '">' + fmtRolling(tgtTotalAll) + '</td>'
+      + '</tr>';
 
-    // ── 하단 표: 실적 (매출+EBIT) ────────────────────────────
-    const actDataRows = bizList.map(b => {
-      const revCells = MONTHS.map((_, i) => {
-        const v = actRevByBiz[b][i];
-        const d = fmtActual(v);
-        const isPast = i <= curMonIdx;
-        const dim = !isPast ? ';color:#BBB' : '';
+    var tgtCumRow = '<tr style="background:#E8E4D8">'
+      + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
+      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + '">' + tgtSubLabel + '</td>'
+      + tgtCumVals.map(function(v) { return '<td style="' + TS.tdCum + '">' + fmtRolling(v) + '</td>'; }).join('')
+      + '<td style="' + TS.tdCum + '">' + fmtRolling(tgtTotalAll) + '</td>'
+      + '</tr>';
+
+    // 실적 표 데이터 행
+    var actByBizView   = showEbit ? actEbitByBiz : actRevByBiz;
+    var actSumUsdView  = showEbit ? actEbitSumUsd : actRevSumUsd;
+    var actCumUsdView  = showEbit ? actEbitCumUsd : actRevCumUsd;
+    var actSubLabel    = showEbit ? 'EBIT(실적)' : '매출(실적)';
+    var actSubColor    = showEbit ? '#085041'    : '#6A3D7C';
+
+    var actDataRows = bizList.map(function(b) {
+      var cells = MONTHS.map(function(_, i) {
+        var v    = actByBizView[b][i];
+        var d    = fmtActual(v);
+        var isPast = i <= curMonIdx;
+        var dim  = !isPast ? ';color:#BBB' : '';
         return '<td style="' + TS.td + dim + '">' + (d !== null && parseFloat(d) !== 0 ? d : (isPast ? '—' : '')) + '</td>';
       }).join('');
-      const ebitCells = MONTHS.map((_, i) => {
-        const v = actEbitByBiz[b][i];
-        const d = fmtActual(v);
-        const isPast = i <= curMonIdx;
-        const dim = !isPast ? ';color:#BBB' : '';
-        return '<td style="' + TS.td + dim + '">' + (d !== null && parseFloat(d) !== 0 ? d : (isPast ? '—' : '')) + '</td>';
-      }).join('');
-      const revTotal  = fmtActual(MONTHS.reduce((s, _, i) => s + (actRevByBiz[b][i]  || 0), 0));
-      const ebitTotal = fmtActual(MONTHS.reduce((s, _, i) => s + (actEbitByBiz[b][i] || 0), 0));
-
-      if (isKpiMode) {
-        return '<tr>'
-          + '<td style="' + TS.tdL + ';font-weight:500;vertical-align:top" rowspan="2">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-          + '<td style="' + TS.tdSub + '">매출(실적)</td>'
-          + revCells + '<td style="' + TS.tdSum + '">' + (parseFloat(revTotal) > 0 ? revTotal : '—') + '</td>'
-          + '</tr><tr>'
-          + '<td style="' + TS.tdSub + ';color:#085041">EBIT(실적)</td>'
-          + ebitCells + '<td style="' + TS.tdSum + ';color:#085041">' + (parseFloat(ebitTotal) > 0 ? ebitTotal : '—') + '</td>'
-          + '</tr>';
-      } else {
-        return '<tr>'
-          + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-          + '<td style="' + TS.tdSub + '">매출(실적)</td>'
-          + ebitCells + '<td style="' + TS.tdSum + '">' + (parseFloat(ebitTotal) > 0 ? ebitTotal : '—') + '</td>'
-          + '</tr>';
-      }
+      var totalUsd  = MONTHS.reduce(function(s, _, i) { return s + (actByBizView[b][i] || 0); }, 0);
+      var totalDisp = fmtActual(totalUsd);
+      return '<tr>'
+        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+        + '<td style="' + TS.tdSub + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
+        + cells
+        + '<td style="' + TS.tdSum + ';color:' + actSubColor + '">' + (parseFloat(totalDisp) > 0 ? totalDisp : '—') + '</td>'
+        + '</tr>';
     }).join('');
 
-    // 합계행 (실적)
-    const actRevSumDisp  = MONTHS.map((_, i) => fmtActual(actRevSumUsd[i]));
-    const actEbitSumDisp = MONTHS.map((_, i) => fmtActual(actEbitSumUsd[i]));
-    const actRevTotalDisp  = fmtActual(MONTHS.reduce((s, _, i) => s + (actRevSumUsd[i]  || 0), 0));
-    const actEbitTotalDisp = fmtActual(MONTHS.reduce((s, _, i) => s + (actEbitSumUsd[i] || 0), 0));
+    var actSumDispView  = MONTHS.map(function(_, i) { return fmtActual(actSumUsdView[i]); });
+    var actCumDispView  = MONTHS.map(function(_, i) { return actCumUsdView[i] !== null ? fmtActual(actCumUsdView[i]) : null; });
+    var actTotalDispView = fmtActual(MONTHS.reduce(function(s, _, i) { return s + (actSumUsdView[i] || 0); }, 0));
 
-    const actSumRow = (function() {
-      const revCells  = MONTHS.map((_, i) => { const d = actRevSumDisp[i];  return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>'; }).join('');
-      const ebitCells = MONTHS.map((_, i) => { const d = actEbitSumDisp[i]; return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>'; }).join('');
-      if (isKpiMode) {
-        return '<tr style="background:#F2F2F2">'
-          + '<td style="' + TS.tdSum + ';text-align:center" rowspan="2">합계</td>'
-          + '<td style="' + TS.tdSub + '">매출</td>' + revCells  + '<td style="' + TS.tdSum + '">' + (parseFloat(actRevTotalDisp)  > 0 ? actRevTotalDisp  : '—') + '</td></tr>'
-          + '<tr style="background:#F2F2F2"><td style="' + TS.tdSub + ';color:#085041">EBIT</td>' + ebitCells + '<td style="' + TS.tdSum + ';color:#085041">' + (parseFloat(actEbitTotalDisp) > 0 ? actEbitTotalDisp : '—') + '</td></tr>';
-      }
-      return '<tr style="background:#F2F2F2"><td colspan="2" style="' + TS.tdSum + ';text-align:center">합계</td>' + ebitCells + '<td style="' + TS.tdSum + '">' + (parseFloat(actEbitTotalDisp) > 0 ? actEbitTotalDisp : '—') + '</td></tr>';
-    })();
+    var actSumRow = '<tr style="background:#F2F2F2">'
+      + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
+      + '<td style="' + TS.tdSub + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
+      + MONTHS.map(function(_, i) {
+          var d = actSumDispView[i];
+          return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>';
+        }).join('')
+      + '<td style="' + TS.tdSum + '">' + (parseFloat(actTotalDispView) > 0 ? actTotalDispView : '—') + '</td>'
+      + '</tr>';
 
-    // 누적합계행 (실적)
-    const actRevCumDisp  = MONTHS.map((_, i) => actRevCumUsd[i]  !== null ? fmtActual(actRevCumUsd[i])  : null);
-    const actEbitCumDisp = MONTHS.map((_, i) => actEbitCumUsd[i] !== null ? fmtActual(actEbitCumUsd[i]) : null);
+    var actCumRow = '<tr style="background:#E8E4D8">'
+      + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
+      + '<td style="' + TS.tdSub + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
+      + MONTHS.map(function(_, i) {
+          var d = actCumDispView[i];
+          return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
+        }).join('')
+      + '<td style="' + TS.tdCum + '">' + (actCumDispView[Math.max(0, curMonIdx)] || '—') + '</td>'
+      + '</tr>';
 
-    const actCumRow = (function() {
-      const revCells  = MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + (actRevCumDisp[i]  !== null ? actRevCumDisp[i]  : '') + '</td>').join('');
-      const ebitCells = MONTHS.map((_, i) => '<td style="' + TS.tdCum + '">' + (actEbitCumDisp[i] !== null ? actEbitCumDisp[i] : '') + '</td>').join('');
-      const revLast  = actRevCumDisp[curMonIdx]  || '—';
-      const ebitLast = actEbitCumDisp[curMonIdx] || '—';
-      if (isKpiMode) {
-        return '<tr style="background:#E8E4D8">'
-          + '<td style="' + TS.tdCum + ';text-align:center" rowspan="2">누적</td>'
-          + '<td style="' + TS.tdSub + '">매출</td>' + revCells  + '<td style="' + TS.tdCum + '">' + revLast  + '</td></tr>'
-          + '<tr style="background:#E8E4D8"><td style="' + TS.tdSub + ';color:#085041">EBIT</td>' + ebitCells + '<td style="' + TS.tdCum + ';color:#085041">' + ebitLast + '</td></tr>';
-      }
-      return '<tr style="background:#E8E4D8"><td colspan="2" style="' + TS.tdCum + ';text-align:center">누적</td>' + ebitCells + '<td style="' + TS.tdCum + '">' + ebitLast + '</td></tr>';
-    })();
+    // ── 요약 3행 (선택된 뷰 기준) ──────────────────────────
+    var tgtSumDispArr = tgtVals;
+    var tgtCumDispArr = tgtCumVals;
+    var actSumRef     = actSumDispView;
+    var actCumRef     = actCumDispView;
 
-    // ── 요약 3행 (EBIT 기준) ──────────────────────────────────
-    const actSumDispArr  = actEbitSumDisp; // 달성률은 EBIT 기준
-    const actCumDispArr  = actEbitCumDisp;
-    const tgtSumDispArr  = ebitSumRaw;
-    const tgtCumDispArr  = ebitCumRaw;
-
-    const diffMonRow = '<tr>'
+    // 실적-계획 (월별)
+    var diffMonRow = '<tr>'
       + '<td colspan="2" style="' + TS.tdL + '">실적-계획 (월별)</td>'
-      + MONTHS.map((_, i) => {
+      + MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          const d = (parseFloat(actSumDispArr[i]) || 0) - tgtSumDispArr[i];
-          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
+          var d = (parseFloat(actSumRef[i]) || 0) - tgtSumDispArr[i];
+          var sign = d > 0 ? '+' : '';
+          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + sign + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
           var aSum = 0, tSum = 0;
           for (var i = 0; i <= curMonIdx && i < 12; i++) {
-            aSum += parseFloat(actSumDispArr[i]) || 0;
+            aSum += parseFloat(actSumRef[i]) || 0;
             tSum += tgtSumDispArr[i];
           }
-          const d = aSum - tSum;
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
+          var d = aSum - tSum;
+          var sign = d > 0 ? '+' : '';
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + sign + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
 
-    const diffCumRow = '<tr>'
+    // 실적-계획 (누적)
+    var diffCumRow = '<tr>'
       + '<td colspan="2" style="' + TS.tdL + '">실적-계획 (누적)</td>'
-      + MONTHS.map((_, i) => {
+      + MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '<td style="' + TS.td + '"></td>';
-          const d = (parseFloat(actCumDispArr[i]) || 0) - tgtCumDispArr[i];
-          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + fmtDiff(d) + '</td>';
+          var d = (parseFloat(actCumRef[i]) || 0) - tgtCumDispArr[i];
+          var sign = d > 0 ? '+' : '';
+          return '<td style="' + TS.td + ';color:' + diffColor(d) + ';font-weight:600">' + sign + fmtDiff(d) + '</td>';
         }).join('')
       + (function() {
-          const d = diffCumFinal;
-          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + fmtDiff(d) + '</td>';
+          var d = diffCumFinal;
+          var sign = d > 0 ? '+' : '';
+          return '<td style="' + TS.tdSum + ';color:' + diffColor(d) + '">' + sign + fmtDiff(d) + '</td>';
         })()
       + '</tr>';
 
-    const pctCumRow = '<tr>'
+    // 달성률 (누적) — % 앞에 +/- 표시
+    var pctCumRow = '<tr>'
       + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적)</td>'
-      + MONTHS.map((_, i) => {
+      + MONTHS.map(function(_, i) {
           if (i > curMonIdx || !tgtCumDispArr[i]) return '<td style="' + TS.td + '"></td>';
-          const p = Math.round((parseFloat(actCumDispArr[i]) || 0) / tgtCumDispArr[i] * 100);
-          return '<td style="' + TS.td + ';color:' + pctColor(p) + ';background:' + pctBg(p) + ';font-weight:600">' + fmtPct(p) + '</td>';
+          var p    = (parseFloat(actCumRef[i]) || 0) / tgtCumDispArr[i] * 100;
+          var pRnd = Math.round(p);
+          var sign = pRnd > 100 ? '+' : (pRnd < 100 ? '-' : '');
+          var disp = sign + pRnd + '%';
+          return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + disp + '</td>';
         }).join('')
       + (function() {
-          const p = pctCumFinal !== null ? Math.round(pctCumFinal) : null;
-          return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + fmtPct(p) + '</td>';
+          var p    = pctCumFinal !== null ? Math.round(pctCumFinal) : null;
+          var sign = p !== null ? (p > 100 ? '+' : (p < 100 ? '-' : '')) : '';
+          var disp = p !== null ? sign + p + '%' : '—';
+          return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + disp + '</td>';
         })()
       + '</tr>';
+
+    // ── 표 조립 ───────────────────────────────────────────────
+    const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
+      + MONTHS.map(function() { return '<col style="width:62px">'; }).join('')
+      + '<col style="width:70px"></colgroup>';
 
     const tgtTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
       + colgroup + buildHeader()
@@ -722,65 +679,48 @@ Pages.KpiTarget = (() => {
       + colgroup + buildHeader()
       + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + '</tbody></table>';
 
-    // ── 단위 전환 버튼 ───────────────────────────────────────
-    const unitBtns = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위 표시:</span>'
-      + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">'
-      + (isEcMode ? 'M USD' : 'M USD ($)') + '</button>'
-      + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원 (₩)</button>'
-        : '')
-      + '</div>'
-      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">단위: ' + unitLabel + (useKrw && hasRate ? ' · 환율 ' + _exchangeRate.toLocaleString() : '') + '</span>'
-      + '</div>';
-
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
-      + chart2Html
-      + chart3Html
       + unitBtns
       + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>';
 
     // ================================================================
-    // 차트 렌더 (3개)
+    // 차트 렌더 — EBIT 누적 1개
     // ================================================================
     setTimeout(function() {
 
-      // ── 공통 유틸 ──────────────────────────────────────────
-      // 값 → 표시 단위 변환 (차트 tick/tooltip용)
+      // 값 → 표시단위 변환
       function toDisp(v) {
         if (v === null) return null;
-        if (isEcMode)  return v / 1000000;
-        if (useKrw)    return v * _exchangeRate / 100000000;
+        if (isEcMode) return v / 1000000;
+        if (useKrw)   return v * _exchangeRate / 100000000;
         return v / 1000000;
       }
       function fmtTick(v) {
-        if (isEcMode || !useKrw) return v.toFixed(1) + 'M';
-        return v.toFixed(1) + '억';
+        return isEcMode ? v.toFixed(1) + 'M' : (useKrw ? v.toFixed(1) + '억' : v.toFixed(1) + 'M');
       }
       function fmtTooltip(v, label) {
         var unit = (isEcMode || !useKrw) ? ' M USD' : '억원';
-        return ' ' + label + ': ' + v.toFixed(2) + unit;
+        return ' ' + label + ': ' + (v || 0).toFixed(2) + unit;
       }
-
-      function makeChartOptions(tooltipFn, tickFn) {
+      function makeChartOptions(tooltipFn, tickFn, yMax) {
+        var yOpts = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:11},callback:tickFn}, beginAtZero:true };
+        if (yMax != null) yOpts.max = yMax;
         return {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { mode:'index', intersect:false, callbacks:{ label: tooltipFn } }
+          responsive:true, maintainAspectRatio:false,
+          plugins:{
+            legend:{display:false},
+            tooltip:{mode:'index',intersect:false,callbacks:{label:tooltipFn}}
           },
-          scales: {
-            x: { grid:{display:false}, ticks:{color:'#9aa0ad',font:{size:11},autoSkip:false} },
-            y: { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:11},callback:tickFn}, beginAtZero:true }
+          scales:{
+            x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:11},autoSkip:false}},
+            y: yOpts
           },
-          layout: { padding:{top:8} }
+          layout:{padding:{top:8}}
         };
       }
-
       function destroyAndCreate(id, config) {
         var key = '_chart_' + id;
         if (window[key]) { window[key].destroy(); window[key] = null; }
@@ -789,92 +729,53 @@ Pages.KpiTarget = (() => {
         window[key] = new Chart(canvas, config);
       }
 
-      // ── 차트 1: EBIT 누적 ────────────────────────────────
-      // 목표: 롤링값(억원/M USD) 누적
-      // 실적: 실제 EBIT (USD × Factor) → 표시단위 변환
+      // ── EBIT 누적 차트 ─────────────────────────────────────
+      // 목표: 롤링 EBIT raw(억원) → 내부단위(원) → toDisp
+      // 실적: 인보이스 매출 × Factor = EBIT(USD) → toDisp
       var ebitTgtCum = [], ebitActCum = [];
       var et = 0, ea = 0;
+
       MONTHS.forEach(function(_, i) {
-        // 목표 누적: 롤링 원본(억원 or M USD) → 내부단위(원 or USD)
-        var tgtRaw = tgtSumRaw[i]; // 억원 or M USD
+        // 목표 누적
+        var tgtRaw      = ebitSumRaw[i]; // 억원 or M USD
         var tgtInternal = isEcMode ? tgtRaw * 1000000 : tgtRaw * 100000000;
         et += tgtInternal;
         ebitTgtCum.push(toDisp(et));
 
-        // 실적 누적: EBIT USD × Factor → 표시단위
+        // 실적 누적 (EBIT = 매출 × Factor)
         if (i <= curMonIdx) {
-          var actEbitUsd = bizList.reduce(function(s, b) {
+          var actUsd = bizList.reduce(function(s, b) {
             return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
           }, 0);
-          ea += actEbitUsd;
-          ebitActCum.push(toDisp(isEcMode ? ea : ea));
+          ea += actUsd;
+          ebitActCum.push(toDisp(ea));
         } else {
           ebitActCum.push(null);
         }
       });
 
+      // y축 최대값: 목표 최대값 × 1.3 (너무 크게 안 되도록)
+      var tgtMax = Math.max.apply(null, ebitTgtCum.filter(function(v) { return v !== null; }));
+      var actMax = Math.max.apply(null, ebitActCum.filter(function(v) { return v !== null; }));
+      var yMax   = Math.max(tgtMax, actMax) * 1.3 || null;
+
       destroyAndCreate('cv-ebit-cum', {
         type: 'line',
         data: { labels: MONTHS, datasets: [
-          { label:'EBIT 목표 누적', data:ebitTgtCum, borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
-          { label:'EBIT 실적 누적', data:ebitActCum, borderColor:'#1D9E75', borderWidth:2.5, pointRadius:ebitActCum.map(function(v){return v!==null?4:0;}), pointBackgroundColor:'#1D9E75', fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'}, tension:0.2 },
+          { label:'EBIT 목표 누적', data:ebitTgtCum,
+            borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3],
+            pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
+          { label:'EBIT 실적 누적', data:ebitActCum,
+            borderColor:'#1D9E75', borderWidth:2.5,
+            pointRadius:ebitActCum.map(function(v){return v!==null?4:0;}),
+            pointBackgroundColor:'#1D9E75',
+            fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'},
+            tension:0.2 },
         ]},
         options: makeChartOptions(
-          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
-          function(v)   { return fmtTick(v); }
-        )
-      });
-
-      // ── 차트 2: EBIT 월별 ────────────────────────────────
-      var ebitTgtMon = MONTHS.map(function(_, i) {
-        var raw = tgtSumRaw[i];
-        return toDisp(isEcMode ? raw * 1000000 : raw * 100000000);
-      });
-      var ebitActMon = MONTHS.map(function(_, i) {
-        if (i > curMonIdx) return null;
-        var actUsd = bizList.reduce(function(s, b) {
-          return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
-        }, 0);
-        return toDisp(actUsd);
-      });
-
-      destroyAndCreate('cv-ebit-mon', {
-        type: 'bar',
-        data: { labels: MONTHS, datasets: [
-          { label:'EBIT 목표', data:ebitTgtMon, backgroundColor:'rgba(133,183,235,0.4)', borderColor:'#85B7EB', borderWidth:1.5, borderRadius:3 },
-          { label:'EBIT 실적', data:ebitActMon, backgroundColor:'rgba(29,158,117,0.5)', borderColor:'#1D9E75', borderWidth:1.5, borderRadius:3 },
-        ]},
-        options: makeChartOptions(
-          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
-          function(v)   { return fmtTick(v); }
-        )
-      });
-
-      // ── 차트 3: 매출 월별 (계획 vs 실적) ─────────────────
-      // 계획: 롤링값 그대로 (EBIT와 같은 값, Factor 미적용 전)
-      // 실적: 실제 매출 USD (Factor 미적용)
-      var revTgtMon = MONTHS.map(function(_, i) {
-        var raw = tgtSumRaw[i];
-        // KPI: 롤링은 EBIT기준이므로 매출로 역산 불가 → 롤링값 그대로 표시 (참고용)
-        return toDisp(isEcMode ? raw * 1000000 : raw * 100000000);
-      });
-      var revActMon = MONTHS.map(function(_, i) {
-        if (i > curMonIdx) return null;
-        var revUsd = bizList.reduce(function(s, b) {
-          return s + _getActualMonth(year, b, i + 1); // Factor 미적용 = 순수 매출
-        }, 0);
-        return toDisp(revUsd);
-      });
-
-      destroyAndCreate('cv-rev-mon', {
-        type: 'bar',
-        data: { labels: MONTHS, datasets: [
-          { label:'매출 계획', data:revTgtMon, backgroundColor:'rgba(180,83,9,0.3)', borderColor:'#B45309', borderWidth:1.5, borderRadius:3 },
-          { label:'매출 실적', data:revActMon, backgroundColor:'rgba(106,61,124,0.4)', borderColor:'#6A3D7C', borderWidth:1.5, borderRadius:3 },
-        ]},
-        options: makeChartOptions(
-          function(ctx) { return fmtTooltip(ctx.raw || 0, ctx.dataset.label); },
-          function(v)   { return fmtTick(v); }
+          function(ctx) { return fmtTooltip(ctx.raw, ctx.dataset.label); },
+          function(v)   { return fmtTick(v); },
+          yMax
         )
       });
 
@@ -1388,6 +1289,7 @@ Pages.KpiTarget = (() => {
     setMode(mode) { _rollingMode=mode; Pages.KpiTarget.render(); },
 
     setTrackingUnit(unit) { _trackingUnit = unit; _renderTracking(); },
+    setTableView(view)    { _tableView    = view; _renderTracking(); },
 
     openFactorPanel() {
       const el=document.getElementById('kpi-factor-panel');
