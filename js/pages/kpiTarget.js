@@ -269,17 +269,21 @@ Pages.KpiTarget = (() => {
     };
 
     // ── 표 스타일 상수 ───────────────────────────────────────
+    // 모든 셀 테두리를 동일하게 통일 (1px solid #BFBFBF)
+    const BD  = 'border:1px solid #BFBFBF';       // 기본 테두리
+    const BDH = 'border:1px solid #999';           // 헤더/합계 테두리
     const TS = {
-      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap',
-      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:62px',
-      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:100px',
-      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:72px',
-      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;border:1px solid #999;white-space:nowrap;width:70px',
-      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;width:62px',
-      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;border:1px solid #BFBFBF;white-space:nowrap;width:100px',
-      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#666;border:1px solid #BFBFBF;white-space:nowrap;width:72px',
-      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#F2F2F2;width:70px',
-      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:700;border:1px solid #999;background:#E8E4D8;width:70px',
+      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap',
+      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:62px',
+      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:100px',
+      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:72px',
+      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:70px',
+      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;' + BD + ';width:62px',
+      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;' + BD + ';white-space:nowrap;width:100px',
+      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';white-space:nowrap;width:72px',
+      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#F2F2F2;width:70px',
+      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#E8E4D8;width:70px',
+      tdCumL:'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';background:#E8E4D8;white-space:nowrap;width:72px',
     };
 
     // 공통 헤더 (두 표 동일 → 컬럼 너비 자동 동기화)
@@ -350,9 +354,9 @@ Pages.KpiTarget = (() => {
     }
 
     // Biz별 12개월 데이터 빌드
-    // revByBiz:  매출 계획 (억원 or M USD raw)
-    // ebitByBiz: EBIT 계획 (억원 or M USD raw)
-    // actRevByBiz:  실제 매출 USD (Factor 미적용)
+    // revByBiz:  매출 계획 (KPI=억원, EC=M USD)
+    // ebitByBiz: EBIT 계획 (KPI=억원, EC=미사용)
+    // actRevByBiz:  실제 매출 USD
     // actEbitByBiz: 실제 EBIT USD (Factor 적용)
     const revByBiz      = {};
     const ebitByBiz     = {};
@@ -360,8 +364,14 @@ Pages.KpiTarget = (() => {
     const actEbitByBiz  = {};
 
     bizList.forEach(b => {
-      revByBiz[b]  = MONTHS.map((_, i) => getRollingRevRaw(b, i));
-      ebitByBiz[b] = MONTHS.map((_, i) => getRollingEbitRaw(b, i));
+      if (isEcMode) {
+        // EC: 저장값 = 매출(M USD) → revByBiz에 할당
+        revByBiz[b]  = MONTHS.map((_, i) => getRollingEbitRaw(b, i)); // EC는 ebit키에 매출값 저장
+        ebitByBiz[b] = MONTHS.map(() => 0); // EC는 EBIT 없음
+      } else {
+        revByBiz[b]  = MONTHS.map((_, i) => getRollingRevRaw(b, i));
+        ebitByBiz[b] = MONTHS.map((_, i) => getRollingEbitRaw(b, i));
+      }
       actRevByBiz[b]  = MONTHS.map((_, i) => {
         if (i > curMonIdx) return null;
         return _getActualMonth(year, b, i + 1); // 순수 매출 USD
@@ -437,11 +447,18 @@ Pages.KpiTarget = (() => {
     };
 
     // ── 요약 카드 ────────────────────────────────────────────
+    // 달성률 표현: 130% → +30%, 97% → -3%, 100% → ±0%
+    function fmtPctDiff(pct) {
+      if (pct === null || pct === undefined) return '—';
+      var diff = Math.round(pct) - 100;
+      return (diff > 0 ? '+' : '') + diff + '%';
+    }
+
     const mc = _modeColor(mode);
     const cards = [
       { label: '연간 목표', value: totalTgtRaw.toFixed(2) + ' ' + unitLabel, sub: _modeLabel(mode) },
       { label: '누적 실적 (' + periodLabel + ')', value: (parseFloat(fmtActual(curActUsd))||0).toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtRaw.toFixed(2) + ' ' + unitLabel },
-      { label: '누적 달성률 (' + periodLabel + ')', value: overallPct + '%', color: pctColor(overallPct), sub: unitLabel + ' 기준' },
+      { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(overallPct), sub: '계획대비 · ' + unitLabel + ' 기준' },
       { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
     ].map(c =>
       '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">'
@@ -477,14 +494,19 @@ Pages.KpiTarget = (() => {
     }
 
     // 차트: EBIT 누적만 유지
-    var chart1Title = _modeLabel(mode) + ' · EBIT 누적 · ' + unitLabel;
+    var chart1Title = _modeLabel(mode) + ' · ' + chartLabel + ' 누적 · ' + unitLabel;
     var chart1Html  = makeChartCard('cv-ebit-cum', chart1Title, [
-      { label: 'EBIT 목표 누적', color: '#85B7EB', dashed: true  },
-      { label: 'EBIT 실적 누적', color: '#1D9E75', dashed: false },
+      { label: chartLabel + ' 목표 누적', color: '#85B7EB', dashed: true  },
+      { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
     ]);
 
-    // ── 단위 전환 버튼 + 표 뷰 전환 버튼 ─────────────────────
-    var showEbit = (_tableView === 'ebit');
+    // EC 모드는 항상 매출 뷰 (EBIT 없음)
+    var showEbit = isEcMode ? false : (_tableView === 'ebit');
+
+    // 표/차트 레이블: EC=매출, KPI=EBIT or 매출
+    var planLabel = isEcMode ? '매출(계획)' : (showEbit ? 'EBIT(계획)' : '매출(계획)');
+    var actLabel  = isEcMode ? '매출(실적)' : (showEbit ? 'EBIT(실적)' : '매출(실적)');
+    var chartLabel = isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출');
 
     var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;flex-wrap:wrap">'
       // 단위 전환
@@ -535,32 +557,33 @@ Pages.KpiTarget = (() => {
     }).join('');
 
     // 계획 합계행
-    var tgtVals = showEbit ? ebitSumRaw : revSumRaw;
-    var tgtCumVals = showEbit ? ebitCumRaw : revCumRaw;
+    var tgtVals     = isEcMode ? revSumRaw  : (showEbit ? ebitSumRaw  : revSumRaw);
+    var tgtCumVals  = isEcMode ? revCumRaw  : (showEbit ? ebitCumRaw  : revCumRaw);
     var tgtTotalAll = tgtVals.reduce(function(s, v) { return s + v; }, 0);
-    var tgtSubLabel = showEbit ? 'EBIT' : '매출';
-    var tgtSubColor = showEbit ? '#0F6E56' : '#185FA5';
+    var tgtSubLabel = isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출');
+    var tgtSubColor = isEcMode ? '#0F6E56' : (showEbit ? '#0F6E56' : '#185FA5');
 
     var tgtSumRow = '<tr style="background:#F2F2F2">'
       + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
-      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + '">' + tgtSubLabel + '</td>'
+      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + ';background:#F2F2F2">' + tgtSubLabel + '(계획)</td>'
       + tgtVals.map(function(v) { return '<td style="' + TS.tdSum + '">' + fmtRolling(v) + '</td>'; }).join('')
       + '<td style="' + TS.tdSum + '">' + fmtRolling(tgtTotalAll) + '</td>'
       + '</tr>';
 
     var tgtCumRow = '<tr style="background:#E8E4D8">'
       + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
-      + '<td style="' + TS.tdSub + ';color:' + tgtSubColor + ';background:#E8E4D8">' + tgtSubLabel + '</td>'
+      + '<td style="' + TS.tdCumL + ';color:' + tgtSubColor + '">' + tgtSubLabel + '(계획)</td>'
       + tgtCumVals.map(function(v) { return '<td style="' + TS.tdCum + '">' + fmtRolling(v) + '</td>'; }).join('')
       + '<td style="' + TS.tdCum + '">' + fmtRolling(tgtTotalAll) + '</td>'
       + '</tr>';
 
     // 실적 표 데이터 행
-    var actByBizView   = showEbit ? actEbitByBiz : actRevByBiz;
-    var actSumUsdView  = showEbit ? actEbitSumUsd : actRevSumUsd;
-    var actCumUsdView  = showEbit ? actEbitCumUsd : actRevCumUsd;
-    var actSubLabel    = showEbit ? 'EBIT(실적)' : '매출(실적)';
-    var actSubColor    = showEbit ? '#085041'    : '#6A3D7C';
+    // EC 모드: 매출 실적만 / KPI: showEbit에 따라 EBIT or 매출
+    var actByBizView   = (isEcMode || !showEbit) ? actRevByBiz  : actEbitByBiz;
+    var actSumUsdView  = (isEcMode || !showEbit) ? actRevSumUsd  : actEbitSumUsd;
+    var actCumUsdView  = (isEcMode || !showEbit) ? actRevCumUsd  : actEbitCumUsd;
+    var actSubLabel    = isEcMode ? '매출(실적)' : (showEbit ? 'EBIT(실적)' : '매출(실적)');
+    var actSubColor    = isEcMode ? '#6A3D7C' : (showEbit ? '#085041' : '#6A3D7C');
 
     var actDataRows = bizList.map(function(b) {
       var cells = MONTHS.map(function(_, i) {
@@ -586,7 +609,7 @@ Pages.KpiTarget = (() => {
 
     var actSumRow = '<tr style="background:#F2F2F2">'
       + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
-      + '<td style="' + TS.tdSub + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
+      + '<td style="' + TS.tdSub + ';color:' + actSubColor + ';background:#F2F2F2">' + actSubLabel + '</td>'
       + MONTHS.map(function(_, i) {
           var d = actSumDispView[i];
           return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>';
@@ -596,7 +619,7 @@ Pages.KpiTarget = (() => {
 
     var actCumRow = '<tr style="background:#E8E4D8">'
       + '<td style="' + TS.tdCum + ';text-align:center">누적</td>'
-      + '<td style="' + TS.tdSub + ';color:' + actSubColor + ';background:#E8E4D8">' + actSubLabel + '</td>'
+      + '<td style="' + TS.tdCumL + ';color:' + actSubColor + '">' + actSubLabel + '</td>'
       + MONTHS.map(function(_, i) {
           var d = actCumDispView[i];
           return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
@@ -647,22 +670,21 @@ Pages.KpiTarget = (() => {
         })()
       + '</tr>';
 
-    // 달성률 (누적) — % 앞에 +/- 표시
+    // 달성률 (누적) — 계획대비 +30%/-3% 표현
     var pctCumRow = '<tr>'
-      + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적)</td>'
+      + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적, 계획대비)</td>'
       + MONTHS.map(function(_, i) {
           if (i > curMonIdx || !tgtCumDispArr[i]) return '<td style="' + TS.td + '"></td>';
           var p    = (parseFloat(actCumRef[i]) || 0) / tgtCumDispArr[i] * 100;
+          var disp = fmtPctDiff(p);
           var pRnd = Math.round(p);
-          var sign = pRnd > 100 ? '+' : (pRnd < 100 ? '-' : '');
-          var disp = sign + pRnd + '%';
           return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + disp + '</td>';
         }).join('')
       + (function() {
-          var p    = pctCumFinal !== null ? Math.round(pctCumFinal) : null;
-          var sign = p !== null ? (p > 100 ? '+' : (p < 100 ? '-' : '')) : '';
-          var disp = p !== null ? sign + p + '%' : '—';
-          return '<td style="' + TS.tdSum + ';color:' + pctColor(p) + ';background:' + pctBg(p) + '">' + disp + '</td>';
+          var p    = pctCumFinal !== null ? pctCumFinal : null;
+          var pRnd = p !== null ? Math.round(p) : null;
+          var disp = p !== null ? fmtPctDiff(p) : '—';
+          return '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + '">' + disp + '</td>';
         })()
       + '</tr>';
 
@@ -779,10 +801,10 @@ Pages.KpiTarget = (() => {
       destroyAndCreate('cv-ebit-cum', {
         type: 'line',
         data: { labels: MONTHS, datasets: [
-          { label:'EBIT 목표 누적', data:ebitTgtCum,
+          { label: chartLabel + ' 목표 누적', data:ebitTgtCum,
             borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3],
             pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
-          { label:'EBIT 실적 누적', data:ebitActCum,
+          { label: chartLabel + ' 실적 누적', data:ebitActCum,
             borderColor:'#1D9E75', borderWidth:2.5,
             pointRadius:ebitActCum.map(function(v){return v!==null?4:0;}),
             pointBackgroundColor:'#1D9E75',
@@ -1117,13 +1139,16 @@ Pages.KpiTarget = (() => {
       // 사업별 행 생성
       const tableRows = ROWS.map((r, i) => {
         const d = yData[r.key];
-        // 구버전(배열) 호환: 배열이면 ebit로 간주, rev는 빈값
+        // EC: 배열로 저장됨 / KPI: { rev, ebit } 객체로 저장됨
         const revVals  = isKpi
           ? (d && !Array.isArray(d) ? (d.rev  || Array(12).fill(0)) : Array(12).fill(0))
           : null;
-        const ebitVals = d
-          ? (Array.isArray(d) ? d : (d.ebit || Array(12).fill(0)))
-          : Array(12).fill(0);
+        const ebitVals = isKpi
+          ? (d && !Array.isArray(d) ? (d.ebit || Array(12).fill(0)) : Array(12).fill(0))
+          : null;
+        const ecVals = !isKpi
+          ? (Array.isArray(d) ? d : Array(12).fill(0)).map(v => parseFloat(v) || 0)
+          : null;
 
         const bizHeader = '<tr><td colspan="' + (MO.length + 2) + '" '
           + 'style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#EBEBEB;border:1px solid var(--bd)">'
@@ -1135,8 +1160,9 @@ Pages.KpiTarget = (() => {
             + makeInputRow(r.key, 'rev',  revVals,  '매출(억원)',  '#185FA5')
             + makeInputRow(r.key, 'ebit', ebitVals, 'EBIT(억원)', '#0F6E56');
         } else {
+          // EC 모드: 매출(M USD) 단일 입력, data-type='ec'
           return bizHeader
-            + makeInputRow(r.key, 'ebit', ebitVals, 'M USD', mc);
+            + makeInputRow(r.key, 'ec', ecVals, '매출(M USD)', mc);
         }
       }).join('');
 
@@ -1283,17 +1309,25 @@ Pages.KpiTarget = (() => {
     saveRolling() {
       const body = document.getElementById('rolling-tbody'); if (!body) return;
       const y    = _rollingYear;
-      const ROWS = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
-      const rows = body.querySelectorAll('tr[data-biz]');  // data-biz 속성 사용
+      const isEc = _rollingMode === 'ec';
+      const rows = body.querySelectorAll('tr[data-biz]');
       const newData = {};
 
       rows.forEach(row => {
         const biz  = row.getAttribute('data-biz');
-        const type = row.getAttribute('data-type'); // 'rev' or 'ebit'
+        const type = row.getAttribute('data-type'); // 'rev', 'ebit', or 'ec'
         if (!biz || !type) return;
-        if (!newData[biz]) newData[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
         const inputs = row.querySelectorAll('input[type=number]');
-        newData[biz][type] = Array.from(inputs).map(i => parseFloat(i.value) || 0);
+        const vals   = Array.from(inputs).map(i => parseFloat(i.value) || 0);
+
+        if (isEc) {
+          // EC: 배열 그대로 저장 (매출 단일값)
+          newData[biz] = vals;
+        } else {
+          // KPI: { rev, ebit } 구조
+          if (!newData[biz]) newData[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+          newData[biz][type] = vals;
+        }
       });
 
       _saveRollingData(y, newData);
