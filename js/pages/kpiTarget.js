@@ -1212,8 +1212,60 @@ Pages.KpiTarget = (() => {
           ${isKpi ? '<span style="display:flex;gap:10px"><span style="color:#185FA5;font-size:11px">■ 매출(억원)</span><span style="color:#0F6E56;font-size:11px">■ EBIT(억원)</span></span>' : ''}
         </div>
         <div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">
-          <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:6px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>
-          <textarea id="rolling-paste-area" placeholder="엑셀 복사 후 붙여넣기" style="width:100%;height:80px;padding:8px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:'DM Mono',monospace;resize:vertical;box-sizing:border-box;color:#333;background:#fff" onpaste="setTimeout(()=>Pages.KpiTarget.parsePasteRolling(),0)"></textarea>
+          <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:8px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>
+
+          <!-- 입력 포맷 가이드 -->
+          <details style="margin-bottom:10px;border:1px solid #DDD;border-radius:5px;overflow:hidden">
+            <summary style="padding:7px 12px;font-size:11px;font-weight:600;color:#555;background:#F5F5F5;cursor:pointer;font-family:Pretendard,sans-serif;list-style:none">
+              📌 입력 포맷 가이드 (클릭하여 펼치기)
+            </summary>
+            <div style="padding:12px;font-size:11px;font-family:Pretendard,sans-serif;color:#444;background:#FAFAFA">
+              <div style="margin-bottom:8px;font-weight:600">✅ 지원 형식</div>
+              <div style="margin-bottom:6px">
+                <span style="background:#E8F0FE;padding:2px 6px;border-radius:3px;font-weight:600">형식 1</span>
+                &nbsp;엑셀에서 <b>사업명 + 구분 + 월별 값</b> 컬럼을 그대로 복사
+              </div>
+              <div style="background:#fff;border:1px solid #DDD;border-radius:4px;padding:8px;font-family:monospace;font-size:10px;margin-bottom:8px;overflow-x:auto">
+                <div style="color:#888;margin-bottom:4px">【탭 구분 — 권장】</div>
+                DRAM Test[TAB]매출[TAB]86,340[TAB]227,330[TAB]...<br>
+                DRAM Test[TAB]에빗[TAB]10,000[TAB]25,000[TAB]...<br>
+                SSD Test[TAB]매출[TAB]61,281[TAB]33,054[TAB]...
+              </div>
+              <div style="margin-bottom:6px">
+                <span style="background:#E8F0FE;padding:2px 6px;border-radius:3px;font-weight:600">형식 2</span>
+                &nbsp;사업명과 구분이 붙어있는 경우도 자동 인식
+              </div>
+              <div style="background:#fff;border:1px solid #DDD;border-radius:4px;padding:8px;font-family:monospace;font-size:10px;margin-bottom:10px;overflow-x:auto">
+                <div style="color:#888;margin-bottom:4px">【공백 구분 — 자동 파싱】</div>
+                비정품 DRAM Test매출 86,340 227,330 ...<br>
+                Scrap 자재매출 200,000 300,000 ...
+              </div>
+
+              <div style="margin-bottom:8px;font-weight:600">📌 구분 키워드</div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+                <span style="background:#EBF2FB;padding:2px 8px;border-radius:3px">매출 → 매출(계획) 행</span>
+                <span style="background:#E8F5F0;padding:2px 8px;border-radius:3px">에빗 / EBIT → EBIT 행</span>
+                <span style="background:#FFF3E0;padding:2px 8px;border-radius:3px">둘 다 가능 (각각 적용)</span>
+              </div>
+
+              <div style="margin-bottom:8px;font-weight:600">🔢 단위 자동 변환</div>
+              <div style="margin-bottom:4px">• 값이 <b>10,000 이상</b>이면 <b>원 단위</b>로 판단 → 자동으로 억원 변환</div>
+              <div style="margin-bottom:4px">• 값이 <b>10,000 미만</b>이면 <b>이미 억원</b>으로 판단 → 그대로 입력</div>
+              <div>• <b>-</b> 값은 0으로 처리</div>
+
+              <div style="margin-top:10px;margin-bottom:6px;font-weight:600">🏢 사업명 매핑</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px">
+                <div>DRAM / 디램 / 비정품 DRAM → <b>DRAM</b></div>
+                <div>SSD / 비정품 SSD → <b>SSD</b></div>
+                <div>MID / Mobile / D-Die → <b>MID</b></div>
+                <div>Scrap / 스크랩 → <b>SCR</b></div>
+                <div>RMA / KLEW → <b>RMA</b></div>
+                <div>컨설팅 / ITAD / SUS → <b>SUS</b></div>
+              </div>
+            </div>
+          </details>
+
+          <textarea id="rolling-paste-area" placeholder="엑셀에서 복사 후 여기에 붙여넣기 (Ctrl+V)" style="width:100%;height:90px;padding:8px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:'DM Mono',monospace;resize:vertical;box-sizing:border-box;color:#333;background:#fff" onpaste="setTimeout(()=>Pages.KpiTarget.parsePasteRolling(),0)"></textarea>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
             <div id="rolling-paste-msg" style="font-size:11px;color:#888;font-family:Pretendard,sans-serif"></div>
             <div style="display:flex;gap:6px">
@@ -1251,98 +1303,198 @@ Pages.KpiTarget = (() => {
     },
 
 
+
     parsePasteRolling() {
       const ta  = document.getElementById('rolling-paste-area'); if (!ta) return;
       const msg = document.getElementById('rolling-paste-msg');
       const raw = ta.value.trim(); if (!raw) return;
+      const isKpi = _isKpi(_rollingMode);
+      const dp    = _rollingMode === 'ec' ? 4 : 2;
 
-      // 숫자 또는 '-' 변환 (-, —, ― 모두 0)
+      // ── 값 파싱 유틸 ─────────────────────────────────────────
       function parseVal(s) {
         const t = String(s).replace(/,/g,'').trim();
-        if (!t || /^[-—―\u2013\u2014]+$/.test(t)) return 0;
-        const n = parseFloat(t); return isNaN(n) ? 0 : n;
+        if (!t || /^[\-—\u2013\u2014]+$/.test(t)) return 0;
+        const n = parseFloat(t);
+        return isNaN(n) ? 0 : n;
       }
 
-      const BIZ_MAP = [
-        { key:'DRAM', pattern:'DRAM Test',            keywords:['dram'] },
-        { key:'SSD',  pattern:'SSD Test',             keywords:['ssd'] },
-        { key:'MID',  pattern:'Mobile Ink Die',       keywords:['mobile ink','mobile','ink die','mid'] },
-        { key:'SCR',  pattern:'Scrap\\s*자재',        keywords:['scrap','자재','scr'] },
-        { key:'RMA',  pattern:'RMA\\s*운영',          keywords:['rma'] },
-        { key:'SUS',  pattern:'Sustainability',       keywords:['sustainability','컨설팅','sus'] },
-        { key:'MOD',  pattern:'모듈\\s*세일즈',       keywords:['모듈','module','mod'] },
-      ];
+      // 원 단위 → 억원 자동 변환 (값이 10000 이상이면 원 단위로 판단)
+      function toOkwon(nums) {
+        const maxVal = Math.max.apply(null, nums.filter(v => v > 0));
+        if (maxVal >= 10000) {
+          // 원 단위 → 억원 (÷ 100000000)
+          return nums.map(v => v > 0 ? +(v / 100000000).toFixed(4) : 0);
+        }
+        return nums; // 이미 억원
+      }
 
-      function matchBizByName(name) {
+      // 타입 인식: '매출' → 'rev', '에빗'/'EBIT' → 'ebit', EC 모드 → 'ec'
+      function detectType(typeStr) {
+        const t = typeStr.trim().toLowerCase();
+        if (!isKpi) return 'ec';
+        if (t === '매출' || t === 'rev' || t === 'revenue') return 'rev';
+        if (t === '에빗' || t === 'ebit') return 'ebit';
+        return 'rev'; // 기본값: 매출
+      }
+
+      // 사업명 → BIZ KEY 매핑
+      const BIZ_MAP = [
+        { key:'DRAM', kw:['dram','디램'] },
+        { key:'SSD',  kw:['ssd'] },
+        { key:'MID',  kw:['mid','mobile ink','mobile','ink die','d-die','ddie'] },
+        { key:'SCR',  kw:['scr','scrap','스크랩','자재'] },
+        { key:'RMA',  kw:['rma','klew','rma 센터'] },
+        { key:'SUS',  kw:['sus','sustainability','컨설팅','지속','itad'] },
+        { key:'MOD',  kw:['mod','모듈','module'] },
+      ];
+      function matchBiz(name) {
         const lower = name.toLowerCase().replace(/\s+/g,' ').trim();
         for (const b of BIZ_MAP) {
-          if (b.keywords.some(k => lower.includes(k))) return b.key;
+          if (b.kw.some(k => lower.includes(k))) return b.key;
         }
         return null;
       }
 
-      // 사업명 패턴으로 분리 (한 줄로 붙어있는 경우 대응)
-      const splitPattern = new RegExp(
-        '(?=' + BIZ_MAP.map(b => b.pattern).join('|') + ')', 'i'
-      );
+      // ── 파싱 전략 ────────────────────────────────────────────
+      // 1순위: 탭 구분자 있으면 탭 분리 (표준 엑셀 복사)
+      // 2순위: '사업명 + 타입(매출|에빗) + 숫자들' 패턴 (공백 붙은 복사)
 
-      // 줄바꿈이 있으면 줄로, 없으면 패턴으로 분리
-      const rawLines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-      let segments = [];
+      const results = {}; // { BIZ: { rev:[12], ebit:[12] } }
+      let matched = 0, skipped = 0;
+      const BIZES = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
 
-      if (rawLines.length >= 2) {
-        // 여러 줄인 경우: 각 줄을 세그먼트로
-        segments = rawLines;
+      if (raw.includes('\t')) {
+        // ── 탭 구분 방식 ─────────────────────────────────────
+        const lines = raw.split('\n').map(l => l.trimEnd()).filter(l => l.trim());
+        for (const line of lines) {
+          const cols = line.split('\t').map(c => c.trim());
+          if (cols.length < 2) continue;
+
+          // 헤더 행 스킵 (월, 사업계획 등)
+          if (/^1?[0-9]월|^사업|^구분|^biz/i.test(cols[0])) { skipped++; continue; }
+
+          // 첫 컬럼: 사업명
+          // 두 번째 컬럼: 타입(매출/에빗) 또는 숫자
+          let bizName, typeStr, numStart;
+          if (/^(매출|에빗|ebit|rev)$/i.test(cols[1])) {
+            bizName = cols[0]; typeStr = cols[1]; numStart = 2;
+          } else if (/^(매출|에빗|ebit|rev)$/i.test(cols[0].split(/\s+/).pop())) {
+            // 사업명과 타입이 첫 컬럼에 붙어있는 경우
+            const parts = cols[0].match(/^(.*?)(매출|에빗|EBIT)$/i);
+            bizName = parts ? parts[1] : cols[0]; typeStr = parts ? parts[2] : '매출'; numStart = 1;
+          } else {
+            bizName = cols[0]; typeStr = '매출'; numStart = 1;
+          }
+
+          const bizKey = matchBiz(bizName);
+          if (!bizKey) { skipped++; continue; }
+
+          const nums = [];
+          for (let i = numStart; i < cols.length && nums.length < 12; i++) {
+            nums.push(parseVal(cols[i]));
+          }
+          while (nums.length < 12) nums.push(0);
+
+          const converted = toOkwon(nums);
+          const type = detectType(typeStr);
+
+          if (!results[bizKey]) results[bizKey] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+          results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
+          matched++;
+        }
       } else {
-        // 한 줄로 붙어있는 경우: 사업명 패턴으로 분리
-        segments = raw.split(splitPattern).filter(s => s.trim());
+        // ── 공백 붙은 방식: 사업명+타입+숫자 패턴 ─────────────
+        // 사업명 키워드 기준으로 세그먼트 분리
+        const BIZ_SPLIT_PATTERN = /(?=[가-힣A-Za-z].*?(?:매출|에빗|EBIT))/;
+        const TYPE_PATTERN = /^(.*?)(매출|에빗|EBIT)([\d,\s\-—\u2013\u2014.]*?)$/;
+
+        // 전체를 하나의 문자열로 보고, 사업명+타입 단위로 분리
+        // 접근: 사업명 매핑 키워드로 직접 분리
+        const splitParts = raw.split(/(비정품\s+DRAM|비정품\s+SSD|DRAM Test|SSD Test|D-Die|Scrap|KLEW|RMA\s*센터|컨설팅|ITAD|Mobile Ink|모듈)/i);
+
+        let currentBizRaw = '';
+        const segments = [];
+        for (let i = 0; i < splitParts.length; i++) {
+          if (i === 0) { currentBizRaw = splitParts[i]; continue; }
+          if (i % 2 === 1) {
+            // 사업명 키워드
+            currentBizRaw = splitParts[i];
+          } else {
+            // 사업명 뒤 데이터
+            segments.push(currentBizRaw + splitParts[i]);
+          }
+        }
+
+        for (const seg of segments) {
+          // 타입 키워드로 분리
+          const typeMatch = seg.match(/(매출|에빗|EBIT)/i);
+          if (!typeMatch) { skipped++; continue; }
+
+          const typeIdx = seg.indexOf(typeMatch[0]);
+          const bizName = seg.slice(0, typeIdx).trim();
+          const rest    = seg.slice(typeIdx + typeMatch[0].length);
+
+          const bizKey = matchBiz(bizName || seg.slice(0, 20));
+          if (!bizKey) { skipped++; continue; }
+
+          const tokens = rest.match(/[\-—\u2013\u2014]+|[\d,]+/g) || [];
+          const nums   = tokens.map(parseVal).slice(0, 12);
+          while (nums.length < 12) nums.push(0);
+
+          const converted = toOkwon(nums);
+          const type = detectType(typeMatch[0]);
+
+          if (!results[bizKey]) results[bizKey] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+          results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
+          matched++;
+        }
       }
 
-      const ROWS = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
-      let matched = 0, skipped = 0;
+      // ── DOM에 값 입력 ─────────────────────────────────────────
+      const body = document.getElementById('rolling-tbody'); if (!body) return;
+      let applied = 0;
 
-      for (const seg of segments) {
-        const trimmed = seg.trim();
-        if (!trimmed) continue;
-
-        // 헤더 행 스킵 (월로 시작)
-        if (/^[0-9]월|^1[0-2]월/.test(trimmed)) { skipped++; continue; }
-
-        // 사업명 추출: 첫 번째 숫자/- 나오기 전까지
-        const nameMatch = trimmed.match(/^([A-Za-z가-힣\s]+?)(?=\s{2,}|\s+[-—―\d])/);
-        const name = nameMatch ? nameMatch[1].trim() : '';
-
-        if (!name) { skipped++; continue; }
-
-        const bizKey = matchBizByName(name);
-        if (!bizKey) { skipped++; continue; }
-
-        // 사업명 이후의 숫자/-  추출 (최대 12개)
-        const dataStr = trimmed.slice(name.length);
-        const tokens  = dataStr.match(/[-—―]+|[\d]+\.?[\d]*/g) || [];
-        const nums    = tokens.slice(0,12).map(parseVal);
-        while (nums.length < 12) nums.push(0);
-
-        // DOM에 값 입력 — data-biz & data-type="ebit" 행에 입력 (붙여넣기는 EBIT)
-        const body = document.getElementById('rolling-tbody'); if (!body) continue;
-        const targetRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ebit"]');
-        if (!targetRow) continue;
-        const inputs = targetRow.querySelectorAll('input[type=number]');
-        inputs.forEach((inp, i) => { inp.value = nums[i] > 0 ? nums[i] : ''; });
-        matched++;
+      for (const [bizKey, vals] of Object.entries(results)) {
+        // rev 행
+        const revRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="rev"]');
+        if (revRow && vals.rev) {
+          revRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+            inp.value = vals.rev[i] > 0 ? vals.rev[i] : '';
+          });
+          applied++;
+        }
+        // ebit 행
+        const ebitRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ebit"]');
+        if (ebitRow && vals.ebit) {
+          ebitRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+            inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
+          });
+          if (!revRow) applied++; // ebit만 있는 경우
+        }
+        // EC 행
+        const ecRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ec"]');
+        if (ecRow && vals.ebit) {
+          ecRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+            inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
+          });
+          applied++;
+        }
       }
 
       Pages.KpiTarget.calcRollingAll();
+
       if (msg) {
-        if (matched > 0) {
-          msg.textContent = `✓ ${matched}개 사업 적용 완료${skipped>0?` (${skipped}행 스킵)`:''}`;
+        if (applied > 0) {
+          msg.textContent = '✓ ' + applied + '개 항목 적용 (단위 자동 변환)';
           msg.style.color = '#1A6B3A';
         } else {
-          msg.textContent = '매칭 실패. 사업명이 포함된 데이터를 붙여넣어 주세요.';
+          msg.textContent = '매칭 실패 — 아래 가이드 형식을 확인해주세요.';
           msg.style.color = '#A32D2D';
         }
       }
     },
+
 
     saveRolling() {
       const body = document.getElementById('rolling-tbody'); if (!body) return;
