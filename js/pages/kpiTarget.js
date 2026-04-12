@@ -785,8 +785,8 @@ Pages.KpiTarget = (() => {
       var et = 0, ea = 0;
 
       MONTHS.forEach(function(_, i) {
-        // 목표 누적: EC=매출(revSumRaw), KPI=EBIT(ebitSumRaw)
-        var rawVal = isEcMode ? revSumRaw[i] : ebitSumRaw[i];
+        // 목표 누적: EC=매출(revSumRaw), KPI+EBIT=ebitSumRaw, KPI+매출=revSumRaw
+        var rawVal = isEcMode ? revSumRaw[i] : (!showEbit ? revSumRaw[i] : ebitSumRaw[i]);
         et += rawVal;
         if (useKrw || isEcMode) {
           ebitTgtCum.push(et); // 억원(KPI+억원) or M USD(EC) 그대로
@@ -1072,11 +1072,10 @@ Pages.KpiTarget = (() => {
     },
 
     calcRollingAll() {
-      // 합계행(footer)은 EBIT 행만 합산
       const body = document.getElementById('rolling-tbody'); if (!body) return;
       const rdp  = _rollingMode === 'ec' ? 4 : 2;
-      const colSums = Array(12).fill(0);
-      let grand = 0;
+      const revSums  = Array(12).fill(0);
+      const ebitSums = Array(12).fill(0);
 
       body.querySelectorAll('tr[data-type]').forEach(row => {
         const type   = row.getAttribute('data-type');
@@ -1085,19 +1084,33 @@ Pages.KpiTarget = (() => {
         inputs.forEach((inp, ci) => {
           const v = parseFloat(inp.value) || 0;
           rowSum += v;
-          if (type === 'ebit') colSums[ci] += v; // footer는 EBIT만
+          if (type === 'rev')  revSums[ci]  += v;
+          if (type === 'ebit') ebitSums[ci] += v;
+          if (type === 'ec')   ebitSums[ci] += v; // EC는 ebit 셀에 표시
         });
         const rt = row.querySelector('.rolling-rowtotal');
         if (rt) rt.textContent = rowSum > 0 ? (+rowSum.toFixed(rdp)) + '' : '—';
       });
 
-      colSums.forEach((v, i) => {
+      // EBIT 합계 (rs0~rs11 + rstotal)
+      let grandEbit = 0;
+      ebitSums.forEach((v, i) => {
         const el = document.getElementById('rs' + i);
         if (el) el.textContent = v > 0 ? (+v.toFixed(rdp)) + '' : '0';
-        grand += v;
+        grandEbit += v;
       });
       const st = document.getElementById('rstotal');
-      if (st) st.textContent = grand > 0 ? (+grand.toFixed(rdp)) + '' : '0';
+      if (st) st.textContent = grandEbit > 0 ? (+grandEbit.toFixed(rdp)) + '' : '0';
+
+      // 매출 합계 (rs-rev0~rs-rev11 + rstotal-rev) — KPI 모드에서만 존재
+      let grandRev = 0;
+      revSums.forEach((v, i) => {
+        const el = document.getElementById('rs-rev' + i);
+        if (el) el.textContent = v > 0 ? (+v.toFixed(rdp)) + '' : '0';
+        grandRev += v;
+      });
+      const stRev = document.getElementById('rstotal-rev');
+      if (stRev) stRev.textContent = grandRev > 0 ? (+grandRev.toFixed(rdp)) + '' : '0';
     },
 
 
@@ -1142,12 +1155,14 @@ Pages.KpiTarget = (() => {
       // 사업별 행 생성
       const tableRows = ROWS.map((r, i) => {
         const d = yData[r.key];
-        // EC: 배열로 저장됨 / KPI: { rev, ebit } 객체로 저장됨
+        // 저장 구조: 신규 { rev:[12], ebit:[12] } / 구버전 [12] (ebit로 간주)
         const revVals  = isKpi
           ? (d && !Array.isArray(d) ? (d.rev  || Array(12).fill(0)) : Array(12).fill(0))
           : null;
         const ebitVals = isKpi
-          ? (d && !Array.isArray(d) ? (d.ebit || Array(12).fill(0)) : Array(12).fill(0))
+          ? (d && !Array.isArray(d)
+              ? (d.ebit || Array(12).fill(0))   // 신규: ebit 필드
+              : (Array.isArray(d) ? d : Array(12).fill(0))) // 구버전: 배열 → ebit
           : null;
         const ecVals = !isKpi
           ? (Array.isArray(d) ? d : Array(12).fill(0)).map(v => parseFloat(v) || 0)
@@ -1169,15 +1184,24 @@ Pages.KpiTarget = (() => {
         }
       }).join('');
 
-      // 합계행 (EBIT 기준)
-      const colSums = Array(12).fill(0);
+      // 합계행: 매출 + EBIT 두 줄 (KPI 모드), EC는 단일
+      const colRevSums  = Array(12).fill(0);
+      const colEbitSums = Array(12).fill(0);
       ROWS.forEach(r => {
         const d = yData[r.key];
-        const ebitVals = d ? (Array.isArray(d) ? d : (d.ebit || [])) : [];
-        ebitVals.forEach((v, i) => { colSums[i] += parseFloat(v) || 0; });
+        const rv = d && !Array.isArray(d) ? (d.rev  || []) : [];
+        const ev = d ? (Array.isArray(d) ? d : (d.ebit || [])) : [];
+        rv.forEach((v, i)  => { colRevSums[i]  += parseFloat(v) || 0; });
+        ev.forEach((v, i)  => { colEbitSums[i] += parseFloat(v) || 0; });
       });
-      const grand    = colSums.reduce((s, v) => s + v, 0);
-      const sumCells = colSums.map((v, idx) =>
+      const grandRev  = colRevSums.reduce((s, v) => s + v, 0);
+      const grandEbit = colEbitSums.reduce((s, v) => s + v, 0);
+
+      const sumCellsRev  = colRevSums.map((v, idx) =>
+        '<td style="padding:6px 4px;text-align:right;font-size:12px;font-weight:500;background:#EBF2FB;border:1px solid var(--bd);font-family:var(--font-mono)">'
+        + (v > 0 ? (+v.toFixed(dp)) : '0') + '</td>'
+      ).join('');
+      const sumCellsEbit = colEbitSums.map((v, idx) =>
         '<td id="rs' + idx + '" style="padding:6px 4px;text-align:right;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd);font-family:var(--font-mono)">'
         + (v > 0 ? (+v.toFixed(dp)) : '0') + '</td>'
       ).join('');
@@ -1206,11 +1230,22 @@ Pages.KpiTarget = (() => {
               <th style="${thS};width:60px;background:#F1EFE8">합계</th>
             </tr></thead>
             <tbody id="rolling-tbody">${tableRows}</tbody>
-            <tfoot><tr>
-              <td style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd)">합계</td>
-              ${sumCells}
-              <td id="rstotal" style="padding:6px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grand > 0 ? (+grand.toFixed(dp)) : '0'}</td>
-            </tr></tfoot>
+            <tfoot>
+              ${isKpi ? `<tr>
+                <td style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#EBF2FB;border:1px solid var(--bd)">매출 합계</td>
+                ${sumCellsRev.replace(/id="rs(\d+)"/g, 'id="rs-rev$1"')}
+                <td id="rstotal-rev" style="padding:6px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#D6E4F7;border:1px solid var(--bd);font-family:var(--font-mono)">${grandRev > 0 ? (+grandRev.toFixed(dp)) : '0'}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd)">EBIT 합계</td>
+                ${sumCellsEbit}
+                <td id="rstotal" style="padding:6px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grandEbit > 0 ? (+grandEbit.toFixed(dp)) : '0'}</td>
+              </tr>` : `<tr>
+                <td style="padding:6px 10px;text-align:center;font-size:12px;font-weight:500;background:#F1EFE8;border:1px solid var(--bd)">합계</td>
+                ${sumCellsEbit}
+                <td id="rstotal" style="padding:6px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:#E8E4D8;border:1px solid var(--bd);font-family:var(--font-mono)">${grandEbit > 0 ? (+grandEbit.toFixed(dp)) : '0'}</td>
+              </tr>`}
+            </tfoot>
           </table>
         </div>`;
     },
