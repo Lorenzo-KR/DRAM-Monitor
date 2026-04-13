@@ -796,16 +796,19 @@ Pages.KpiTarget = (() => {
           ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate / 1000000 : et);
         }
 
-        // 실적 누적: USD → 표시 단위 변환
+        // 실적 누적: 표와 동일한 기준 (showEbit → EBIT, !showEbit → 매출)
         if (i <= curMonIdx) {
           var actUsd = bizList.reduce(function(s, b) {
-            return s + _getActualMonth(year, b, i + 1) * _getFactor(b);
+            var rev = _getActualMonth(year, b, i + 1);
+            // EC 모드: 항상 매출 / KPI 매출 보기: Factor 미적용 / KPI EBIT 보기: Factor 적용
+            if (isEcMode || !showEbit) return s + rev;
+            return s + rev * _getFactor(b);
           }, 0);
           ea += actUsd;
-          // USD → 표시 단위
-          if (isEcMode)   ebitActCum.push(ea / 1000000);                       // M USD
-          else if (useKrw) ebitActCum.push(ea * _exchangeRate / 100000000);    // 억원
-          else             ebitActCum.push(ea / 1000000);                       // M USD
+          // USD → 표시 단위 (표와 동일 단위)
+          if (isEcMode)    ebitActCum.push(ea / 1000000);                    // M USD
+          else if (useKrw) ebitActCum.push(ea * _exchangeRate / 100000000);  // 억원
+          else             ebitActCum.push(ea / 1000000);                    // M USD
         } else {
           ebitActCum.push(null);
         }
