@@ -697,7 +697,8 @@ Pages.KpiTarget = (() => {
           return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + disp + '</td>';
         }).join('')
       + (function() {
-          var p    = pctCumFinal !== null ? pctCumFinal : null;
+          // 현재 뷰(매출/EBIT) + 단위(억원/MUSD) 기준 현재월 누적 달성률
+          var p    = tgtCumTotalDisp > 0 ? actCumTotalDisp / tgtCumTotalDisp * 100 : null;
           var pRnd = p !== null ? Math.round(p) : null;
           var disp = p !== null ? fmtPctDiff(p) : '—';
           return '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + '">' + disp + '</td>';
