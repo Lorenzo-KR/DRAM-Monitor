@@ -1399,7 +1399,7 @@ Pages.KpiTarget = (() => {
           const converted = toOkwon(nums);
           const type = detectType(typeStr);
 
-          if (!results[bizKey]) results[bizKey] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null };
           results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
           matched++;
         }
@@ -1445,7 +1445,7 @@ Pages.KpiTarget = (() => {
           const converted = toOkwon(nums);
           const type = detectType(typeMatch[0]);
 
-          if (!results[bizKey]) results[bizKey] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null };
           results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
           matched++;
         }
@@ -1456,29 +1456,34 @@ Pages.KpiTarget = (() => {
       let applied = 0;
 
       for (const [bizKey, vals] of Object.entries(results)) {
-        // rev 행
-        const revRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="rev"]');
-        if (revRow && vals.rev) {
-          revRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
-            inp.value = vals.rev[i] > 0 ? vals.rev[i] : '';
-          });
-          applied++;
+        // rev 행 — vals.rev가 null이면 건드리지 않음 (기존값 유지)
+        if (vals.rev !== null) {
+          const revRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="rev"]');
+          if (revRow) {
+            revRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+              inp.value = vals.rev[i] > 0 ? vals.rev[i] : '';
+            });
+            applied++;
+          }
         }
-        // ebit 행
-        const ebitRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ebit"]');
-        if (ebitRow && vals.ebit) {
-          ebitRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
-            inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
-          });
-          if (!revRow) applied++; // ebit만 있는 경우
-        }
-        // EC 행
-        const ecRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ec"]');
-        if (ecRow && vals.ebit) {
-          ecRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
-            inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
-          });
-          applied++;
+
+        // ebit 행 — vals.ebit가 null이면 건드리지 않음 (기존값 유지)
+        if (vals.ebit !== null) {
+          const ebitRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ebit"]');
+          if (ebitRow) {
+            ebitRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+              inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
+            });
+            applied++;
+          }
+          // EC 행
+          const ecRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ec"]');
+          if (ecRow) {
+            ecRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+              inp.value = vals.ebit[i] > 0 ? vals.ebit[i] : '';
+            });
+            applied++;
+          }
         }
       }
 
