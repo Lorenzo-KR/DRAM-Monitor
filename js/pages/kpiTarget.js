@@ -748,11 +748,14 @@ Pages.KpiTarget = (() => {
         return v / 1000000;
       }
       function fmtTick(v) {
+        if (v === null || v === undefined || isNaN(v)) return '';
         return isEcMode ? v.toFixed(1) + 'M' : (useKrw ? v.toFixed(1) + '억' : v.toFixed(1) + 'M');
       }
       function fmtTooltip(v, label) {
+        // null(미래 월)이면 tooltip에서 제외
+        if (v === null || v === undefined) return null;
         var unit = (isEcMode || !useKrw) ? ' M USD' : '억원';
-        return ' ' + label + ': ' + (v || 0).toFixed(2) + unit;
+        return ' ' + label + ': ' + Number(v).toFixed(2) + unit;
       }
       function makeChartOptions(tooltipFn, tickFn, yMax) {
         var yOpts = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:11},callback:tickFn}, beginAtZero:true };
