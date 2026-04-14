@@ -212,8 +212,9 @@ Pages.KpiTarget = (() => {
   // ================================================================
   // 월별 트래킹 — 단위 상태
   // ================================================================
-  let _trackingUnit = 'usd'; // 'usd' | 'krw'
-  let _tableView    = 'ebit'; // 'ebit' | 'rev' — 표 보기 모드
+  let _trackingUnit = 'usd'; // 'usd' | 'krw' | 'sgd'
+  let _tableView    = 'ebit'; // 'ebit' | 'rev'
+  const _SGD_RATE   = 1.27;  // 사업계획 기준환율: 1 USD = 1.27 SGD (고정)
 
   // ================================================================
   // _renderTracking
@@ -242,7 +243,8 @@ Pages.KpiTarget = (() => {
     const isKpiMode = _isKpi(mode);          // KPI67 or KPI103
     const isEcMode  = mode === 'ec';
     const hasRate   = isKpiMode && _exchangeRate > 0;
-    const useKrw    = _trackingUnit === 'krw' && isKpiMode;  // EC는 항상 USD
+    const useKrw    = _trackingUnit === 'krw' && isKpiMode;
+    const useSgd    = _trackingUnit === 'sgd' && isKpiMode;
 
     const now       = new Date();
     const curMonIdx = now.getFullYear() === year
@@ -298,15 +300,20 @@ Pages.KpiTarget = (() => {
 
     // 값 포맷 헬퍼
     function fmtRolling(v) {
-      // 롤링 저장값 표시:
-      //   KPI+억원 모드: 억원 그대로 소수2자리
-      //   KPI+USD  모드: 억원 → M USD 역환산 (÷환율÷1억 × 100만)
-      //   EC        모드: M USD 그대로 소수2자리
+      // 롤링 저장값(억원 or M USD) → 표시 단위
       if (v === null || v === undefined) return '—';
       const n = parseFloat(v) || 0;
       if (n === 0) return '—';
-      if (isKpiMode && !useKrw && hasRate) {
-        // 억원 → USD → M USD: n억원 ÷ 환율 × 1억 ÷ 1백만
+      if (isKpiMode && useKrw) {
+        return n.toFixed(2); // 억원 그대로
+      }
+      if (isKpiMode && useSgd && hasRate) {
+        // 억원 → USD → SGD → M SGD
+        const mSgd = (n * 100000000 / _exchangeRate) * _SGD_RATE / 1000000;
+        return mSgd.toFixed(2);
+      }
+      if (isKpiMode && !useKrw && !useSgd && hasRate) {
+        // 억원 → M USD
         const mUsd = (n * 100000000 / _exchangeRate) / 1000000;
         return mUsd.toFixed(2);
       }
@@ -316,16 +323,10 @@ Pages.KpiTarget = (() => {
     function fmtActual(usdVal) {
       // 실적 USD 원본 → 표시 단위로 변환
       if (usdVal === null || usdVal === undefined) return null;
-      if (isEcMode) {
-        // EC: USD → M USD
-        return (usdVal / 1000000).toFixed(2);
-      }
-      if (useKrw) {
-        // KPI+원화: USD × 환율 → 원 → 억원
-        return (usdVal * _exchangeRate / 100000000).toFixed(2);
-      }
-      // KPI+USD: USD → M USD
-      return (usdVal / 1000000).toFixed(2);
+      if (isEcMode)  return (usdVal / 1000000).toFixed(2);              // M USD
+      if (useKrw)    return (usdVal * _exchangeRate / 100000000).toFixed(2); // 억원
+      if (useSgd)    return (usdVal * _SGD_RATE / 1000000).toFixed(2);  // M SGD
+      return (usdVal / 1000000).toFixed(2);                              // M USD
     }
 
     function fmtDiff(v) {
@@ -433,7 +434,7 @@ Pages.KpiTarget = (() => {
     const diffCumFinal = curActDisp - curTgtDisp;
     const pctCumFinal  = curTgtDisp > 0 ? curActDisp / curTgtDisp * 100 : null;
     const periodLabel  = curMonIdx >= 0 ? '1~' + (curMonIdx + 1) + '월' : '—';
-    const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : 'M USD');
+    const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : useSgd ? 'M SGD' : 'M USD');
 
     // ── 색상 규칙 ────────────────────────────────────────────
     // 차이: 음수=파랑(목표초과), 양수=빨강(미달) — 요구사항 4번
@@ -517,21 +518,28 @@ Pages.KpiTarget = (() => {
       // 단위 전환
       + '<div style="display:flex;align-items:center;gap:8px">'
       + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
-      + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!useKrw ? '#1D1D1F' : '#fff') + ';color:' + (!useKrw ? '#fff' : '#555') + '">M USD</button>'
+      + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (_trackingUnit==='usd' ? '#1D1D1F' : '#fff') + ';color:' + (_trackingUnit==='usd' ? '#fff' : '#555') + '">M USD</button>'
       + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#185FA5' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원 (₩)</button>'
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#1D1D1F' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원</button>'
+        : '')
+      + (isKpiMode
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'sgd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useSgd ? '#1D1D1F' : '#fff') + ';color:' + (useSgd ? '#fff' : '#555') + '">M SGD</button>'
         : '')
       + '</div>'
-      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">' + unitLabel + (useKrw && hasRate ? ' · 환율 ' + _exchangeRate.toLocaleString() : '') + '</span>'
+      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+      + unitLabel
+      + (useKrw && hasRate ? ' · ₩' + _exchangeRate.toLocaleString() + '/USD' : '')
+      + (useSgd ? ' · ' + _SGD_RATE.toFixed(2) + ' SGD/USD (계획환율)' : '')
+      + '</span>'
       + '</div>'
       // 표 뷰 전환 (KPI 모드에서만)
       + (isKpiMode
         ? '<div style="display:flex;align-items:center;gap:8px">'
           + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">표 보기:</span>'
-          + '<div style="display:flex;border:1.5px solid #CCC;border-radius:6px;overflow:hidden">'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#0F6E56' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:4px 14px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#185FA5' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
+          + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#1D1D1F' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#1D1D1F' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
           + '</div>'
           + '</div>'
         : '')
@@ -743,18 +751,20 @@ Pages.KpiTarget = (() => {
       // 값 → 표시단위 변환
       function toDisp(v) {
         if (v === null) return null;
-        if (isEcMode) return v / 1000000;
-        if (useKrw)   return v * _exchangeRate / 100000000;
-        return v / 1000000;
+        if (isEcMode) return v / 1000000;                            // M USD
+        if (useKrw)   return v * _exchangeRate / 100000000;          // 억원
+        if (useSgd)   return v * _SGD_RATE / 1000000;                // M SGD
+        return v / 1000000;                                           // M USD
       }
       function fmtTick(v) {
         if (v === null || v === undefined || isNaN(v)) return '';
-        return isEcMode ? v.toFixed(1) + 'M' : (useKrw ? v.toFixed(1) + '억' : v.toFixed(1) + 'M');
+        if (useKrw)  return v.toFixed(1) + '억';
+        if (useSgd)  return v.toFixed(1) + 'S';
+        return v.toFixed(1) + 'M';
       }
       function fmtTooltip(v, label) {
-        // null(미래 월)이면 tooltip에서 제외
         if (v === null || v === undefined) return null;
-        var unit = (isEcMode || !useKrw) ? ' M USD' : '억원';
+        var unit = isEcMode ? ' M USD' : (useKrw ? '억원' : useSgd ? ' M SGD' : ' M USD');
         return ' ' + label + ': ' + Number(v).toFixed(2) + unit;
       }
       function makeChartOptions(tooltipFn, tickFn, yMax) {
@@ -793,25 +803,27 @@ Pages.KpiTarget = (() => {
         var rawVal = isEcMode ? revSumRaw[i] : (!showEbit ? revSumRaw[i] : ebitSumRaw[i]);
         et += rawVal;
         if (useKrw || isEcMode) {
-          ebitTgtCum.push(et); // 억원(KPI+억원) or M USD(EC) 그대로
+          ebitTgtCum.push(et);  // 억원(KPI+억원) or M USD(EC) 그대로
+        } else if (useSgd) {
+          // 억원 → USD → M SGD
+          ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate * _SGD_RATE / 1000000 : et);
         } else {
-          // KPI+M USD: 억원 → M USD 역환산
+          // KPI+M USD: 억원 → M USD
           ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate / 1000000 : et);
         }
 
-        // 실적 누적: 표와 동일한 기준 (showEbit → EBIT, !showEbit → 매출)
+        // 실적 누적: 표와 동일한 기준
         if (i <= curMonIdx) {
           var actUsd = bizList.reduce(function(s, b) {
             var rev = _getActualMonth(year, b, i + 1);
-            // EC 모드: 항상 매출 / KPI 매출 보기: Factor 미적용 / KPI EBIT 보기: Factor 적용
             if (isEcMode || !showEbit) return s + rev;
             return s + rev * _getFactor(b);
           }, 0);
           ea += actUsd;
-          // USD → 표시 단위 (표와 동일 단위)
-          if (isEcMode)    ebitActCum.push(ea / 1000000);                    // M USD
-          else if (useKrw) ebitActCum.push(ea * _exchangeRate / 100000000);  // 억원
-          else             ebitActCum.push(ea / 1000000);                    // M USD
+          if (isEcMode)    ebitActCum.push(ea / 1000000);
+          else if (useKrw) ebitActCum.push(ea * _exchangeRate / 100000000);
+          else if (useSgd) ebitActCum.push(ea * _SGD_RATE / 1000000);        // M SGD
+          else             ebitActCum.push(ea / 1000000);
         } else {
           ebitActCum.push(null);
         }
