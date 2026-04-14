@@ -308,9 +308,9 @@ Pages.KpiTarget = (() => {
         return n.toFixed(2); // 억원 그대로
       }
       if (isKpiMode && useSgd && hasRate) {
-        // 억원 → USD → SGD → M SGD
-        const mSgd = (n * 100000000 / _exchangeRate) * _SGD_RATE / 1000000;
-        return mSgd.toFixed(2);
+        // 억원 → M USD → M SGD: M USD × 1.27
+        const mUsd = (n * 100000000 / _exchangeRate) / 1000000;
+        return (mUsd * _SGD_RATE).toFixed(2);
       }
       if (isKpiMode && !useKrw && !useSgd && hasRate) {
         // 억원 → M USD
@@ -805,8 +805,8 @@ Pages.KpiTarget = (() => {
         if (useKrw || isEcMode) {
           ebitTgtCum.push(et);  // 억원(KPI+억원) or M USD(EC) 그대로
         } else if (useSgd) {
-          // 억원 → USD → M SGD
-          ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate * _SGD_RATE / 1000000 : et);
+          // 억원 → M USD → M SGD
+          ebitTgtCum.push(hasRate ? (et * 100000000 / _exchangeRate / 1000000) * _SGD_RATE : et);
         } else {
           // KPI+M USD: 억원 → M USD
           ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate / 1000000 : et);
