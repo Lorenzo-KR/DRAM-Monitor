@@ -665,6 +665,16 @@ Pages.KpiTarget = (() => {
     var actCumTotalDisp = parseFloat(fmtActual(actCumRawCur)) || 0;
     var tgtCumTotalDisp = parseFloat(fmtRolling(tgtCumRawCur)) || 0;
 
+    // ── 달성률 전용: raw USD 기준으로 직접 계산 (단위 변환 오차 없음) ──
+    // KPI: tgtCumRawCur = 억원 → USD 변환
+    // EC:  tgtCumRawCur = M USD → USD 변환
+    var tgtCumUsd = isEcMode
+      ? tgtCumRawCur * 1000000              // EC: M USD → USD
+      : (hasRate ? tgtCumRawCur * 100000000 / _exchangeRate : 0); // KPI: 억원 → USD
+    var pctCumForTable = (tgtCumUsd > 0 && actCumRawCur > 0)
+      ? actCumRawCur / tgtCumUsd * 100
+      : null;
+
     // 실적-계획 (월별)
     var diffMonRow = '<tr>'
       + '<td colspan="2" style="' + TS.tdL + '">실적-계획 (월별)</td>'
@@ -694,19 +704,25 @@ Pages.KpiTarget = (() => {
         })()
       + '</tr>';
 
-    // 달성률 (누적) — 계획대비 +30%/-3% 표현
+    // 달성률 (누적) — raw USD 기준으로 계산 → 단위 전환해도 동일한 값
     var pctCumRow = '<tr>'
       + '<td colspan="2" style="' + TS.tdL + '">달성률 (누적, 계획대비)</td>'
       + MONTHS.map(function(_, i) {
-          if (i > curMonIdx || !tgtCumDispArr[i]) return '<td style="' + TS.td + '"></td>';
-          var p    = (parseFloat(actCumRef[i]) || 0) / tgtCumDispArr[i] * 100;
+          if (i > curMonIdx || !tgtCumVals[i]) return '<td style="' + TS.td + '"></td>';
+          // 목표 → USD, 실적 raw(USD) 직접 비율
+          var tgtUsd = isEcMode
+            ? tgtCumVals[i] * 1000000                                  // EC: M USD → USD
+            : (hasRate ? tgtCumVals[i] * 100000000 / _exchangeRate : null); // KPI: 억원 → USD
+          var actUsd = actCumUsdView[i] || 0;
+          if (!tgtUsd || tgtUsd <= 0) return '<td style="' + TS.td + '"></td>';
+          var p    = actUsd / tgtUsd * 100;
           var disp = fmtPctDiff(p);
           var pRnd = Math.round(p);
           return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + disp + '</td>';
         }).join('')
       + (function() {
-          // 현재 뷰(매출/EBIT) + 단위(억원/MUSD) 기준 현재월 누적 달성률
-          var p    = tgtCumTotalDisp > 0 ? actCumTotalDisp / tgtCumTotalDisp * 100 : null;
+          // 합계: pctCumForTable (raw USD 기반, 단위 무관)
+          var p    = pctCumForTable;
           var pRnd = p !== null ? Math.round(p) : null;
           var disp = p !== null ? fmtPctDiff(p) : '—';
           return '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + '">' + disp + '</td>';
