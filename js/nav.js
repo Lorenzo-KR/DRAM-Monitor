@@ -42,9 +42,10 @@ const Nav = (() => {
       document.querySelectorAll('.pg').forEach(el => el.classList.remove('on'));
       // 모든 nav 버튼 비활성화
       document.querySelectorAll('.ni').forEach(el => el.classList.remove('on'));
-      // 보고서 페이지는 좌우 패딩 최소화
+      // 보고서·KPI 탭은 좌우 패딩 최소화 (표 너비 확보)
       const mainEl = document.querySelector('.main');
-      if (mainEl) mainEl.style.padding = pageKey === 'report' ? '28px 12px' : '';
+      if (mainEl) mainEl.style.padding =
+        (pageKey === 'report' || pageKey === 'kpitarget') ? '28px 12px' : '';
 
       // 대상 페이지 표시
       const pageEl = document.getElementById(`pg-${pageKey}`);
