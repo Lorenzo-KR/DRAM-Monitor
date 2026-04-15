@@ -273,17 +273,17 @@ Pages.KpiTarget = (() => {
     const BD  = 'border:1px solid #BFBFBF';       // 기본 테두리
     const BDH = 'border:1px solid #999';           // 헤더/합계 테두리
     const TS = {
-      th:    'padding:6px 5px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap',
-      thMon: 'padding:6px 5px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:74px',
-      thBiz: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:120px',
-      thSub: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:86px',
-      thSum: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:84px',
-      td:    'padding:5px 5px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';width:74px',
-      tdL:   'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';white-space:nowrap;width:120px',
-      tdSub: 'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';white-space:nowrap;width:86px',
-      tdSum: 'padding:5px 7px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#F2F2F2;width:84px',
-      tdCum: 'padding:5px 7px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#E8E4D8;width:84px',
-      tdCumL:'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';background:#E8E4D8;white-space:nowrap;width:86px',
+      th:    'padding:6px 4px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap',
+      thMon: 'padding:6px 4px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:65px',
+      thBiz: 'padding:6px 6px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:100px',
+      thSub: 'padding:6px 6px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:80px',
+      thSum: 'padding:6px 6px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:74px',
+      td:    'padding:5px 4px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';width:65px',
+      tdL:   'padding:5px 8px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';white-space:nowrap;width:100px',
+      tdSub: 'padding:5px 8px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';white-space:nowrap;width:80px',
+      tdSum: 'padding:5px 6px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#F2F2F2;width:74px',
+      tdCum: 'padding:5px 6px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#E8E4D8;width:74px',
+      tdCumL:'padding:5px 8px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';background:#E8E4D8;white-space:nowrap;width:80px',
     };
 
     // 공통 헤더 (두 표 동일 → 컬럼 너비 자동 동기화)
@@ -762,9 +762,9 @@ Pages.KpiTarget = (() => {
         + cells + sumCell + '</tr>';
     })();
 
-        const colgroup = '<colgroup><col style="width:120px"><col style="width:86px">'
-      + MONTHS.map(function() { return '<col style="width:74px">'; }).join('')
-      + '<col style="width:84px"></colgroup>';
+        const colgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
+      + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
+      + '<col style="width:74px"></colgroup>';
 
     const tgtTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
       + colgroup + buildHeader()
