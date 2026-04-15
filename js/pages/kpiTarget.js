@@ -1158,7 +1158,7 @@ Pages.KpiTarget = (() => {
       // 관리자 버튼 스타일 (심플)
       const adminBtnStyle = 'padding:5px 11px;border:1px solid #CCC;border-radius:4px;background:#FAFAFA;color:#555;font-size:12px;cursor:pointer;font-family:Pretendard,sans-serif';
 
-      el.innerHTML=`<div>
+      el.innerHTML=`<div style="max-width:1200px">
         <!-- ① 기준 선택 + 관리자 버튼 (심플) -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">

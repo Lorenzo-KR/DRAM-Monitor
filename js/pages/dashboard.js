@@ -359,7 +359,7 @@ Pages.Dashboard = (() => {
       if (!el) return;
       const kpi   = _calcKpi();
       const dtStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-      el.innerHTML = '<div style="max-width:1400px">'
+      el.innerHTML = '<div style="max-width:1200px">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
         + '<div style="font-size:16px;font-weight:600;letter-spacing:-.02em">Operations Dashboard</div>'
         + '<div style="font-size:14px;color:var(--tx3)">' + dtStr + '</div>'
