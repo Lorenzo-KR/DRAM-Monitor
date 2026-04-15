@@ -273,17 +273,17 @@ Pages.KpiTarget = (() => {
     const BD  = 'border:1px solid #BFBFBF';       // 기본 테두리
     const BDH = 'border:1px solid #999';           // 헤더/합계 테두리
     const TS = {
-      th:    'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap',
-      thMon: 'padding:5px 4px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:62px',
-      thBiz: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:100px',
-      thSub: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:72px',
-      thSum: 'padding:5px 6px;text-align:center;font-size:11px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:70px',
-      td:    'padding:4px 4px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;' + BD + ';width:62px',
-      tdL:   'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;' + BD + ';white-space:nowrap;width:100px',
-      tdSub: 'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';white-space:nowrap;width:72px',
-      tdSum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#F2F2F2;width:70px',
-      tdCum: 'padding:4px 6px;text-align:right;font-size:11px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#E8E4D8;width:70px',
-      tdCumL:'padding:4px 8px;text-align:left;font-size:11px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';background:#E8E4D8;white-space:nowrap;width:72px',
+      th:    'padding:6px 5px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap',
+      thMon: 'padding:6px 5px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:74px',
+      thBiz: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:120px',
+      thSub: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:86px',
+      thSum: 'padding:6px 7px;text-align:center;font-size:13px;font-weight:700;font-family:Pretendard,sans-serif;background:#D9D9D9;' + BDH + ';white-space:nowrap;width:84px',
+      td:    'padding:5px 5px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';width:74px',
+      tdL:   'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;' + BD + ';white-space:nowrap;width:120px',
+      tdSub: 'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';white-space:nowrap;width:86px',
+      tdSum: 'padding:5px 7px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#F2F2F2;width:84px',
+      tdCum: 'padding:5px 7px;text-align:right;font-size:13px;font-family:Pretendard,sans-serif;font-weight:600;' + BD + ';background:#E8E4D8;width:84px',
+      tdCumL:'padding:5px 10px;text-align:left;font-size:13px;font-family:Pretendard,sans-serif;font-weight:400;color:#555;' + BD + ';background:#E8E4D8;white-space:nowrap;width:86px',
     };
 
     // 공통 헤더 (두 표 동일 → 컬럼 너비 자동 동기화)
@@ -465,10 +465,10 @@ Pages.KpiTarget = (() => {
       { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
       { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
     ].map(c =>
-      '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:11px 14px">'
-      + '<div style="font-size:12px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">' + c.label + '</div>'
-      + '<div style="font-size:18px;font-weight:600;' + (c.color ? 'color:' + c.color : '') + '">' + c.value + '</div>'
-      + '<div style="font-size:12px;color:var(--tbl-tx-body);margin-top:2px">' + c.sub + '</div>'
+      '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">'
+      + '<div style="font-size:14px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">' + c.label + '</div>'
+      + '<div style="font-size:22px;font-weight:600;' + (c.color ? 'color:' + c.color : '') + '">' + c.value + '</div>'
+      + '<div style="font-size:14px;color:var(--tbl-tx-body);margin-top:3px">' + c.sub + '</div>'
       + '</div>'
     ).join('');
 
@@ -485,15 +485,15 @@ Pages.KpiTarget = (() => {
           : 'background:' + item.color;
         return '<span style="display:flex;align-items:center;gap:5px">'
           + '<span style="width:12px;height:3px;display:inline-block;border-radius:2px;' + lineStyle + '"></span>'
-          + '<span style="font-size:11px;font-family:Pretendard,sans-serif;color:var(--tx2)">' + item.label + '</span>'
+          + '<span style="font-size:13px;font-family:Pretendard,sans-serif;color:var(--tx2)">' + item.label + '</span>'
           + '</span>';
       }).join('');
-      return '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px">'
-        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-        + '<span style="font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tx)">' + title + '</span>'
-        + '<div style="display:flex;gap:12px">' + legendHtml + '</div>'
+      return '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+        + '<span style="font-size:14px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tx)">' + title + '</span>'
+        + '<div style="display:flex;gap:14px">' + legendHtml + '</div>'
         + '</div>'
-        + '<div style="position:relative;height:200px"><canvas id="' + canvasId + '"></canvas></div>'
+        + '<div style="position:relative;height:240px"><canvas id="' + canvasId + '"></canvas></div>'
         + '</div>';
     }
 
@@ -512,20 +512,20 @@ Pages.KpiTarget = (() => {
       { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
     ]);
 
-    var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;flex-wrap:wrap">'
+    var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap">'
       // 단위 전환
       + '<div style="display:flex;align-items:center;gap:8px">'
-      + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
+      + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
       + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (_trackingUnit==='usd' ? '#1D1D1F' : '#fff') + ';color:' + (_trackingUnit==='usd' ? '#fff' : '#555') + '">M USD</button>'
+      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (_trackingUnit==='usd' ? '#1D1D1F' : '#fff') + ';color:' + (_trackingUnit==='usd' ? '#fff' : '#555') + '">M USD</button>'
       + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#1D1D1F' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원</button>'
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#1D1D1F' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원</button>'
         : '')
       + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'sgd\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useSgd ? '#1D1D1F' : '#fff') + ';color:' + (useSgd ? '#fff' : '#555') + '">M SGD</button>'
+        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'sgd\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useSgd ? '#1D1D1F' : '#fff') + ';color:' + (useSgd ? '#fff' : '#555') + '">M SGD</button>'
         : '')
       + '</div>'
-      + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+      + '<span style="font-size:13px;color:var(--tx3);font-family:Pretendard,sans-serif">'
       + unitLabel
       + (useKrw && hasRate ? ' · ₩' + _exchangeRate.toLocaleString() + '/USD' : '')
       + (useSgd ? ' · ' + _SGD_RATE.toFixed(2) + ' SGD/USD (계획환율)' : '')
@@ -534,10 +534,10 @@ Pages.KpiTarget = (() => {
       // 표 뷰 전환 (KPI 모드에서만)
       + (isKpiMode
         ? '<div style="display:flex;align-items:center;gap:8px">'
-          + '<span style="font-size:11px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">표 보기:</span>'
+          + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">표 보기:</span>'
           + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#1D1D1F' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:4px 12px;border:none;font-size:11px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#1D1D1F' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#1D1D1F' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
+          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#1D1D1F' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
           + '</div>'
           + '</div>'
         : '')
@@ -762,9 +762,9 @@ Pages.KpiTarget = (() => {
         + cells + sumCell + '</tr>';
     })();
 
-        const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
-      + MONTHS.map(function() { return '<col style="width:62px">'; }).join('')
-      + '<col style="width:70px"></colgroup>';
+        const colgroup = '<colgroup><col style="width:120px"><col style="width:86px">'
+      + MONTHS.map(function() { return '<col style="width:74px">'; }).join('')
+      + '<col style="width:84px"></colgroup>';
 
     const tgtTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
       + colgroup + buildHeader()
@@ -907,16 +907,16 @@ Pages.KpiTarget = (() => {
       + chart1Html
       + unitBtns
       + '<div style="margin-bottom:4px">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
-      + '<div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
       + '① ' + (showEbit ? 'EBIT 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
       + '</div>'
-      + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;padding:4px 12px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
+      + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
       + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
       + '</div>'
       + '<div style="margin-bottom:4px">'
-      + '<div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
       + '② ' + (showEbit ? 'EBIT 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
@@ -947,7 +947,7 @@ Pages.KpiTarget = (() => {
         return ' ' + label + ': ' + Number(v).toFixed(2) + unit;
       }
       function makeChartOptions(tooltipFn, tickFn, yMax) {
-        var yOpts = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:11},callback:tickFn}, beginAtZero:true };
+        var yOpts = { grid:{color:'rgba(0,0,0,0.05)'}, ticks:{color:'#9aa0ad',font:{size:13},callback:tickFn}, beginAtZero:true };
         if (yMax != null) yOpts.max = yMax;
         return {
           responsive:true, maintainAspectRatio:false,
@@ -956,7 +956,7 @@ Pages.KpiTarget = (() => {
             tooltip:{mode:'index',intersect:false,callbacks:{label:tooltipFn}}
           },
           scales:{
-            x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:11},autoSkip:false}},
+            x:{grid:{display:false},ticks:{color:'#9aa0ad',font:{size:13},autoSkip:false}},
             y: yOpts
           },
           layout:{padding:{top:8}}
