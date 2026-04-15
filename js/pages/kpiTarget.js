@@ -994,7 +994,8 @@ Pages.KpiTarget = (() => {
       const totalActUsd = CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActual(year,b),0);
       const totalTgt = totalTgtRaw;
       const totalAct = isKpiM ? totalActKrw : totalActUsd;
-      const totalPct = totalTgt>0 ? Math.min(100,Math.round(totalAct/totalTgt*100)) : 0;
+      const totalPct    = totalTgt>0 ? Math.min(100, totalAct/totalTgt*100) : 0;
+      const totalPctFmt = totalPct.toFixed(1) + '%';
       const totalRem = Math.max(0,totalTgt-totalAct);
       const totalClr = '#4B5563';
 
@@ -1067,7 +1068,7 @@ Pages.KpiTarget = (() => {
           </div>
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
-            <div style="font-size:18px;font-weight:600;color:var(--tx)">${totalPct}%</div>
+            <div style="font-size:18px;font-weight:600;color:var(--tx)">${totalPctFmt}</div>
             <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?(hasRate?'원화 기준':'환율 미입력'):'USD 기준'}</div>
           </div>
         </div>`:`<div style="background:var(--tbl-sum-bg);border-left:3px solid var(--bd);padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:var(--tx)">
@@ -1085,7 +1086,7 @@ Pages.KpiTarget = (() => {
               <td style="padding:10px 14px;font-size:12px;font-weight:500;font-family:Pretendard,sans-serif;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
               <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</td>
               <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM&&hasRate?(totalAct/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalAct))}</td>
-              <td style="padding:10px 14px;border-top:0.5px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:#4B5563;width:${totalPct}%"></div></div><span style="font-size:12px;font-weight:600;color:var(--tx);min-width:32px;text-align:right">${totalPct}%</span></div></td>
+              <td style="padding:10px 14px;border-top:0.5px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:#4B5563;width:${Math.min(100,Math.round(totalPct))}%"></div></div><span style="font-size:12px;font-weight:600;color:var(--tx);min-width:32px;text-align:right">${totalPctFmt}</span></div></td>
               <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM?(totalRem/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalRem))}</td>
             </tr></tfoot>`:''}
           </table>
