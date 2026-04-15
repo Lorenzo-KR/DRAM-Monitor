@@ -57,8 +57,6 @@ Pages.Revenue = (() => {
     sel.innerHTML = [...ys].sort().reverse().map(y => `<option value="${y}"${y === String(new Date().getFullYear()) ? ' selected' : ''}>${y}년</option>`).join('');
   }
 
-  function currentMonth() { return new Date().toISOString().slice(0, 7); }
-
   // ── 메인 렌더 ──────────────────────────────────────────────
   function render() {
     _buildMonthSelect(); _buildYearSelect();
