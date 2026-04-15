@@ -1,16 +1,21 @@
 """
-crawl_dram_price.py  v2
+crawl_dram_price.py  v3
 TrendForce DRAM Price 크롤링 → Google Sheets 저장
 
-- URL 1개 접속 후 탭 3개를 순서대로 클릭하여 각각 파싱
-  Tab 0: DRAM Spot Price     → sheet: spot_prices
-  Tab 1: DRAM Contract Price → sheet: contract_prices
-  Tab 2: Module Spot Price   → sheet: module_prices
+- 탭 클릭 없이 DOM에서 테이블 인덱스로 직접 접근 (안정적)
+- 테이블별 Last Update를 개별 추출
+- 시트의 마지막 저장 Last Update와 비교 → 변경됐을 때만 저장
+  (DRAM Spot은 매일, GDDR은 주간/월간 업데이트이므로 자동 대응)
 
-- 저장 기준: Last Update 날짜 기준 (같은 날짜가 이미 있으면 스킵)
-- 컬럼: Date | Last Update | Category | Item |
-         Daily High | Daily Low | Session High | Session Low |
-         Session Average | Session Change | Source
+테이블 → 시트 매핑:
+  Table 0: DRAM Spot Price     → spot_prices
+  Table 1: DRAM Contract Price → contract_prices
+  Table 2: Module Spot Price   → module_prices
+  Table 3: GDDR Spot Price     → gddr_prices
+
+컬럼: Date | Last Update | Category | Item |
+       High | Low | Session High | Session Low |
+       Session Average | Session Change | Source
 """
 
 import os, json, time, re, datetime
@@ -23,16 +28,17 @@ GCP_CREDS = os.environ.get('GCP_CREDENTIALS', '')
 
 SOURCE_URL = 'https://www.trendforce.com/price/dram/dram_spot'
 
-# 클릭할 탭 순서 → (탭 텍스트 키워드, 카테고리명, 시트명)
-TAB_MAP = [
-    ('DRAM Spot Price',     'DRAM Spot',     'spot_prices'),
-    ('DRAM Contract Price', 'DRAM Contract', 'contract_prices'),
-    ('Module Spot Price',   'Module Spot',   'module_prices'),
+# 테이블 인덱스 → (카테고리명, 시트명)
+TABLE_MAP = [
+    (0, 'DRAM Spot',     'spot_prices'),
+    (1, 'DRAM Contract', 'contract_prices'),
+    (2, 'Module Spot',   'module_prices'),
+    (3, 'GDDR Spot',     'gddr_prices'),
 ]
 
 HEADERS = [
     'Date', 'Last Update', 'Category', 'Item',
-    'Daily High', 'Daily Low',
+    'High', 'Low',
     'Session High', 'Session Low',
     'Session Average', 'Session Change', 'Source'
 ]
@@ -54,21 +60,32 @@ def get_or_create_sheet(sh, sheet_name):
         first = ws.row_values(1)
         if first != HEADERS:
             ws.update('A1', [HEADERS])
-            print(f'[Sheet] {sheet_name}: headers updated')
+            print(f'  [Sheet] {sheet_name}: 헤더 업데이트')
     except gspread.WorksheetNotFound:
         ws = sh.add_worksheet(sheet_name, rows=10000, cols=len(HEADERS) + 2)
         ws.append_row(HEADERS)
-        print(f'[Sheet] {sheet_name}: created')
+        print(f'  [Sheet] {sheet_name}: 새로 생성')
     return ws
 
 
-def extract_date(text):
-    """'Last Update 2026-04-10 18:10 (GMT+8)' → '2026-04-10'"""
-    m = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+def get_last_saved_update(ws):
+    """시트에서 마지막으로 저장된 Last Update 값 반환"""
+    all_rows = ws.get_all_values()
+    # 헤더 제외, 데이터 행의 Last Update 컬럼(index 1)
+    data_rows = [r for r in all_rows[1:] if len(r) > 1 and r[1]]
+    if not data_rows:
+        return None
+    return data_rows[-1][1]  # 마지막 행의 Last Update
+
+
+def extract_date(last_update_text):
+    """'Last Update 2026-04-15 11:00 (GMT+8)' → '2026-04-15'"""
+    m = re.search(r'(\d{4}-\d{2}-\d{2})', last_update_text)
     return m.group(1) if m else datetime.date.today().isoformat()
 
 
 def find_col(headers, keywords):
+    """헤더 목록에서 키워드 포함 컬럼 인덱스 반환"""
     for kw in keywords:
         for i, h in enumerate(headers):
             if kw.lower() in h.lower():
@@ -76,61 +93,51 @@ def find_col(headers, keywords):
     return -1
 
 
-def parse_visible_table(page, category):
-    """현재 활성화된(보이는) 테이블 1개만 파싱"""
-    rows = []
+def get_table_last_update(page, tbl):
+    """테이블 주변 DOM에서 Last Update 텍스트 추출"""
+    section_text = page.evaluate('''(tbl) => {
+        let el = tbl;
+        for (let j = 0; j < 8; j++) {
+            el = el.parentElement;
+            if (!el) break;
+            if ((el.innerText || '').includes('Last Update'))
+                return el.innerText.slice(0, 300);
+        }
+        return '';
+    }''', tbl)
+    matches = re.findall(r'Last Update[^\n]+', section_text)
+    return matches[0].strip() if matches else ''
 
-    # Last Update 텍스트 추출 (페이지에서 가장 최근 것)
-    body_text  = page.evaluate('document.body.innerText')
-    lu_matches = re.findall(r'Last Update[^\n]+', body_text)
-    last_update = lu_matches[0].strip() if lu_matches else ''
-    date_str    = extract_date(last_update)
-    print(f'  Last Update: {last_update}')
 
-    # 현재 보이는(visible) 테이블만 선택
-    # TrendForce는 탭 콘텐츠를 display:none으로 숨기거나 v-show/v-if로 처리
-    tables = page.query_selector_all('table')
-    visible_tables = []
-    for tbl in tables:
-        try:
-            is_visible = tbl.is_visible()
-            if is_visible:
-                visible_tables.append(tbl)
-        except Exception:
-            pass
+def parse_table(page, tbl, category):
+    """테이블 파싱 → (last_update_text, date_str, rows)"""
+    last_update = get_table_last_update(page, tbl)
+    date_str    = extract_date(last_update) if last_update else datetime.date.today().isoformat()
+    print(f'  Last Update: {last_update or "(없음)"}')
 
-    print(f'  Visible tables: {len(visible_tables)}')
+    ths   = [th.inner_text().strip() for th in tbl.query_selector_all('th')]
+    trs   = tbl.query_selector_all('tbody tr')
+    print(f'  헤더: {ths}')
+    print(f'  행 수: {len(trs)}개')
 
-    if not visible_tables:
-        # fallback: 첫 번째 테이블
-        print('  [Fallback] using first table')
-        visible_tables = tables[:1]
-
-    # 첫 번째 visible 테이블만 파싱
-    tbl = visible_tables[0]
-    ths = [th.inner_text().strip() for th in tbl.query_selector_all('th')]
-    print(f'  Headers: {ths}')
-
+    # 컬럼 매핑 (테이블마다 헤더명이 다소 다름)
     idx_item = find_col(ths, ['item'])
-    idx_dh   = find_col(ths, ['daily high',  'weekly high'])
-    idx_dl   = find_col(ths, ['daily low',   'weekly low'])
+    idx_high = find_col(ths, ['daily high', 'weekly high'])
+    idx_low  = find_col(ths, ['daily low',  'weekly low'])
     idx_sh   = find_col(ths, ['session high'])
     idx_sl   = find_col(ths, ['session low'])
     idx_savg = find_col(ths, ['session average'])
     idx_schg = find_col(ths, ['session change', 'average change'])
 
-    trs = tbl.query_selector_all('tbody tr')
-    print(f'  Rows: {len(trs)}')
-
+    rows = []
     for tr in trs:
-        tds   = tr.query_selector_all('td')
-        cells = [td.inner_text().strip() for td in tds]
+        cells = [td.inner_text().strip() for td in tr.query_selector_all('td')]
         if not cells:
             continue
 
         item   = cells[idx_item] if idx_item >= 0 and idx_item < len(cells) else ''
-        dh     = cells[idx_dh]   if idx_dh   >= 0 and idx_dh   < len(cells) else ''
-        dl     = cells[idx_dl]   if idx_dl   >= 0 and idx_dl   < len(cells) else ''
+        high   = cells[idx_high] if idx_high >= 0 and idx_high < len(cells) else ''
+        low    = cells[idx_low]  if idx_low  >= 0 and idx_low  < len(cells) else ''
         s_high = cells[idx_sh]   if idx_sh   >= 0 and idx_sh   < len(cells) else ''
         s_low  = cells[idx_sl]   if idx_sl   >= 0 and idx_sl   < len(cells) else ''
         s_avg  = cells[idx_savg] if idx_savg >= 0 and idx_savg < len(cells) else ''
@@ -138,18 +145,18 @@ def parse_visible_table(page, category):
 
         if not item:
             continue
-        if not any([dh, dl, s_avg, s_high]):
-            print(f'  [Skip] {item[:40]} — no price data')
+        if not any([high, low, s_avg, s_high]):
+            print(f'  [Skip] {item[:40]} — 가격 데이터 없음')
             continue
 
-        print(f'  [{category}] {item[:40]} | Avg:{s_avg}')
+        print(f'  → {item[:40]} | Avg: {s_avg}')
         rows.append([
             date_str, last_update, category, item,
-            dh, dl, s_high, s_low, s_avg, s_chg,
+            high, low, s_high, s_low, s_avg, s_chg,
             'TrendForce'
         ])
 
-    return date_str, last_update, rows
+    return last_update, date_str, rows
 
 
 def crawl():
@@ -157,6 +164,7 @@ def crawl():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
+            channel='chrome',
             headless=True,
             args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
         )
@@ -174,44 +182,23 @@ def crawl():
         )
 
         page = ctx.new_page()
-        print(f'[Crawl] Loading {SOURCE_URL}')
+        print(f'[Crawl] 접속 중: {SOURCE_URL}')
         page.goto(SOURCE_URL, wait_until='domcontentloaded', timeout=90000)
-        time.sleep(8)  # 페이지 완전 로드 대기
+        time.sleep(8)
 
-        for tab_keyword, category, sheet_name in TAB_MAP:
-            print(f'\n[Tab] {category} ({tab_keyword})')
+        tables = page.query_selector_all('table')
+        print(f'[Crawl] 테이블 {len(tables)}개 발견\n')
 
-            # 탭 버튼 찾아서 클릭
-            try:
-                # 텍스트로 탭 버튼 찾기
-                tab_btn = page.locator(
-                    f'button:has-text("{tab_keyword}"), '
-                    f'a:has-text("{tab_keyword}"), '
-                    f'li:has-text("{tab_keyword}"), '
-                    f'span:has-text("{tab_keyword}")'
-                ).first
+        for tbl_idx, category, sheet_name in TABLE_MAP:
+            print(f'[{category}] Table {tbl_idx} 파싱 중...')
 
-                if tab_btn.count() == 0:
-                    # 부분 텍스트로 재시도
-                    short = tab_keyword.split()[0]  # 'DRAM', 'Module' 등
-                    tab_btn = page.locator(f'[class*="tab"]:has-text("{short}")').first
+            if tbl_idx >= len(tables):
+                print(f'  [Error] Table {tbl_idx} 없음 — 스킵\n')
+                continue
 
-                tab_btn.click(timeout=5000)
-                print(f'  Clicked tab: {tab_keyword}')
-                time.sleep(3)  # 탭 전환 애니메이션 대기
-
-            except Exception as e:
-                print(f'  [Tab Click Error] {e}')
-                if tab_keyword == TAB_MAP[0][0]:
-                    print('  First tab — already active, continuing')
-                else:
-                    print('  Skipping this tab')
-                    continue
-
-            # 현재 보이는 테이블 파싱
-            date_str, last_update, rows = parse_visible_table(page, category)
-            results[sheet_name] = (category, date_str, last_update, rows)
-            print(f'  → {len(rows)} rows parsed')
+            last_update, date_str, rows = parse_table(page, tables[tbl_idx], category)
+            results[sheet_name] = (category, last_update, date_str, rows)
+            print()
 
         ctx.close()
         browser.close()
@@ -222,25 +209,25 @@ def crawl():
 def save_all(sh, results):
     total_saved = 0
 
-    for sheet_name, (category, date_str, last_update, rows) in results.items():
+    for sheet_name, (category, last_update, date_str, rows) in results.items():
+        print(f'[Save] {sheet_name}')
         ws = get_or_create_sheet(sh, sheet_name)
 
         if not rows:
-            print(f'[Save] {sheet_name}: no rows')
+            print(f'  → 파싱된 데이터 없음, 스킵\n')
             continue
 
-        # 중복 체크 (같은 날짜 이미 있으면 스킵)
-        existing       = ws.get_all_values()
-        existing_dates = {r[0] for r in existing[1:] if r}
-
-        if date_str in existing_dates:
-            print(f'[Save] {sheet_name}: {date_str} already exists → skip')
+        # Last Update 기준 중복 체크
+        # 시트의 마지막 저장값과 비교 — 같으면 업데이트 없는 것이므로 스킵
+        last_saved = get_last_saved_update(ws)
+        if last_saved and last_saved == last_update:
+            print(f'  → Last Update 동일 ({last_update}) — 스킵\n')
             continue
 
         for row in rows:
             ws.append_row(row, value_input_option='RAW')
 
-        print(f'[Save] {sheet_name}: {len(rows)} rows saved (date: {date_str})')
+        print(f'  → {len(rows)}행 저장 완료 (Last Update: {last_update})\n')
         total_saved += len(rows)
 
     return total_saved
@@ -248,11 +235,11 @@ def save_all(sh, results):
 
 if __name__ == '__main__':
     if not SHEET_ID or not GCP_CREDS:
-        print('[Error] GSHEET_ID or GCP_CREDENTIALS missing')
+        print('[Error] GSHEET_ID 또는 GCP_CREDENTIALS 환경변수 없음')
         exit(1)
 
-    print(f'[Start] {datetime.date.today()} — tab-click mode, 3 tabs')
+    print(f'[Start] {datetime.date.today()}')
     sh      = get_gc()
     results = crawl()
     saved   = save_all(sh, results)
-    print(f'\n[Done] Total {saved} rows saved')
+    print(f'[Done] 총 {saved}행 저장')
