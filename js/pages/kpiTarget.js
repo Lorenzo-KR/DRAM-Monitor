@@ -499,20 +499,20 @@ Pages.KpiTarget = (() => {
         + '</div>';
     }
 
+    // EC 모드는 항상 매출 뷰 (EBIT 없음)
+    var showEbit = isEcMode ? false : (_tableView === 'ebit');
+
+    // 표/차트 레이블: EC=매출, KPI=EBIT or 매출
+    var planLabel  = isEcMode ? '매출(계획)' : (showEbit ? 'EBIT(계획)' : '매출(계획)');
+    var actLabel   = isEcMode ? '매출(실적)' : (showEbit ? 'EBIT(실적)' : '매출(실적)');
+    var chartLabel = isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출');
+
     // 차트: EBIT 누적만 유지
     var chart1Title = _modeLabel(mode) + ' · ' + chartLabel + ' 누적 · ' + unitLabel;
     var chart1Html  = makeChartCard('cv-ebit-cum', chart1Title, [
       { label: chartLabel + ' 목표 누적', color: '#85B7EB', dashed: true  },
       { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
     ]);
-
-    // EC 모드는 항상 매출 뷰 (EBIT 없음)
-    var showEbit = isEcMode ? false : (_tableView === 'ebit');
-
-    // 표/차트 레이블: EC=매출, KPI=EBIT or 매출
-    var planLabel = isEcMode ? '매출(계획)' : (showEbit ? 'EBIT(계획)' : '매출(계획)');
-    var actLabel  = isEcMode ? '매출(실적)' : (showEbit ? 'EBIT(실적)' : '매출(실적)');
-    var chartLabel = isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출');
 
     var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;flex-wrap:wrap">'
       // 단위 전환
