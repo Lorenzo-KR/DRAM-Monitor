@@ -2,253 +2,259 @@
  * pages/dramPrice.js
  * DRAM Price Tracking (TrendForce)
  *
- * 시트 컬럼:
- *   Date(Last Update날짜) | Last Update | Category | Item |
- *   Col1(Daily/Weekly High) | Col2(Daily/Weekly Low) |
- *   Session High | Session Low | Session Average | Session Change | Source
+ * 4개 시트를 각각 독립 섹션으로 표시 (차트 + 표)
+ * 시트별로 컬럼 구조가 다르므로 SHEETS 설정에서 각각 정의
  */
 Pages.DramPrice = (() => {
 
-  const SHEET_MAP = {
-    spot:     'spot_prices',
-    contract: 'contract_prices',
-    module:   'module_prices',
-  };
-
-  const CATEGORIES = [
-    { key: 'all',      label: '전체',          color: '#1D1D1F' },
-    { key: 'spot',     label: 'DRAM Spot',     color: '#1B4F8A' },
-    { key: 'contract', label: 'DRAM Contract', color: '#0F6E56' },
-    { key: 'module',   label: 'Module Spot',   color: '#6A3D7C' },
+  // 시트별 설정: sheet(시트명), cols(표시할 컬럼), avgCol(차트 기준 컬럼), chgCol(변화율 컬럼)
+  const SHEETS = [
+    {
+      key: 'spot', label: 'DRAM Spot Price', color: '#1B4F8A', sheet: 'spot_prices',
+      cols:   ['Daily High', 'Daily Low', 'Session High', 'Session Low', 'Session Average', 'Session Change'],
+      avgCol: 'Session Average',
+      chgCol: 'Session Change',
+    },
+    {
+      key: 'contract', label: 'DRAM Contract Price', color: '#0F6E56', sheet: 'contract_prices',
+      cols:   ['Session High', 'Session Low', 'Session Average', 'Average Change', 'Low Change'],
+      avgCol: 'Session Average',
+      chgCol: 'Average Change',
+    },
+    {
+      key: 'module', label: 'Module Spot Price', color: '#6A3D7C', sheet: 'module_prices',
+      cols:   ['Weekly High', 'Weekly Low', 'Session High', 'Session Low', 'Session Average', 'Average Change'],
+      avgCol: 'Session Average',
+      chgCol: 'Average Change',
+    },
+    {
+      key: 'gddr', label: 'GDDR Spot Price', color: '#B45309', sheet: 'gddr_prices',
+      cols:   ['Weekly High', 'Weekly Low', 'Session High', 'Session Low', 'Session Average', 'Average Change'],
+      avgCol: 'Session Average',
+      chgCol: 'Average Change',
+    },
   ];
-
-  // Col1/Col2 레이블 (카테고리별로 다름)
-  const COL_LABELS = {
-    spot:     { col1: 'Daily High',  col2: 'Daily Low'  },
-    contract: { col1: '',            col2: ''           },
-    module:   { col1: 'Weekly High', col2: 'Weekly Low' },
-    all:      { col1: 'High',        col2: 'Low'        },
-  };
 
   const COLORS = [
     '#1B4F8A','#0F6E56','#6A3D7C','#B45309','#0C6B8A',
-    '#2D7D46','#8B3A3A','#555','#C05621','#1A6B3A','#7B3F00','#003366',
+    '#2D7D46','#8B3A3A','#555','#C05621','#1A6B3A',
   ];
 
-  // 컬럼 인덱스: Date | Last Update | Category | Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | Source
-  const C = {
-    date:0, lastUpdate:1, cat:2, item:3,
-    dHigh:4, dLow:5, sHigh:6, sLow:7, sAvg:8, sChg:9
-  };
+  // 섹션별 상태 (제품 필터 + 차트 인스턴스)
+  let _data  = {};   // { spot: [{Date, Item, 'Daily High', ...}, ...], ... }
+  let _state = {};   // { spot: { selProds: Set, chart: null }, ... }
 
-  let _allData  = { spot: [], contract: [], module: [] };
-  let _selCat   = 'all';
-  let _selProds = new Set();
-  let _metric   = 'avg';
-  let _chart    = null;
+  SHEETS.forEach(s => {
+    _data[s.key]  = [];
+    _state[s.key] = { selProds: new Set(), chart: null };
+  });
 
-  const pn = s => { const n = parseFloat(String(s||'').replace(/[^0-9.-]/g,'')); return isNaN(n) ? null : n; };
-
-  // ── fetch 단일 시트 (getDramPrices action + sheet 파라미터) ──
+  // ── 데이터 fetch ───────────────────────────────────────────
   async function _fetchSheet(sheetName) {
     try {
       const res  = await fetch(`${CONFIG.API_URL}?action=getDramPrices&sheet=${encodeURIComponent(sheetName)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json || json.error) throw new Error(json?.error || 'unknown error');
-      if (!Array.isArray(json)) return [];
-
-      const KEYS = ['Date','Last Update','Category','Item',
-                    'Daily High','Daily Low',
-                    'Session High','Session Low','Session Average','Session Change','Source'];
-      return json
-        .map(obj => KEYS.map(k => obj[k] || ''))
-        .filter(r => r[C.date]);
+      return Array.isArray(json) ? json.filter(r => r['Date']) : [];
     } catch (e) {
-      console.warn(`[DramPrice] fetch(${sheetName}) error:`, e.message);
+      console.warn(`[DramPrice] fetch(${sheetName}) 오류:`, e.message);
       return [];
     }
   }
 
-  function _currentRows() {
-    if (_selCat === 'all') return [..._allData.spot, ..._allData.contract, ..._allData.module];
-    return _allData[_selCat] || [];
-  }
+  // ── 숫자 파싱 ───────────────────────────────────────────────
+  const pn = s => {
+    const n = parseFloat(String(s || '').replace(/[^0-9.-]/g, ''));
+    return isNaN(n) ? null : n;
+  };
 
-  function _getItems(rows) {
-    return [...new Set(rows.map(r => r[C.item]).filter(Boolean))];
-  }
+  // ── 변화율 색상 ─────────────────────────────────────────────
+  const chgColor = s =>
+    s && s.includes('▲') ? '#1A6B3A' :
+    s && s.includes('▼') ? '#A32D2D' : '#555';
 
-  // ── 차트 ──────────────────────────────────────────────────
-  function _buildChartData(rows) {
-    const items    = _getItems(rows);
-    const filtered = items.filter(i => _selProds.size === 0 || _selProds.has(i));
-    const byDate   = {};
-    rows.forEach(r => {
-      const d = r[C.date], item = r[C.item];
+  // ── 차트 렌더 ──────────────────────────────────────────────
+  function _renderChart(cfg) {
+    const state  = _state[cfg.key];
+    const rows   = _data[cfg.key];
+    const canvas = document.getElementById(`dp-chart-${cfg.key}`);
+    if (!canvas) return;
+
+    if (state.chart) { state.chart.destroy(); state.chart = null; }
+
+    const filtered = state.selProds.size > 0
+      ? rows.filter(r => state.selProds.has(r['Item']))
+      : rows;
+
+    if (!filtered.length) return;
+
+    const items  = [...new Set(filtered.map(r => r['Item']).filter(Boolean))];
+    const byDate = {};
+    filtered.forEach(r => {
+      const d = r['Date'], item = r['Item'];
       if (!d || !item) return;
       if (!byDate[d]) byDate[d] = {};
-      byDate[d][item] = _metric === 'high' ? pn(r[C.dHigh])
-                      : _metric === 'low'  ? pn(r[C.dLow])
-                      :                      pn(r[C.sAvg]);
+      byDate[d][item] = pn(r[cfg.avgCol]);
     });
+
     const dates    = Object.keys(byDate).sort();
-    const datasets = filtered.map((item, i) => ({
+    const datasets = items.map((item, i) => ({
       label:           item,
       data:            dates.map(d => byDate[d][item] ?? null),
       borderColor:     COLORS[i % COLORS.length],
       backgroundColor: COLORS[i % COLORS.length] + '18',
-      tension: 0.3,
-      pointRadius: dates.length > 30 ? 2 : 4,
-      spanGaps: true,
+      tension:         0.3,
+      pointRadius:     dates.length > 30 ? 2 : 4,
+      spanGaps:        true,
     }));
-    return { labels: dates, datasets };
-  }
 
-  function _refreshChart() {
-    const canvas = document.getElementById('dp-chart');
-    if (!canvas) return;
-    if (_chart) { _chart.destroy(); _chart = null; }
-    const rows = _currentRows().filter(r => _selProds.size === 0 || _selProds.has(r[C.item]));
-    if (!rows.length) return;
-    _chart = new Chart(canvas, {
+    state.chart = new Chart(canvas, {
       type: 'line',
-      data: _buildChartData(rows),
+      data: { labels: dates, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { position: 'top', labels: { font: { family: 'Pretendard', size: 11 }, boxWidth: 10, padding: 6 } },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(3) ?? '—'}` } },
+          legend: {
+            position: 'top',
+            labels: { font: { family: 'Pretendard', size: 11 }, boxWidth: 10, padding: 6 },
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(3) ?? '—'}`,
+            },
+          },
         },
         scales: {
-          x: { ticks: { font: { family: 'Pretendard', size: 11 }, maxTicksLimit: 14 }, grid: { color: '#F0F0F0' } },
+          x: { ticks: { font: { family: 'Pretendard', size: 11 }, maxTicksLimit: 12 }, grid: { color: '#F0F0F0' } },
           y: { ticks: { font: { family: 'Pretendard', size: 11 }, callback: v => '$' + v.toFixed(2) }, grid: { color: '#F0F0F0' } },
         },
       },
     });
   }
 
-  // ── 제품 버튼 ─────────────────────────────────────────────
-  function _renderProdBtns() {
-    const el = document.getElementById('dp-prod-wrap');
+  // ── 제품 필터 버튼 ────────────────────────────────────────
+  function _renderProdBtns(cfg) {
+    const el = document.getElementById(`dp-prods-${cfg.key}`);
     if (!el) return;
-    const items = _getItems(_currentRows());
+    const items = [...new Set(_data[cfg.key].map(r => r['Item']).filter(Boolean))];
+    const state = _state[cfg.key];
     el.innerHTML = items.map((p, i) => {
-      const on = _selProds.size === 0 || _selProds.has(p);
-      return `<button class="dp-prod-btn" data-prod="${p}"
-        onclick="Pages.DramPrice.toggleProduct('${p.replace(/'/g,"\\'")}')"
-        style="padding:2px 8px;border:1px solid ${COLORS[i%COLORS.length]};border-radius:20px;
-               font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;margin:2px 2px 2px 0;
-               background:${on ? COLORS[i%COLORS.length] : '#fff'};
-               color:${on ? '#fff' : COLORS[i%COLORS.length]}">${p}</button>`;
+      const on = state.selProds.size === 0 || state.selProds.has(p);
+      const c  = COLORS[i % COLORS.length];
+      return `<button onclick="Pages.DramPrice.toggleProduct('${cfg.key}','${p.replace(/'/g, "\\'")}')"
+        style="padding:2px 8px;border:1px solid ${c};border-radius:20px;font-size:11px;
+               font-family:Pretendard,sans-serif;cursor:pointer;margin:2px 2px 2px 0;
+               background:${on ? c : '#fff'};color:${on ? '#fff' : c}">${p}</button>`;
     }).join('');
   }
 
   // ── 데이터 표 ─────────────────────────────────────────────
-  function _renderTable() {
-    const el = document.getElementById('dp-table');
+  function _renderTable(cfg) {
+    const el = document.getElementById(`dp-table-${cfg.key}`);
     if (!el) return;
 
-    const rows = _currentRows()
-      .filter(r => _selProds.size === 0 || _selProds.has(r[C.item]))
-      .sort((a, b) => b[C.date].localeCompare(a[C.date]))
-      .slice(0, 500);
+    const state = _state[cfg.key];
+    const rows  = (_data[cfg.key])
+      .filter(r => state.selProds.size === 0 || state.selProds.has(r['Item']))
+      .sort((a, b) => b['Date'].localeCompare(a['Date']))
+      .slice(0, 200);
 
     if (!rows.length) {
-      el.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-family:Pretendard,sans-serif">데이터 없음</div>';
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-family:Pretendard,sans-serif;font-size:12px">데이터 없음</div>';
       return;
     }
 
-    const CAT_COLOR = { 'DRAM Spot': '#1B4F8A', 'DRAM Contract': '#0F6E56', 'Module Spot': '#6A3D7C' };
-    const chgColor  = s => s && s.includes('▲') ? '#1A6B3A' : s && s.includes('▼') ? '#A32D2D' : '#555';
-    const showCat   = _selCat === 'all';
-    const labels    = COL_LABELS[_selCat] || COL_LABELS.all;
-
     const FS  = "font-family:Pretendard,sans-serif;font-size:12px";
     const FM  = "font-family:'DM Mono',monospace;font-size:12px";
-    const thS = `padding:7px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`;
-    const tdB = `padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8`;
+    const thS = `padding:6px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`;
+    const tdB = `padding:6px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8`;
+
+    const ths = ['날짜', 'Last Update', '제품', ...cfg.cols]
+      .map(h => `<th style="${thS}">${h}</th>`).join('');
 
     const trs = rows.map((r, i) => {
-      const cc      = CAT_COLOR[r[C.cat]] || '#555';
-      const catCell = showCat
-        ? `<td style="${tdB}"><span style="padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;${FS};color:${cc};border:1px solid ${cc}22;background:${cc}11">${r[C.cat]}</span></td>`
-        : '';
-      const col1Cell = r[C.dHigh] ? `<td style="${tdB};${FM};text-align:right">${r[C.dHigh]}</td>` : '';
-      const col2Cell = r[C.dLow]  ? `<td style="${tdB};${FM};text-align:right">${r[C.dLow]}</td>`  : '';
-      return `<tr style="${i%2===1 ? 'background:#FAFAFA' : ''}">
-        <td style="${tdB};${FS};color:#888;white-space:nowrap">${r[C.date]}</td>
-        <td style="${tdB};${FS};color:#aaa;white-space:nowrap;font-size:11px">${r[C.lastUpdate]||'—'}</td>
-        ${catCell}
-        <td style="${tdB};${FS};white-space:nowrap">${r[C.item]}</td>
-        ${col1Cell}
-        ${col2Cell}
-        <td style="${tdB};${FM};text-align:right">${r[C.sHigh]||'—'}</td>
-        <td style="${tdB};${FM};text-align:right">${r[C.sLow]||'—'}</td>
-        <td style="${tdB};${FM};text-align:right;font-weight:600">${r[C.sAvg]||'—'}</td>
-        <td style="${tdB};${FM};text-align:center;color:${chgColor(r[C.sChg])};font-weight:600">${r[C.sChg]||'—'}</td>
+      const dataCells = cfg.cols.map(col => {
+        const v = r[col] || '—';
+        if (col === cfg.chgCol) {
+          return `<td style="${tdB};${FM};text-align:center;color:${chgColor(v)};font-weight:600">${v}</td>`;
+        }
+        if (col === cfg.avgCol) {
+          return `<td style="${tdB};${FM};text-align:right;font-weight:600">${v}</td>`;
+        }
+        return `<td style="${tdB};${FM};text-align:right">${v}</td>`;
+      }).join('');
+
+      return `<tr style="${i % 2 === 1 ? 'background:#FAFAFA' : ''}">
+        <td style="${tdB};${FS};color:#888;white-space:nowrap">${r['Date'] || '—'}</td>
+        <td style="${tdB};color:#aaa;white-space:nowrap;font-size:10px;font-family:Pretendard,sans-serif">${r['Last Update'] || '—'}</td>
+        <td style="${tdB};${FS};white-space:nowrap">${r['Item'] || '—'}</td>
+        ${dataCells}
       </tr>`;
     }).join('');
 
-    // 헤더 (Col1/Col2는 카테고리에 따라 표시)
-    const showCol1 = _selCat !== 'contract';
-    const col1Th   = showCol1 ? `<th style="${thS}">${labels.col1 || 'High'}</th>` : '';
-    const col2Th   = showCol1 ? `<th style="${thS}">${labels.col2 || 'Low'}</th>` : '';
-
     el.innerHTML = `<div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse">
-        <thead><tr>
-          <th style="${thS}">날짜</th>
-          <th style="${thS}">Last Update</th>
-          ${showCat ? `<th style="${thS}">카테고리</th>` : ''}
-          <th style="${thS}">제품</th>
-          ${col1Th}${col2Th}
-          <th style="${thS}">Session High</th>
-          <th style="${thS}">Session Low</th>
-          <th style="${thS}">Session Avg</th>
-          <th style="${thS}">Change</th>
-        </tr></thead>
+        <thead><tr>${ths}</tr></thead>
         <tbody>${trs}</tbody>
       </table></div>`;
   }
 
-  function _updateCatTabs() {
-    document.querySelectorAll('.dp-cat-btn').forEach(b => {
-      const cat  = CATEGORIES.find(c => c.key === b.dataset.cat);
-      const isOn = b.dataset.cat === _selCat;
-      b.style.background = isOn ? (cat ? cat.color : '#1D1D1F') : '#fff';
-      b.style.color      = isOn ? '#fff' : (cat ? cat.color : '#333');
-    });
+  // ── 섹션 전체 업데이트 ────────────────────────────────────
+  function _refreshSection(cfg) {
+    _renderProdBtns(cfg);
+    _renderChart(cfg);
+    _renderTable(cfg);
+  }
+
+  // ── 섹션 HTML 빌드 ────────────────────────────────────────
+  function _buildSectionHtml(cfg) {
+    const rows      = _data[cfg.key];
+    const lastRow   = rows.length ? [...rows].sort((a, b) => b['Date'].localeCompare(a['Date']))[0] : null;
+    const lastUpdate = lastRow ? (lastRow['Last Update'] || lastRow['Date'] || '—') : '데이터 없음';
+    const dayCount  = new Set(rows.map(r => r['Date'])).size;
+
+    return `
+      <div class="page-card" style="margin-bottom:16px">
+        <!-- 섹션 헤더 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:4px;height:20px;background:${cfg.color};border-radius:2px;display:inline-block"></span>
+            <span style="font-size:14px;font-weight:700;font-family:Pretendard,sans-serif;color:var(--tx)">${cfg.label}</span>
+            <span style="font-size:11px;color:#888;font-family:Pretendard,sans-serif">${dayCount}일 누적</span>
+          </div>
+          <span style="font-size:11px;color:#888;font-family:Pretendard,sans-serif">${lastUpdate}</span>
+        </div>
+
+        <!-- 제품 필터 -->
+        <div id="dp-prods-${cfg.key}" style="margin-bottom:12px"></div>
+
+        <!-- 차트 -->
+        <div style="position:relative;height:280px;margin-bottom:16px">
+          <canvas id="dp-chart-${cfg.key}"></canvas>
+        </div>
+
+        <!-- 표 -->
+        <div style="border-top:1px solid #EBEBEB;padding-top:10px">
+          <div style="font-size:11px;font-weight:600;color:#888;font-family:Pretendard,sans-serif;margin-bottom:6px">
+            최근 200건
+          </div>
+          <div id="dp-table-${cfg.key}"></div>
+        </div>
+      </div>`;
   }
 
   // ── Public ────────────────────────────────────────────────
   return {
 
-    setMetric(m) {
-      _metric = m;
-      document.querySelectorAll('.dp-metric-btn').forEach(b => {
-        b.style.background = b.dataset.m === m ? '#1D1D1F' : '#fff';
-        b.style.color      = b.dataset.m === m ? '#fff' : '#333';
-      });
-      _refreshChart();
-    },
-
-    selectCat(cat) {
-      _selCat   = cat;
-      _selProds = new Set();
-      _updateCatTabs();
-      _renderProdBtns();
-      _refreshChart();
-      _renderTable();
-    },
-
-    toggleProduct(prod) {
-      if (_selProds.has(prod)) _selProds.delete(prod);
-      else _selProds.add(prod);
-      _renderProdBtns();
-      _refreshChart();
-      _renderTable();
+    toggleProduct(key, prod) {
+      const state = _state[key];
+      if (!state) return;
+      if (state.selProds.has(prod)) state.selProds.delete(prod);
+      else state.selProds.add(prod);
+      const cfg = SHEETS.find(s => s.key === key);
+      if (cfg) _refreshSection(cfg);
     },
 
     async render() {
@@ -256,93 +262,28 @@ Pages.DramPrice = (() => {
       if (!el) return;
       el.innerHTML = `<div class="page-wrap"><div style="padding:40px;text-align:center;color:#999;font-family:Pretendard,sans-serif">데이터 불러오는 중...</div></div>`;
 
-      const [spotRows, contractRows, moduleRows] = await Promise.all([
-        _fetchSheet(SHEET_MAP.spot),
-        _fetchSheet(SHEET_MAP.contract),
-        _fetchSheet(SHEET_MAP.module),
-      ]);
+      // 4개 시트 병렬 fetch
+      const fetched = await Promise.all(SHEETS.map(s => _fetchSheet(s.sheet)));
+      SHEETS.forEach((s, i) => { _data[s.key] = fetched[i]; });
 
-      _allData = { spot: spotRows, contract: contractRows, module: moduleRows };
-
-      const allRows   = [...spotRows, ...contractRows, ...moduleRows];
-      const sorted    = [...allRows].sort((a, b) => b[C.date].localeCompare(a[C.date]));
-      const lastDate  = sorted.length ? sorted[0][C.date] : '—';
-      const totalDays = new Set(spotRows.map(r => r[C.date])).size;  // Spot 기준
-
-      // 카테고리별 Last Update 표시
-      const lastUpdates = {
-        spot:     spotRows.length     ? [...spotRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
-        contract: contractRows.length ? [...contractRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
-        module:   moduleRows.length   ? [...moduleRows].sort((a,b) => b[C.date].localeCompare(a[C.date]))[0][C.lastUpdate] : '—',
-      };
-
-      const catBtns = CATEGORIES.map(c => {
-        const data  = c.key === 'all' ? allRows : (_allData[c.key] || []);
-        const days  = new Set(data.map(r => r[C.date])).size;
-        const isOn  = c.key === _selCat;
-        const lu    = c.key !== 'all' ? lastUpdates[c.key] : lastDate;
-        return `<button class="dp-cat-btn" data-cat="${c.key}"
-          onclick="Pages.DramPrice.selectCat('${c.key}')"
-          style="padding:6px 16px;border:1.5px solid ${c.color};border-radius:7px;
-                 font-size:12px;font-weight:600;font-family:Pretendard,sans-serif;cursor:pointer;
-                 background:${isOn ? c.color : '#fff'};color:${isOn ? '#fff' : c.color};transition:.15s;text-align:left">
-          <div>${c.label}</div>
-          <div style="font-size:10px;opacity:.7;font-weight:400;margin-top:1px">${days}일 · ${lu}</div>
-        </button>`;
-      }).join('');
+      // 섹션 HTML 조립
+      const sectionsHtml = SHEETS.map(s => _buildSectionHtml(s)).join('');
 
       el.innerHTML = `
         <div class="page-wrap">
           <div class="ph-row">
             <div class="ph">
               <h1>DRAM Price Tracking</h1>
-              <p>TrendForce · ${totalDays}일 누적 데이터 · Last Update 날짜 기준 저장</p>
+              <p>TrendForce · 시트별 독립 업데이트 주기</p>
             </div>
           </div>
-
-          <!-- 카테고리 탭 -->
-          <div class="page-card" style="margin-bottom:12px;padding:12px 16px">
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch">${catBtns}</div>
-          </div>
-
-          <!-- 필터 -->
-          <div class="page-card" style="margin-bottom:12px">
-            <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
-              <div>
-                <div style="font-size:11px;color:#888;margin-bottom:6px;font-family:Pretendard,sans-serif;font-weight:600">지표</div>
-                <div style="display:flex;gap:4px">
-                  <button class="dp-metric-btn" data-m="avg" onclick="Pages.DramPrice.setMetric('avg')"
-                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#1D1D1F;color:#fff">Session Avg</button>
-                  <button class="dp-metric-btn" data-m="high" onclick="Pages.DramPrice.setMetric('high')"
-                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">High</button>
-                  <button class="dp-metric-btn" data-m="low" onclick="Pages.DramPrice.setMetric('low')"
-                    style="padding:3px 10px;border:1px solid #CCC;border-radius:4px;font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;background:#fff;color:#333">Low</button>
-                </div>
-              </div>
-              <div style="flex:1;min-width:200px">
-                <div style="font-size:11px;color:#888;margin-bottom:6px;font-family:Pretendard,sans-serif;font-weight:600">제품 필터</div>
-                <div id="dp-prod-wrap"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 차트 -->
-          <div class="page-card" style="margin-bottom:12px">
-            <div style="position:relative;height:420px"><canvas id="dp-chart"></canvas></div>
-          </div>
-
-          <!-- 표 -->
-          <div class="page-card" style="padding:0;overflow:hidden">
-            <div style="padding:10px 14px;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;border-bottom:1px solid #E8E8E8">
-              데이터 (최근 500건)
-            </div>
-            <div id="dp-table"></div>
-          </div>
+          ${sectionsHtml}
         </div>`;
 
-      _renderProdBtns();
-      _refreshChart();
-      _renderTable();
+      // 각 섹션 렌더 (setTimeout으로 canvas 생성 후)
+      setTimeout(() => {
+        SHEETS.forEach(cfg => _refreshSection(cfg));
+      }, 50);
     },
   };
 })();
