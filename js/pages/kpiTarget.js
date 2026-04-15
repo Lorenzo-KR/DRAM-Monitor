@@ -729,62 +729,42 @@ Pages.KpiTarget = (() => {
         })()
       + '</tr>';
 
-    // ── 달성률 행 2개: 매출 + EBIT (raw USD 기준, 단위 무관) ──────
-    // 공통 함수: 누적 달성률 행 생성
-    function makePctCumRow(label, actCumArr, tgtCumArr, isEcRaw) {
-      // actCumArr: 월별 누적 실적 USD 배열
-      // tgtCumArr: 월별 누적 계획 raw 배열 (KPI=억원, EC=M USD)
-      // isEcRaw: EC 모드처럼 tgtCumArr 단위가 M USD인 경우
-      function toTgtUsd(v) {
-        if (!v || v <= 0) return null;
-        if (isEcRaw) return v * 1000000;                          // M USD → USD
-        return hasRate ? v * 100000000 / _exchangeRate : null;    // 억원 → USD
+    // ── 연간 달성률 행 ────────────────────────────────────────
+    // 연간 총 계획 대비 현재까지 실적 (현재 뷰: showEbit=EBIT, !showEbit=매출)
+    var annualPctRow = (function() {
+      var tgtAnnualRaw = (showEbit ? ebitSumRaw : revSumRaw).reduce(function(s, v) { return s + v; }, 0);
+      var tgtAnnualUsd = isEcMode
+        ? tgtAnnualRaw * 1000000
+        : (hasRate ? tgtAnnualRaw * 100000000 / _exchangeRate : null);
+      var actCumArr  = showEbit ? actEbitCumUsd : actRevCumUsd;
+      var actAnnualUsd = curMonIdx >= 0 ? (actCumArr[curMonIdx] || 0) : 0;
+      var rowLabel = isEcMode ? '연간 달성률 (매출 계획대비)' : (showEbit ? '연간 달성률 (EBIT 계획대비)' : '연간 달성률 (매출 계획대비)');
+
+      if (!tgtAnnualUsd || tgtAnnualUsd <= 0) {
+        return '<tr>'
+          + '<td colspan="2" style="' + TS.tdL + ';font-weight:600">' + rowLabel + '</td>'
+          + MONTHS.map(function() { return '<td style="' + TS.td + '"></td>'; }).join('')
+          + '<td style="' + TS.tdSum + '">—</td>'
+          + '</tr>';
       }
+
       var cells = MONTHS.map(function(_, i) {
-        if (i > curMonIdx || !tgtCumArr[i]) return '<td style="' + TS.td + '"></td>';
-        var tgtUsd = toTgtUsd(tgtCumArr[i]);
-        var actUsd = (actCumArr[i] !== null && actCumArr[i] !== undefined) ? actCumArr[i] : null;
-        if (!tgtUsd || actUsd === null) return '<td style="' + TS.td + '"></td>';
-        var p    = actUsd / tgtUsd * 100;
+        if (i > curMonIdx || actCumArr[i] === null) return '<td style="' + TS.td + '"></td>';
+        var p    = (actCumArr[i] || 0) / tgtAnnualUsd * 100;
         var pRnd = Math.round(p);
         return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + fmtPctDiff(p) + '</td>';
       }).join('');
 
-      // 합계 셀: 현재월 누적 기준
-      var sumCell = (function() {
-        var ci = Math.max(0, Math.min(curMonIdx, 11));
-        var tgtUsd = toTgtUsd(tgtCumArr[ci]);
-        var actUsd = (actCumArr[ci] !== null && actCumArr[ci] !== undefined) ? actCumArr[ci] : null;
-        if (!tgtUsd || actUsd === null) return '<td style="' + TS.tdSum + '">—</td>';
-        var p    = actUsd / tgtUsd * 100;
-        var pRnd = Math.round(p);
-        return '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + '">' + fmtPctDiff(p) + '</td>';
-      })();
+      var p    = actAnnualUsd / tgtAnnualUsd * 100;
+      var pRnd = Math.round(p);
+      var sumCell = '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + fmtPctDiff(p) + '</td>';
 
       return '<tr>'
-        + '<td colspan="2" style="' + TS.tdL + ';font-size:10.5px">' + label + '</td>'
-        + cells + sumCell
-        + '</tr>';
-    }
+        + '<td colspan="2" style="' + TS.tdL + ';font-weight:600">' + rowLabel + '</td>'
+        + cells + sumCell + '</tr>';
+    })();
 
-    // 매출 달성률 (누적기준) — KPI+EC 모두 표시
-    var pctRevCumRow = makePctCumRow(
-      '매출 달성률 (월 누적기준)',
-      actRevCumUsd,
-      revCumRaw,
-      isEcMode  // EC는 revCumRaw = M USD 단위
-    );
-
-    // EBIT 달성률 (누적기준) — KPI만 표시 (EC는 EBIT 없음)
-    var pctEbitCumRow = !isEcMode
-      ? makePctCumRow(
-          'EBIT 달성률 (월 누적기준)',
-          actEbitCumUsd,
-          ebitCumRaw,
-          false  // KPI는 ebitCumRaw = 억원 단위
-        )
-      : '';
-    const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
+        const colgroup = '<colgroup><col style="width:100px"><col style="width:72px">'
       + MONTHS.map(function() { return '<col style="width:62px">'; }).join('')
       + '<col style="width:70px"></colgroup>';
 
@@ -794,7 +774,7 @@ Pages.KpiTarget = (() => {
 
     const actTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
       + colgroup + buildHeader()
-      + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + pctRevCumRow + pctEbitCumRow + '</tbody></table>';
+      + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + annualPctRow + '</tbody></table>';
 
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
