@@ -17,17 +17,17 @@ const Nav = (() => {
    * render   : 페이지 진입 시 호출할 함수
    */
   const PAGES = {
-    dash:       { index: 0, render: () => Pages.Dashboard.render() },
-    biweekly:   { index: 1, render: () => Pages.Biweekly.render() },
-    progress:   { index: 2, render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
-    revenue:    { index: 3, render: () => { Pages.Revenue.setMode('year'); } },
-    kpitarget:  { index: 4, render: () => Pages.KpiTarget.render() },
-    country:    { index: 5, render: () => Pages.Country.render() },
-    verify:     { index: 6, render: () => Pages.Verify.render() },
-    customers:  { index: 7, render: () => Pages.Customers.render() },
-    report:     { index: 8, render: () => Pages.Report.render() },
-    changelog:  { index: 9, render: () => Pages.Changelog.render() },
-    dramprice:  { index: 10, render: () => Pages.DramPrice.render() },
+    dash:       { render: () => Pages.Dashboard.render() },
+    biweekly:   { render: () => Pages.Biweekly.render() },
+    progress:   { render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
+    revenue:    { render: () => { Pages.Revenue.setMode('year'); } },
+    kpitarget:  { render: () => Pages.KpiTarget.render() },
+    country:    { render: () => Pages.Country.render() },
+    verify:     { render: () => Pages.Verify.render() },
+    customers:  { render: () => Pages.Customers.render() },
+    report:     { render: () => Pages.Report.render() },
+    changelog:  { render: () => Pages.Changelog.render() },
+    dramprice:  { render: () => Pages.DramPrice.render() },
   };
 
   let _current = null;
@@ -51,8 +51,8 @@ const Nav = (() => {
       if (pageEl) pageEl.classList.add('on');
 
       // 대상 nav 버튼 활성화
-      const navButtons = document.querySelectorAll('.ni');
-      if (navButtons[page.index]) navButtons[page.index].classList.add('on');
+      const navBtn = document.querySelector(`.ni[data-page="${pageKey}"]`);
+      if (navBtn) navBtn.classList.add('on');
 
       _current = pageKey;
 
