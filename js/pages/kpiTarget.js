@@ -1110,16 +1110,16 @@ Pages.KpiTarget = (() => {
         };
 
         return `<tr style="border-top:1px solid var(--tbl-row-bd)">
-          <td style="padding:12px 14px;font-family:Pretendard,sans-serif;font-size:12px">
-            <span style="font-size:12px;font-weight:500;color:var(--tx);font-family:Pretendard,sans-serif">${CONFIG.BIZ_LABELS[b]}</span>
-            ${isKpiM?`<span style="font-size:10px;color:var(--tx3);margin-left:5px;font-family:Pretendard,sans-serif">×${factor}</span>`:''}
+          <td style="padding:12px 14px;font-family:Pretendard,sans-serif;font-size:13px">
+            <span style="font-size:13px;font-weight:500;color:var(--tx);font-family:Pretendard,sans-serif">${CONFIG.BIZ_LABELS[b]}</span>
+            ${isKpiM?`<span style="font-size:11px;color:var(--tx3);margin-left:5px;font-family:Pretendard,sans-serif">×${factor}</span>`:''}
           </td>
-          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px">${fmtTgt()}</td>
-          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tx)">${fmtAct()}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px">${fmtTgt()}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;color:var(--tx)">${fmtAct()}</td>
           <td style="padding:12px 14px;min-width:160px">
-            ${tgt>0&&(hasRate||!isKpiM)?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div></div><span style="font-size:12px;font-weight:600;color:${barClr};min-width:32px;text-align:right;font-family:Pretendard,sans-serif">${pct}%</span></div>`:isKpiM?'<span style="font-size:11px;color:#999;font-family:Pretendard,sans-serif">환율 입력 필요</span>':'<span style="font-size:12px;color:var(--tbl-tx-body);font-family:Pretendard,sans-serif">롤링 필요</span>'}
+            ${tgt>0&&(hasRate||!isKpiM)?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div></div><span style="font-size:13px;font-weight:600;color:${barClr};min-width:36px;text-align:right;font-family:Pretendard,sans-serif">${pct}%</span></div>`:isKpiM?'<span style="font-size:12px;color:#999;font-family:Pretendard,sans-serif">환율 입력 필요</span>':'<span style="font-size:13px;color:var(--tbl-tx-body);font-family:Pretendard,sans-serif">롤링 필요</span>'}
           </td>
-          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;color:var(--tx)">${fmtRem()}</td>
+          <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;color:var(--tx)">${fmtRem()}</td>
         </tr>`;
       }).join('');
 
@@ -1138,8 +1138,8 @@ Pages.KpiTarget = (() => {
         return `<button onclick="Pages.KpiTarget.selectYear(${y})" style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.15s;${active?'background:#1D1D1F;color:#fff;border-color:#1D1D1F':'background:none;color:var(--tx2);border-color:var(--bd2)'}">${y}년</button>`;
       }).join('');
 
-      const TH  = l=>`<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
-      const THR = l=>`<th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
+      const TH  = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
+      const THR = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
       const actHeader = isKpiM ? '누적 EBIT (억원)' : '누적 실적 (USD)';
       const tgtHeader = isKpiM ? '목표 EBIT (억원)' : '목표 매출 (USD)';
 
@@ -1152,18 +1152,18 @@ Pages.KpiTarget = (() => {
       // 기준 선택 버튼: 경계 구분, 폰트 검은색
       const mBtn = (m, label) => {
         const on = mode===m;
-        return `<button onclick="Pages.KpiTarget.setMode('${m}')" style="padding:6px 14px;border-right:1px solid #CCC;border-top:none;border-bottom:none;border-left:none;font-size:12px;font-weight:${on?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${on?'#1D1D1F':'#fff'};color:${on?'#fff':'#333'};transition:.15s">${label}</button>`;
+        return `<button onclick="Pages.KpiTarget.setMode('${m}')" style="padding:6px 16px;border-right:1px solid #CCC;border-top:none;border-bottom:none;border-left:none;font-size:13px;font-weight:${on?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${on?'#1D1D1F':'#fff'};color:${on?'#fff':'#333'};transition:.15s">${label}</button>`;
       };
 
       // 관리자 버튼 스타일 (심플)
-      const adminBtnStyle = 'padding:4px 10px;border:1px solid #CCC;border-radius:4px;background:#FAFAFA;color:#555;font-size:11px;cursor:pointer;font-family:Pretendard,sans-serif';
+      const adminBtnStyle = 'padding:5px 11px;border:1px solid #CCC;border-radius:4px;background:#FAFAFA;color:#555;font-size:12px;cursor:pointer;font-family:Pretendard,sans-serif';
 
-      el.innerHTML=`<div style="max-width:1000px">
+      el.innerHTML=`<div>
         <!-- ① 기준 선택 + 관리자 버튼 (심플) -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:12px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">기준:</span>
+              <span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">기준:</span>
               <div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">
                 ${mBtn('kpi67','KPI(67억)')}
                 ${mBtn('kpi103','KPI(103억)')}
@@ -1189,21 +1189,21 @@ Pages.KpiTarget = (() => {
 
 
         <!-- ③ 요약 카드 -->
-        ${totalTgt>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
-          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">연간 목표 (${ml})</div>
-            <div style="font-size:18px;font-weight:600;color:var(--tx)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</div>
-            <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?'목표 EBIT (롤링 합계)':'롤링 데이터 합계'}</div>
+        ${totalTgt>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
+            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">연간 목표 (${ml})</div>
+            <div style="font-size:22px;font-weight:600;color:var(--tx)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</div>
+            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${isKpiM?'목표 EBIT (롤링 합계)':'롤링 데이터 합계'}</div>
           </div>
-          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">${isKpiM?'누적 EBIT':'누적 달성'}</div>
-            <div style="font-size:18px;font-weight:600;color:var(--tx)">${isKpiM&&hasRate?(totalActKrw/100000000).toFixed(2)+'억원':isKpiM?'$'+formatNumber(Math.round(totalActKrw)):'$'+formatNumber(Math.round(totalActUsd))}</div>
-            ${isKpiM&&hasRate?`<div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">$${formatNumber(Math.round(CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0)))} × ${_exchangeRate.toLocaleString()}원</div>`:''}
+          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
+            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">${isKpiM?'누적 EBIT':'누적 달성'}</div>
+            <div style="font-size:22px;font-weight:600;color:var(--tx)">${isKpiM&&hasRate?(totalActKrw/100000000).toFixed(2)+'억원':isKpiM?'$'+formatNumber(Math.round(totalActKrw)):'$'+formatNumber(Math.round(totalActUsd))}</div>
+            ${isKpiM&&hasRate?`<div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">$${formatNumber(Math.round(CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0)))} × ${_exchangeRate.toLocaleString()}원</div>`:''}
           </div>
-          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:10px 14px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:3px">전체 달성률</div>
-            <div style="font-size:18px;font-weight:600;color:var(--tx)">${totalPctFmt}</div>
-            <div style="font-size:11px;color:var(--tbl-tx-body);margin-top:2px">${isKpiM?(hasRate?'원화 기준':'환율 미입력'):'USD 기준'}</div>
+          <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
+            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">전체 달성률</div>
+            <div style="font-size:22px;font-weight:600;color:var(--tx)">${totalPctFmt}</div>
+            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${isKpiM?(hasRate?'원화 기준':'환율 미입력'):'USD 기준'}</div>
           </div>
         </div>`:`<div style="background:var(--tbl-sum-bg);border-left:3px solid var(--bd);padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:var(--tx)">
           롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
@@ -1211,17 +1211,17 @@ Pages.KpiTarget = (() => {
         </div>`}
 
         <!-- ④ 사업별 표: [A] 연간 목표 달성 현황 -->
-        <div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em;margin-bottom:4px">[A] 연간 목표 달성 현황</div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em;margin-bottom:6px">[A] 연간 목표 달성 현황</div>
         <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr>${TH('사업')}${THR(tgtHeader)}${THR(actHeader)}${TH('달성률')}${THR('잔여')}</tr></thead>
             <tbody>${bizRows}</tbody>
             ${totalTgt>0?`<tfoot><tr style="background:var(--tbl-sum-bg)">
-              <td style="padding:10px 14px;font-size:12px;font-weight:500;font-family:Pretendard,sans-serif;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM&&hasRate?(totalAct/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalAct))}</td>
-              <td style="padding:10px 14px;border-top:0.5px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:#4B5563;width:${Math.min(100,Math.round(totalPct))}%"></div></div><span style="font-size:12px;font-weight:600;color:var(--tx);min-width:32px;text-align:right">${totalPctFmt}</span></div></td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:12px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM?(totalRem/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalRem))}</td>
+              <td style="padding:10px 14px;font-size:13px;font-weight:500;font-family:Pretendard,sans-serif;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM&&hasRate?(totalAct/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalAct))}</td>
+              <td style="padding:10px 14px;border-top:0.5px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:#4B5563;width:${Math.min(100,Math.round(totalPct))}%"></div></div><span style="font-size:13px;font-weight:600;color:var(--tx);min-width:36px;text-align:right">${totalPctFmt}</span></div></td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM?(totalRem/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalRem))}</td>
             </tr></tfoot>`:''}
           </table>
         </div>
