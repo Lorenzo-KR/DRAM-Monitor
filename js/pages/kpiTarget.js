@@ -9,7 +9,7 @@ Pages.KpiTarget = (() => {
   let _year        = new Date().getFullYear();
   let _bizSet      = new Set(['all']);
   let _rollingYear = new Date().getFullYear();
-  let _rollingMode = 'kpi67'; // 'kpi67' | 'kpi103' | 'ec'
+  let _rollingMode = 'kpi103'; // 'kpi67' | 'kpi103' | 'ec'
 
   const _emptyRolling = () => ({
     2026: {
@@ -752,12 +752,12 @@ Pages.KpiTarget = (() => {
         if (i > curMonIdx || actCumArr[i] === null) return '<td style="' + TS.td + '"></td>';
         var p    = (actCumArr[i] || 0) / tgtAnnualUsd * 100;
         var pRnd = Math.round(p);
-        return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + fmtPctDiff(p) + '</td>';
+        return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + Math.round(p) + '%' + '</td>';
       }).join('');
 
       var p    = actAnnualUsd / tgtAnnualUsd * 100;
       var pRnd = Math.round(p);
-      var sumCell = '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + fmtPctDiff(p) + '</td>';
+      var sumCell = '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + Math.round(p) + '%' + '</td>';
 
       return '<tr>'
         + '<td colspan="2" style="' + TS.tdL + ';font-weight:600">' + rowLabel + '</td>'
