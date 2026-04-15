@@ -380,6 +380,10 @@ select.ec {
   max-width: 1200px;
   font-family: 'Pretendard', -apple-system, sans-serif;
 }
+/* KPI 목표설정 탭: 표 너비 확보를 위해 20% 확장 */
+#pg-kpitarget .page-wrap {
+  max-width: 1440px;
+}
 .page-card {
   background: #fff;
   border: 1px solid #E0E0E0;
