@@ -456,8 +456,8 @@ Pages.KpiTarget = (() => {
     // 달성률 표현: 130% → +30%, 97% → -3%, 100% → ±0%
     function fmtPctDiff(pct) {
       if (pct === null || pct === undefined) return '—';
-      var diff = Math.round(pct) - 100;
-      return (diff > 0 ? '+' : '') + diff + '%';
+      var diff = pct - 100;
+      return (diff > 0 ? '+' : '') + diff.toFixed(1) + '%';
     }
 
     const mc = _modeColor(mode);
@@ -752,12 +752,12 @@ Pages.KpiTarget = (() => {
         if (i > curMonIdx || actCumArr[i] === null) return '<td style="' + TS.td + '"></td>';
         var p    = (actCumArr[i] || 0) / tgtAnnualUsd * 100;
         var pRnd = Math.round(p);
-        return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + Math.round(p) + '%' + '</td>';
+        return '<td style="' + TS.td + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + p.toFixed(1) + '%' + '</td>';
       }).join('');
 
       var p    = actAnnualUsd / tgtAnnualUsd * 100;
       var pRnd = Math.round(p);
-      var sumCell = '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + Math.round(p) + '%' + '</td>';
+      var sumCell = '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + ';font-weight:600">' + p.toFixed(1) + '%' + '</td>';
 
       return '<tr>'
         + '<td colspan="2" style="' + TS.tdL + ';font-weight:600">' + rowLabel + '</td>'
