@@ -41,8 +41,9 @@ Pages.DramPrice = (() => {
   ];
 
   // 섹션별 상태 (제품 필터 + 차트 인스턴스)
-  let _data  = {};   // { spot: [{Date, Item, 'Daily High', ...}, ...], ... }
-  let _state = {};   // { spot: { selProds: Set, chart: null }, ... }
+  let _data      = {};   // { spot: [{Date, Item, 'Daily High', ...}, ...], ... }
+  let _state     = {};   // { spot: { selProds: Set, chart: null }, ... }
+  let _activeKey = SHEETS[0].key;  // 현재 활성 탭
 
   SHEETS.forEach(s => {
     _data[s.key]  = [];
@@ -245,8 +246,48 @@ Pages.DramPrice = (() => {
       </div>`;
   }
 
+  // ── 탭 버튼 HTML ─────────────────────────────────────────
+  function _buildTabsHtml() {
+    return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">'
+      + SHEETS.map(s => {
+          const active = s.key === _activeKey;
+          return `<button id="dp-tab-${s.key}"
+            onclick="Pages.DramPrice.switchTab('${s.key}')"
+            style="font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;
+                   cursor:pointer;padding:7px 18px;border-radius:20px;
+                   border:2px solid ${s.color};
+                   background:${active ? s.color : '#fff'};
+                   color:${active ? '#fff' : s.color};
+                   transition:background .15s,color .15s">${s.label}</button>`;
+        }).join('')
+      + '</div>';
+  }
+
   // ── Public ────────────────────────────────────────────────
   return {
+
+    switchTab(key) {
+      _activeKey = key;
+
+      // 탭 버튼 스타일 갱신
+      SHEETS.forEach(s => {
+        const btn = document.getElementById(`dp-tab-${s.key}`);
+        if (!btn) return;
+        const active = s.key === key;
+        btn.style.background = active ? s.color : '#fff';
+        btn.style.color      = active ? '#fff'  : s.color;
+      });
+
+      // 섹션 show/hide
+      SHEETS.forEach(s => {
+        const el = document.getElementById(`dp-section-${s.key}`);
+        if (el) el.style.display = s.key === key ? '' : 'none';
+      });
+
+      // 차트 재렌더 (display:none 상태에서 canvas 크기 0이었을 수 있음)
+      const cfg = SHEETS.find(s => s.key === key);
+      if (cfg) _refreshSection(cfg);
+    },
 
     toggleProduct(key, prod) {
       const state = _state[key];
@@ -266,8 +307,12 @@ Pages.DramPrice = (() => {
       const fetched = await Promise.all(SHEETS.map(s => _fetchSheet(s.sheet)));
       SHEETS.forEach((s, i) => { _data[s.key] = fetched[i]; });
 
-      // 섹션 HTML 조립
-      const sectionsHtml = SHEETS.map(s => _buildSectionHtml(s)).join('');
+      // 섹션 HTML — 비활성 섹션은 display:none
+      const sectionsHtml = SHEETS.map(s =>
+        `<div id="dp-section-${s.key}" style="${s.key !== _activeKey ? 'display:none' : ''}">`
+        + _buildSectionHtml(s)
+        + '</div>'
+      ).join('');
 
       el.innerHTML = `
         <div class="page-wrap">
@@ -277,12 +322,14 @@ Pages.DramPrice = (() => {
               <p>TrendForce · 시트별 독립 업데이트 주기</p>
             </div>
           </div>
+          ${_buildTabsHtml()}
           ${sectionsHtml}
         </div>`;
 
-      // 각 섹션 렌더 (setTimeout으로 canvas 생성 후)
+      // 활성 섹션만 렌더 (setTimeout으로 canvas 생성 후)
       setTimeout(() => {
-        SHEETS.forEach(cfg => _refreshSection(cfg));
+        const cfg = SHEETS.find(s => s.key === _activeKey);
+        if (cfg) _refreshSection(cfg);
       }, 50);
     },
   };
