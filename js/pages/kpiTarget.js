@@ -11,17 +11,15 @@ Pages.KpiTarget = (() => {
   let _rollingYear = new Date().getFullYear();
   let _rollingMode = 'kpi103'; // 'kpi67' | 'kpi103' | 'ec'
 
-  const _emptyRolling = () => ({
-    2026: {
-      DRAM: [0,0,0.1,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556,0.1556],
-      SSD:  [0,0,0.1,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667,0.0667],
-      MID:  [0,0,1.2,0,0,1.2,0,0,1.2,0,0,1.2],
-      SCR: Array(12).fill(0), RMA: Array(12).fill(0),
-      SUS: Array(12).fill(0), MOD: Array(12).fill(0),
-    },
-    2027: { DRAM:Array(12).fill(0),SSD:Array(12).fill(0),MID:Array(12).fill(0),SCR:Array(12).fill(0),RMA:Array(12).fill(0),SUS:Array(12).fill(0),MOD:Array(12).fill(0) },
-    2028: { DRAM:Array(12).fill(0),SSD:Array(12).fill(0),MID:Array(12).fill(0),SCR:Array(12).fill(0),RMA:Array(12).fill(0),SUS:Array(12).fill(0),MOD:Array(12).fill(0) },
-  });
+  function _emptyYearData() {
+    return CONFIG.BIZ_LIST.reduce((o, b) => { o[b] = Array(12).fill(0); return o; }, {});
+  }
+  function _emptyRolling() {
+    const cur = new Date().getFullYear();
+    const obj = {};
+    for (let y = cur - 1; y <= cur + 2; y++) obj[y] = _emptyYearData();
+    return obj;
+  }
 
   // ── 롤링 데이터 저장소 3개 ─────────────────────────────────
   let _rolling67  = JSON.parse(localStorage.getItem('kpi_rolling')     || 'null') || _emptyRolling();
