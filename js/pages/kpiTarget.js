@@ -131,23 +131,20 @@ Pages.KpiTarget = (() => {
   }
 
   // ── 롤링 저장 ─────────────────────────────────────────────
+  const _ROLLING_META = {
+    ec:     { key: 'ec_rolling',      store: () => _ecRolling  },
+    kpi103: { key: 'kpi_rolling_103', store: () => _rolling103 },
+    kpi67:  { key: 'kpi_rolling',     store: () => _rolling67  },
+  };
+
   function _saveRollingData(year, data) {
-    if (_rollingMode === 'ec') {
-      if (!_ecRolling[year]) _ecRolling[year] = {};
-      Object.assign(_ecRolling[year], data);
-      localStorage.setItem('ec_rolling', JSON.stringify(_ecRolling));
-      Api.setSetting('ec_rolling', JSON.stringify(_ecRolling));
-    } else if (_rollingMode === 'kpi103') {
-      if (!_rolling103[year]) _rolling103[year] = {};
-      Object.assign(_rolling103[year], data);
-      localStorage.setItem('kpi_rolling_103', JSON.stringify(_rolling103));
-      Api.setSetting('kpi_rolling_103', JSON.stringify(_rolling103));
-    } else {
-      if (!_rolling67[year]) _rolling67[year] = {};
-      Object.assign(_rolling67[year], data);
-      localStorage.setItem('kpi_rolling', JSON.stringify(_rolling67));
-      Api.setSetting('kpi_rolling', JSON.stringify(_rolling67));
-    }
+    const meta  = _ROLLING_META[_rollingMode] || _ROLLING_META.kpi67;
+    const store = meta.store();
+    if (!store[year]) store[year] = {};
+    Object.assign(store[year], data);
+    const json = JSON.stringify(store);
+    localStorage.setItem(meta.key, json);
+    Api.setSetting(meta.key, json);
   }
 
   // ── 서버 settings 동기화 ──────────────────────────────────
