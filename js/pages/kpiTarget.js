@@ -45,6 +45,9 @@ Pages.KpiTarget = (() => {
 
   // ── 환율 ──────────────────────────────────────────────────
   let _exchangeRate = parseFloat(localStorage.getItem('kpi_exchange_rate') || '0') || 1395;
+
+  // 엑셀 다운로드용 최근 렌더 데이터 캐시
+  let _exportCache = null;
   function _saveExchangeRate(rate) {
     _exchangeRate = rate;
     localStorage.setItem('kpi_exchange_rate', String(rate));
@@ -771,13 +774,103 @@ Pages.KpiTarget = (() => {
       + colgroup + buildHeader()
       + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + annualPctRow + '</tbody></table>';
 
+    // ── 엑셀 내보내기 데이터 캐시 ────────────────────────────
+    {
+      const _hdr = ['구분', '구분2'].concat(MONTHS.map(function(_, i) { return (i + 1) + '월'; })).concat(['연간합계']);
+
+      // 계획표
+      const _planRows = [_hdr];
+      bizList.forEach(function(b) {
+        const vals  = showEbit ? ebitByBiz[b] : revByBiz[b];
+        const total = vals.reduce(function(s, v) { return s + v; }, 0);
+        _planRows.push([CONFIG.BIZ_LABELS[b] || b, tgtSubLabel + '(계획)']
+          .concat(vals.map(function(v) { return fmtRolling(v); }))
+          .concat([fmtRolling(total)]));
+      });
+      _planRows.push(['합계', tgtSubLabel + '(계획)']
+        .concat(tgtVals.map(function(v) { return fmtRolling(v); }))
+        .concat([fmtRolling(tgtTotalAll)]));
+      _planRows.push(['누적', tgtSubLabel + '(계획)']
+        .concat(tgtCumVals.map(function(v) { return fmtRolling(v); }))
+        .concat([fmtRolling(tgtTotalAll)]));
+
+      // 실적표
+      const _actRows = [_hdr.slice()];
+      bizList.forEach(function(b) {
+        const totalUsd  = MONTHS.reduce(function(s, _, i) { return s + (actByBizView[b][i] || 0); }, 0);
+        const totalDisp = fmtActual(totalUsd);
+        _actRows.push([CONFIG.BIZ_LABELS[b] || b, actSubLabel]
+          .concat(MONTHS.map(function(_, i) {
+            const v = actByBizView[b][i];
+            const d = fmtActual(v);
+            return (d !== null && parseFloat(d) !== 0) ? d : '';
+          }))
+          .concat([parseFloat(totalDisp) > 0 ? totalDisp : '']));
+      });
+      _actRows.push(['합계', actSubLabel]
+        .concat(MONTHS.map(function(_, i) {
+          const d = actSumDispView[i];
+          return (d !== null && parseFloat(d) !== 0) ? d : '';
+        }))
+        .concat([parseFloat(actTotalDispView) > 0 ? actTotalDispView : '']));
+      _actRows.push(['누적', actSubLabel]
+        .concat(MONTHS.map(function(_, i) {
+          const d = actCumDispView[i];
+          return d !== null ? d : '';
+        }))
+        .concat([actCumDispView[Math.max(0, curMonIdx)] || '']));
+      _actRows.push(['실적-계획 (월별)', '']
+        .concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return '';
+          return fmtDiff((parseFloat(actSumRef[i]) || 0) - tgtSumFmt[i]);
+        }))
+        .concat([fmtDiff(actSumTotalDisp - tgtSumTotalDisp)]));
+      _actRows.push(['실적-계획 (누적)', '']
+        .concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return '';
+          return fmtDiff((parseFloat(actCumRef[i]) || 0) - tgtCumFmt[i]);
+        }))
+        .concat([fmtDiff(actCumTotalDisp - tgtCumTotalDisp)]));
+      _actRows.push(['달성률 (누적, 계획대비)', '']
+        .concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx || !tgtCumVals[i]) return '';
+          const tgtUsd = isEcMode
+            ? tgtCumVals[i] * 1000000
+            : (hasRate ? tgtCumVals[i] * 100000000 / _exchangeRate : null);
+          if (!tgtUsd || tgtUsd <= 0) return '';
+          return fmtPctDiff((actCumUsdView[i] || 0) / tgtUsd * 100);
+        }))
+        .concat([pctCumForTable !== null ? fmtPctDiff(pctCumForTable) : '']));
+      const _tgtAnnRaw = (showEbit ? ebitSumRaw : revSumRaw).reduce(function(s, v) { return s + v; }, 0);
+      const _tgtAnnUsd = isEcMode ? _tgtAnnRaw * 1000000 : (hasRate ? _tgtAnnRaw * 100000000 / _exchangeRate : null);
+      const _actCumAnn = showEbit ? actEbitCumUsd : actRevCumUsd;
+      _actRows.push(['연간 달성률 (계획대비)', '']
+        .concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx || !_tgtAnnUsd || _tgtAnnUsd <= 0 || _actCumAnn[i] === null) return '';
+          return ((_actCumAnn[i] || 0) / _tgtAnnUsd * 100).toFixed(1) + '%';
+        }))
+        .concat([(_tgtAnnUsd && _tgtAnnUsd > 0 && curMonIdx >= 0)
+          ? ((_actCumAnn[curMonIdx] || 0) / _tgtAnnUsd * 100).toFixed(1) + '%' : '']));
+
+      _exportCache = {
+        year:       _year,
+        modeLabel:  _modeLabel(mode),
+        tableLabel: showEbit ? 'EBIT' : '매출',
+        plan:       _planRows,
+        actual:     _actRows,
+      };
+    }
+
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
       + unitBtns
       + '<div style="margin-bottom:4px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'
       + '<div style="font-size:11px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:4px 2px;letter-spacing:.05em">'
       + '① ' + (showEbit ? 'EBIT 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
+      + '</div>'
+      + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:11px;font-family:Pretendard,sans-serif;cursor:pointer;padding:4px 12px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:6px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
       + '</div>'
@@ -1639,6 +1732,15 @@ Pages.KpiTarget = (() => {
       if (el) el.style.display='none';
       if (ov) ov.style.display='none';
       document.body.style.overflow='';
+    },
+
+    downloadTracking() {
+      if (!_exportCache) { alert('데이터를 먼저 불러오세요.'); return; }
+      const { year, modeLabel, tableLabel, plan, actual } = _exportCache;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(plan),   tableLabel + '계획표');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(actual), tableLabel + '실적표');
+      XLSX.writeFile(wb, 'KPI_' + year + '_' + tableLabel + '_' + modeLabel + '.xlsx');
     },
 
     updateExchangeRate(val) {
