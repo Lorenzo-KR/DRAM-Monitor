@@ -775,82 +775,123 @@ Pages.KpiTarget = (() => {
       + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + annualPctRow + '</tbody></table>';
 
     // ── 엑셀 내보내기 데이터 캐시 ────────────────────────────
+    // 각 행: { type, vals: string[], nums?: number[], pcts?: number[] }
+    // nums/pcts: 인덱스 0,1은 null(라벨), 2..13은 월별값, 14는 합계
     {
       const _hdr = ['구분', '구분2'].concat(MONTHS.map(function(_, i) { return (i + 1) + '월'; })).concat(['연간합계']);
 
       // 계획표
-      const _planRows = [_hdr];
+      const _planRows = [{ type: 'header', vals: _hdr }];
       bizList.forEach(function(b) {
         const vals  = showEbit ? ebitByBiz[b] : revByBiz[b];
         const total = vals.reduce(function(s, v) { return s + v; }, 0);
-        _planRows.push([CONFIG.BIZ_LABELS[b] || b, tgtSubLabel + '(계획)']
-          .concat(vals.map(function(v) { return fmtRolling(v); }))
-          .concat([fmtRolling(total)]));
+        _planRows.push({ type: 'biz', vals:
+          [CONFIG.BIZ_LABELS[b] || b, tgtSubLabel + '(계획)']
+            .concat(vals.map(function(v) { return fmtRolling(v); }))
+            .concat([fmtRolling(total)]) });
       });
-      _planRows.push(['합계', tgtSubLabel + '(계획)']
-        .concat(tgtVals.map(function(v) { return fmtRolling(v); }))
-        .concat([fmtRolling(tgtTotalAll)]));
-      _planRows.push(['누적', tgtSubLabel + '(계획)']
-        .concat(tgtCumVals.map(function(v) { return fmtRolling(v); }))
-        .concat([fmtRolling(tgtTotalAll)]));
+      _planRows.push({ type: 'sum', vals:
+        ['합계', tgtSubLabel + '(계획)']
+          .concat(tgtVals.map(function(v) { return fmtRolling(v); }))
+          .concat([fmtRolling(tgtTotalAll)]) });
+      _planRows.push({ type: 'cum', vals:
+        ['누적', tgtSubLabel + '(계획)']
+          .concat(tgtCumVals.map(function(v) { return fmtRolling(v); }))
+          .concat([fmtRolling(tgtTotalAll)]) });
 
       // 실적표
-      const _actRows = [_hdr.slice()];
+      const _actRows = [{ type: 'header', vals: _hdr.slice() }];
       bizList.forEach(function(b) {
         const totalUsd  = MONTHS.reduce(function(s, _, i) { return s + (actByBizView[b][i] || 0); }, 0);
         const totalDisp = fmtActual(totalUsd);
-        _actRows.push([CONFIG.BIZ_LABELS[b] || b, actSubLabel]
+        _actRows.push({ type: 'biz', vals:
+          [CONFIG.BIZ_LABELS[b] || b, actSubLabel]
+            .concat(MONTHS.map(function(_, i) {
+              const v = actByBizView[b][i];
+              const d = fmtActual(v);
+              return (d !== null && parseFloat(d) !== 0) ? d : '';
+            }))
+            .concat([parseFloat(totalDisp) > 0 ? totalDisp : '']) });
+      });
+      _actRows.push({ type: 'sum', vals:
+        ['합계', actSubLabel]
           .concat(MONTHS.map(function(_, i) {
-            const v = actByBizView[b][i];
-            const d = fmtActual(v);
+            const d = actSumDispView[i];
             return (d !== null && parseFloat(d) !== 0) ? d : '';
           }))
-          .concat([parseFloat(totalDisp) > 0 ? totalDisp : '']));
-      });
-      _actRows.push(['합계', actSubLabel]
-        .concat(MONTHS.map(function(_, i) {
-          const d = actSumDispView[i];
-          return (d !== null && parseFloat(d) !== 0) ? d : '';
-        }))
-        .concat([parseFloat(actTotalDispView) > 0 ? actTotalDispView : '']));
-      _actRows.push(['누적', actSubLabel]
-        .concat(MONTHS.map(function(_, i) {
-          const d = actCumDispView[i];
-          return d !== null ? d : '';
-        }))
-        .concat([actCumDispView[Math.max(0, curMonIdx)] || '']));
-      _actRows.push(['실적-계획 (월별)', '']
-        .concat(MONTHS.map(function(_, i) {
+          .concat([parseFloat(actTotalDispView) > 0 ? actTotalDispView : '']) });
+      _actRows.push({ type: 'cum', vals:
+        ['누적', actSubLabel]
+          .concat(MONTHS.map(function(_, i) {
+            const d = actCumDispView[i];
+            return d !== null ? d : '';
+          }))
+          .concat([actCumDispView[Math.max(0, curMonIdx)] || '']) });
+
+      // diff rows — nums: 색상 판단용 숫자값 (null=라벨/빈칸)
+      (function() {
+        const monNums  = [null, null].concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return null;
+          return (parseFloat(actSumRef[i]) || 0) - tgtSumFmt[i];
+        })).concat([actSumTotalDisp - tgtSumTotalDisp]);
+        const monVals  = ['실적-계획 (월별)', ''].concat(MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '';
           return fmtDiff((parseFloat(actSumRef[i]) || 0) - tgtSumFmt[i]);
-        }))
-        .concat([fmtDiff(actSumTotalDisp - tgtSumTotalDisp)]));
-      _actRows.push(['실적-계획 (누적)', '']
-        .concat(MONTHS.map(function(_, i) {
+        })).concat([fmtDiff(actSumTotalDisp - tgtSumTotalDisp)]);
+        _actRows.push({ type: 'diff', vals: monVals, nums: monNums });
+
+        const cumNums  = [null, null].concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return null;
+          return (parseFloat(actCumRef[i]) || 0) - tgtCumFmt[i];
+        })).concat([actCumTotalDisp - tgtCumTotalDisp]);
+        const cumVals  = ['실적-계획 (누적)', ''].concat(MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '';
           return fmtDiff((parseFloat(actCumRef[i]) || 0) - tgtCumFmt[i]);
-        }))
-        .concat([fmtDiff(actCumTotalDisp - tgtCumTotalDisp)]));
-      _actRows.push(['달성률 (누적, 계획대비)', '']
-        .concat(MONTHS.map(function(_, i) {
+        })).concat([fmtDiff(actCumTotalDisp - tgtCumTotalDisp)]);
+        _actRows.push({ type: 'diff', vals: cumVals, nums: cumNums });
+      })();
+
+      // pct rows — pcts: 색상 판단용 raw % 값 (null=라벨/빈칸)
+      (function() {
+        const pctNums = [null, null].concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx || !tgtCumVals[i]) return null;
+          const tgtUsd = isEcMode
+            ? tgtCumVals[i] * 1000000
+            : (hasRate ? tgtCumVals[i] * 100000000 / _exchangeRate : null);
+          if (!tgtUsd || tgtUsd <= 0) return null;
+          return (actCumUsdView[i] || 0) / tgtUsd * 100;
+        })).concat([pctCumForTable]);
+        const pctVals = ['달성률 (누적, 계획대비)', ''].concat(MONTHS.map(function(_, i) {
           if (i > curMonIdx || !tgtCumVals[i]) return '';
           const tgtUsd = isEcMode
             ? tgtCumVals[i] * 1000000
             : (hasRate ? tgtCumVals[i] * 100000000 / _exchangeRate : null);
           if (!tgtUsd || tgtUsd <= 0) return '';
           return fmtPctDiff((actCumUsdView[i] || 0) / tgtUsd * 100);
-        }))
-        .concat([pctCumForTable !== null ? fmtPctDiff(pctCumForTable) : '']));
-      const _tgtAnnRaw = (showEbit ? ebitSumRaw : revSumRaw).reduce(function(s, v) { return s + v; }, 0);
-      const _tgtAnnUsd = isEcMode ? _tgtAnnRaw * 1000000 : (hasRate ? _tgtAnnRaw * 100000000 / _exchangeRate : null);
-      const _actCumAnn = showEbit ? actEbitCumUsd : actRevCumUsd;
-      _actRows.push(['연간 달성률 (계획대비)', '']
-        .concat(MONTHS.map(function(_, i) {
-          if (i > curMonIdx || !_tgtAnnUsd || _tgtAnnUsd <= 0 || _actCumAnn[i] === null) return '';
-          return ((_actCumAnn[i] || 0) / _tgtAnnUsd * 100).toFixed(1) + '%';
-        }))
-        .concat([(_tgtAnnUsd && _tgtAnnUsd > 0 && curMonIdx >= 0)
-          ? ((_actCumAnn[curMonIdx] || 0) / _tgtAnnUsd * 100).toFixed(1) + '%' : '']));
+        })).concat([pctCumForTable !== null ? fmtPctDiff(pctCumForTable) : '']);
+        _actRows.push({ type: 'pct', vals: pctVals, pcts: pctNums });
+      })();
+
+      (function() {
+        const _tgtAnnRaw = (showEbit ? ebitSumRaw : revSumRaw).reduce(function(s, v) { return s + v; }, 0);
+        const _tgtAnnUsd = isEcMode ? _tgtAnnRaw * 1000000 : (hasRate ? _tgtAnnRaw * 100000000 / _exchangeRate : null);
+        const _actCumAnn = showEbit ? actEbitCumUsd : actRevCumUsd;
+        const _annPctOf  = function(i) {
+          if (!_tgtAnnUsd || _tgtAnnUsd <= 0 || _actCumAnn[i] === null) return null;
+          return (_actCumAnn[i] || 0) / _tgtAnnUsd * 100;
+        };
+        const annPcts = [null, null].concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return null;
+          return _annPctOf(i);
+        })).concat([curMonIdx >= 0 ? _annPctOf(curMonIdx) : null]);
+        const annVals = ['연간 달성률 (계획대비)', ''].concat(MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return '';
+          const p = _annPctOf(i);
+          return p !== null ? p.toFixed(1) + '%' : '';
+        })).concat([curMonIdx >= 0 && _annPctOf(curMonIdx) !== null
+          ? _annPctOf(curMonIdx).toFixed(1) + '%' : '']);
+        _actRows.push({ type: 'pct', vals: annVals, pcts: annPcts });
+      })();
 
       _exportCache = {
         year:       _year,
@@ -1737,9 +1778,109 @@ Pages.KpiTarget = (() => {
     downloadTracking() {
       if (!_exportCache) { alert('데이터를 먼저 불러오세요.'); return; }
       const { year, modeLabel, tableLabel, plan, actual } = _exportCache;
+
+      // ── 색상 팔레트 (AARRGGBB) ──────────────────────────────
+      const C = {
+        white:      'FFFFFFFF',
+        hdrBg:      'FFF0F0F0',
+        sumBg:      'FFF2F2F2',
+        cumBg:      'FFE8E4D8',
+        tx:         'FF222222',
+        txSub:      'FF888888',
+        green:      'FF1A6B3A',
+        red:        'FFA32D2D',
+        pctBlueBg:  'FFEBF2FB',
+        pctBlue:    'FF1B4F8A',
+        pctRedBg:   'FFFEF2F2',
+        pctRed:     'FFDC2626',
+        bd:         'FFCCCCCC',
+      };
+
+      const border = {
+        top:    { style: 'thin', color: { rgb: C.bd } },
+        bottom: { style: 'thin', color: { rgb: C.bd } },
+        left:   { style: 'thin', color: { rgb: C.bd } },
+        right:  { style: 'thin', color: { rgb: C.bd } },
+      };
+
+      function mkCell(v, bg, fg, bold, align) {
+        return {
+          v: (v === null || v === undefined) ? '' : String(v),
+          t: 's',
+          s: {
+            fill:      { patternType: 'solid', fgColor: { rgb: bg || C.white } },
+            font:      { name: 'Malgun Gothic', sz: 9, bold: !!bold, color: { rgb: fg || C.tx } },
+            alignment: { horizontal: align || 'left', vertical: 'center' },
+            border,
+          },
+        };
+      }
+
+      function buildSheet(rows) {
+        const ws = {};
+        let maxC = 0;
+        rows.forEach(function(rowObj, r) {
+          const { type, vals, nums, pcts } = rowObj;
+          const last = vals.length - 1;
+          if (last > maxC) maxC = last;
+
+          vals.forEach(function(v, c) {
+            const addr  = XLSX.utils.encode_cell({ r, c });
+            const isLbl = c <= 1;
+            const isNum = c >= 2;
+            const align = isLbl ? 'left' : 'right';
+
+            if (type === 'header') {
+              ws[addr] = mkCell(v, C.hdrBg, C.tx, true, 'center');
+
+            } else if (type === 'sum') {
+              const al = c === 0 ? 'center' : align;
+              ws[addr] = mkCell(v, C.sumBg, c === 1 ? C.txSub : C.tx, true, al);
+
+            } else if (type === 'cum') {
+              const al = c === 0 ? 'center' : align;
+              ws[addr] = mkCell(v, C.cumBg, c === 1 ? C.txSub : C.tx, false, al);
+
+            } else if (type === 'diff') {
+              if (isLbl) {
+                ws[addr] = mkCell(v, C.white, c === 1 ? C.txSub : C.tx, c === 0, 'left');
+              } else {
+                const n  = nums ? nums[c] : null;
+                const fg = (n === null || n === undefined) ? C.tx : (n >= 0 ? C.green : C.red);
+                const bold = n !== null && n !== undefined && v !== '';
+                ws[addr] = mkCell(v, C.white, fg, bold, 'right');
+              }
+
+            } else if (type === 'pct') {
+              if (isLbl) {
+                ws[addr] = mkCell(v, C.white, c === 1 ? C.txSub : C.tx, c === 0, 'left');
+              } else {
+                const p = pcts ? pcts[c] : null;
+                if (p === null || p === undefined || v === '') {
+                  ws[addr] = mkCell(v, C.white, C.tx, false, 'right');
+                } else {
+                  const under = p < 100;
+                  ws[addr] = mkCell(v, under ? C.pctBlueBg : C.pctRedBg,
+                                       under ? C.pctBlue   : C.pctRed, true, 'right');
+                }
+              }
+
+            } else {
+              // biz
+              ws[addr] = mkCell(v, C.white, c === 1 ? C.txSub : C.tx, false, c === 0 ? 'left' : 'right');
+            }
+          });
+        });
+
+        ws['!ref']  = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: maxC } });
+        ws['!cols'] = [{ wch: 22 }, { wch: 11 }].concat(Array(maxC - 1).fill({ wch: 9 }));
+        ws['!rows'] = rows.map(function() { return { hpt: 16 }; });
+        return ws;
+      }
+
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(plan),   tableLabel + '계획표');
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(actual), tableLabel + '실적표');
+      XLSX.utils.book_append_sheet(wb, buildSheet(plan),   tableLabel + '계획표');
+      XLSX.utils.book_append_sheet(wb, buildSheet(actual), tableLabel + '실적표');
       XLSX.writeFile(wb, 'KPI_' + year + '_' + tableLabel + '_' + modeLabel + '.xlsx');
     },
 
