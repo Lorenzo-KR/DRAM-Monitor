@@ -24,7 +24,7 @@ Pages.Revenue = (() => {
   }
   function setBiz(el, val) {
     _biz = val;
-    ['rv-biz-all','rv-biz-dram','rv-biz-ssd','rv-biz-mid'].forEach(id => {
+    ['rv-biz-all','rv-biz-dram','rv-biz-ssd','rv-biz-mid','rv-biz-scr','rv-biz-rma','rv-biz-sus','rv-biz-mod'].forEach(id => {
       const b = document.getElementById(id); if (!b) return;
       b.classList.remove('on');
     });
