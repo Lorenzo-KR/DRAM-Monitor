@@ -59,7 +59,7 @@ Pages.Biweekly = (() => {
           const inv = invoices.find(r => String(r.lotId) === String(l.id));
           return (st === 'done' && !inv) || (st !== 'done' && st !== 'upcoming');
         });
-        const inProgQty = inProgLots.reduce((s, l) => s + getLotCumulative(l.id, dailies), 0);
+        const inProgQty = inProgLots.reduce((s, l) => s + parseNumber(l.qty), 0);
         result[`${biz}_${co}`] = { doneQty, doneAmt, inProgQty };
       });
     });

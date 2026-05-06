@@ -232,6 +232,16 @@ Pages.Progress = (() => {
       inDate, targetDate: document.getElementById('nl-tgt')?.value || addDays(inDate, CONFIG.LOT_DEFAULT_TARGET_DAYS),
       qty, unit: '개', price: 0, currency: 'USD', product: '', note: '', done: '0', actualDone: '',
     };
+
+    const regBtn = document.querySelector('#new-lot-row button');
+    if (regBtn) { regBtn.disabled = true; regBtn.textContent = '등록 중...'; }
+
+    const result = await Api.appendNow(CONFIG.SHEETS.LOTS, record);
+
+    if (regBtn) { regBtn.disabled = false; regBtn.textContent = '+ 등록'; }
+
+    if (!result.success) return;
+
     Store.upsertLot(record);
     const ok = document.getElementById('nl-ok');
     if (ok) { ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 1500); }
@@ -239,7 +249,6 @@ Pages.Progress = (() => {
     if (sel) sel.selectedIndex = 0;
     UI.toast(lotNo + ' 등록됨');
     render();
-    Api.append(CONFIG.SHEETS.LOTS, record);
     Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
   }
 
@@ -547,6 +556,17 @@ Pages.Progress = (() => {
     const isDone   = document.getElementById('dp-done-'+lotId)?.value==='1' || remNew===0;
 
     const record = { id:Date.now(), date, lotId:lot.id, lotNo:lot.lotNo||lot.id, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc, normal, noBoot, abnormal, cumul:cumNew, remain:remNew, note:document.getElementById('dp-note-'+lotId)?.value||'', done:isDone?'1':'0' };
+
+    // 저장 중 버튼 비활성화
+    const saveBtn = document.querySelector(`[onclick="Pages.Progress.saveDaily(${lotId})"]`);
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+
+    const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
+
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+
+    if (!result.success) return;
+
     Store.upsertDaily(record);
     if (isDone) {
       const upd = {...lot, done:'1', actualDone:date};
@@ -558,7 +578,6 @@ Pages.Progress = (() => {
     if (ok) { ok.style.display='inline'; setTimeout(()=>ok.style.display='none',1500); }
     UI.toast('저장됨');
     render();
-    Api.append(CONFIG.SHEETS.DAILY, record);
   }
 
   // ── 삭제 ───────────────────────────────────────────────────
