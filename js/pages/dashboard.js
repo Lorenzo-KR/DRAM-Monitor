@@ -231,10 +231,11 @@ Pages.Dashboard = (() => {
               : 'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2')
         : '';
 
-      const ddTag = dd !== null && !isUpcoming ? '<span style="font-size:11px;margin-left:4px;color:' + (dd < 0 ? '#dc2626' : 'var(--tx3)') + '">(' + (dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd) + ')</span>' : '';
-      const targetCell = isDone
-        ? (lot.actualDone || lot.targetDate || '—')
-        : ((lot.targetDate || '—') + ddTag);
+      const ddTag = dd !== null && !isUpcoming && !isDone ? '<span style="font-size:10px;margin-left:3px;color:' + (dd < 0 ? '#dc2626' : 'var(--tx3)') + '">(' + (dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd) + ')</span>' : '';
+      const targetColor = st === 'overdue' ? '#dc2626' : 'var(--tx3)';
+      const actualColor = lot.actualDone ? 'var(--tx)' : 'var(--tx3)';
+      const targetCell = '<div style="font-size:10px;color:' + targetColor + ';line-height:1.3">' + (lot.targetDate || '—') + ddTag + '</div>'
+                       + '<div style="color:' + actualColor + ';line-height:1.3;margin-top:2px;font-weight:' + (lot.actualDone ? 500 : 400) + '">' + (lot.actualDone || '—') + '</div>';
 
       return '<tr style="' + rowBg + '">'
         + '<td style="' + S.td + ';font-family:var(--font-mono)">' + (lot.lotNo || lot.id) + '</td>'
@@ -250,7 +251,7 @@ Pages.Dashboard = (() => {
             : '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#E0E0E0;border-radius:2px;overflow:hidden"><div style="height:100%;border-radius:2px;background:' + barColor + ';width:' + pct + '%"></div></div><span style="font-size:14px;font-weight:500;color:' + pctColor + ';min-width:28px;text-align:right">' + pct + '%</span></div>')
         + '</td>'
         + '<td style="' + S.tdm + ';color:' + (isUpcoming ? 'var(--tx2)' : 'var(--tx3)') + ';font-weight:' + (isUpcoming ? '500' : '400') + '">' + (lot.inDate || '—') + '</td>'
-        + '<td style="' + S.tdm + ';color:' + (st === 'overdue' ? '#dc2626' : isDone ? 'var(--tx)' : 'var(--tx3)') + '">' + targetCell + '</td>'
+        + '<td style="' + S.tdm + '">' + targetCell + '</td>'
         + '<td style="' + S.td + '">' + statusCell + ' ' + unpaidBadge + '</td>'
         + '</tr>';
     }).join('');
@@ -262,7 +263,7 @@ Pages.Dashboard = (() => {
       + '<th style="' + S.th + '">LOT 번호</th><th style="' + S.th + '">지역</th><th style="' + S.th + '">사업</th><th style="' + S.th + '">고객사</th>'
       + '<th style="' + S.thr + '">입고량</th><th style="' + S.thr + '">처리</th><th style="' + S.thr + '">잔량</th>'
       + '<th style="' + S.th + ';min-width:120px">진행률</th>'
-      + '<th style="' + S.th + '">입고일</th><th style="' + S.th + '">목표완료</th><th style="' + S.th + '">상태</th>'
+      + '<th style="' + S.th + '">입고일</th><th style="' + S.th + '"><div style="font-size:10px;color:var(--tx3);font-weight:500;line-height:1.3">목표완료일</div><div style="line-height:1.3">실완료일</div></th><th style="' + S.th + '">상태</th>'
       + '</tr></thead>'
       + '<tbody>' + rows + '</tbody>'
       + '</table></div>';
