@@ -9,7 +9,7 @@
 
 Pages.Progress = (() => {
 
-  let _charts    = { SG: null, HK: null };
+  let _chart     = null;
   let _openLotId = null;
 
   // ── 상태 헬퍼 (입고예정 추가) ──────────────────────────────
@@ -34,10 +34,16 @@ Pages.Progress = (() => {
   }
 
   // ── 차트 ───────────────────────────────────────────────────
+  function _toggleArrayFilter(key, value) {
+    const cur = Store.getChartFilter()[key] || [];
+    const next = cur.includes(value) ? cur.filter(x => x !== value) : [...cur, value];
+    Store.setChartFilter({ [key]: next });
+    return next;
+  }
+
   function setChartBiz(el) {
-    document.querySelectorAll('[data-chart-biz]').forEach(e => e.classList.remove('on'));
-    el.classList.add('on');
-    Store.setChartFilter({ biz: el.dataset.chartBiz });
+    const next = _toggleArrayFilter('biz', el.dataset.chartBiz);
+    el.classList.toggle('on', next.includes(el.dataset.chartBiz));
     renderChart();
   }
 
@@ -49,9 +55,8 @@ Pages.Progress = (() => {
   }
 
   function setChartMetric(el) {
-    document.querySelectorAll('[data-chart-metric]').forEach(e => e.classList.remove('on'));
-    el.classList.add('on');
-    Store.setChartFilter({ metric: el.dataset.chartMetric });
+    const next = _toggleArrayFilter('metric', el.dataset.chartMetric);
+    el.classList.toggle('on', next.includes(el.dataset.chartMetric));
     renderChart();
   }
 
@@ -102,36 +107,48 @@ Pages.Progress = (() => {
       .reduce((s, r) => s + parseNumber(r.proc), 0);
   }
 
-  function _renderCountryChart(co) {
-    const canvas = document.getElementById('monthly-chart-' + co.toLowerCase()); if (!canvas) return;
-    const { biz: chartBiz, year: chartYear, metric = 'qty' } = Store.getChartFilter();
+  const METRIC_LABEL = { qty: '입고', proc: '처리', backlog: '잔량' };
+
+  function _datasetStyle(metric, color) {
+    if (metric === 'qty')     return { backgroundColor: color + '33', borderColor: color, borderWidth: 2 };
+    if (metric === 'proc')    return { backgroundColor: color + 'BB', borderColor: color, borderWidth: 2 };
+    return { backgroundColor: color + '00', borderColor: color, borderWidth: 2, borderDash: [4, 3] };
+  }
+
+  function renderChart() {
+    const canvas = document.getElementById('monthly-chart'); if (!canvas) return;
+    const { biz: bizArr = [], country: co = 'SG', year: chartYear, metric: metricArr = [] } = Store.getChartFilter();
     const lots    = Store.getLots();
     const dailies = Store.getDailies();
     const months  = [];
     for (let m = 1; m <= 12; m++) months.push(chartYear + '-' + String(m).padStart(2, '0'));
     const labels = months.map(m => m.slice(5) + '월');
 
-    const bizList = chartBiz ? [chartBiz] : CONFIG.BIZ_LIST;
-    const datasets = bizList.map(b => ({
-      label: CONFIG.BIZ_LABELS[b],
-      data: months.map(m => _monthValue(metric, b, co, m, lots, dailies)),
-      backgroundColor: CONFIG.BIZ_COLORS[b]+'55',
-      borderColor: CONFIG.BIZ_COLORS[b],
-      borderWidth: 2, borderRadius: 3, borderSkipped: false,
-    }));
+    const datasets = [];
+    bizArr.forEach(b => {
+      metricArr.forEach(mt => {
+        const color = CONFIG.BIZ_COLORS[b] || '#888';
+        datasets.push({
+          label: `${b} ${METRIC_LABEL[mt] || mt}`,
+          data: months.map(m => _monthValue(mt, b, co, m, lots, dailies)),
+          borderRadius: 3, borderSkipped: false,
+          ..._datasetStyle(mt, color),
+        });
+      });
+    });
 
-    if (_charts[co]) { _charts[co].destroy(); _charts[co] = null; }
+    if (_chart) { _chart.destroy(); _chart = null; }
     const datalabelsPlugin = window.ChartDataLabels ? [window.ChartDataLabels] : [];
-    _charts[co] = new Chart(canvas, {
+    _chart = new Chart(canvas, {
       type: 'bar', plugins: datalabelsPlugin,
       data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { display: datasets.length > 1, labels: { font:{size:11}, color:'#888', boxWidth:10, padding:12 } },
+          legend: { display: datasets.length > 0, labels: { font:{size:11}, color:'#888', boxWidth:10, padding:12 } },
           tooltip: { mode:'index', intersect:false, callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${formatNumber(ctx.raw)}` } },
           datalabels: {
-            display: ctx => { const v=ctx.dataset.data[ctx.dataIndex]; const mx=Math.max(...ctx.dataset.data); return v>0&&(mx===0||v/mx>0.03); },
+            display: ctx => { const v=ctx.dataset.data[ctx.dataIndex]; const all=ctx.chart.data.datasets.flatMap(d=>d.data); const mx=Math.max(...all); return v>0&&(mx===0||v/mx>0.04); },
             anchor:'end', align:'end', color:'#555', font:{size:10,weight:'600',family:'DM Mono,monospace'},
             formatter: v => v>0?formatNumber(v):'', offset:2, clip:false,
           },
@@ -144,13 +161,13 @@ Pages.Progress = (() => {
       },
     });
 
-    // 요약 카드 (BIZ별)
+    // 요약 카드 (선택된 BIZ만, 선택된 국가 기준)
     const yearStr = String(chartYear);
     const curM    = currentMonth();
     const lots_co    = lots.filter(l => l.country === co);
     const dailies_co = dailies.filter(r => r.country === co);
 
-    const items = CONFIG.BIZ_LIST.map(b => {
+    const items = bizArr.map(b => {
       const yearInflow  = lots_co.filter(l => l.biz===b && String(l.inDate||'').startsWith(yearStr)).reduce((s,l)=>s+parseNumber(l.qty), 0);
       const yearProc    = dailies_co.filter(r => r.biz===b && String(r.date||'').startsWith(yearStr)).reduce((s,r)=>s+parseNumber(r.proc), 0);
       const monthInflow = lots_co.filter(l => l.biz===b && String(l.inDate||'').startsWith(curM)).reduce((s,l)=>s+parseNumber(l.qty), 0);
@@ -161,35 +178,35 @@ Pages.Progress = (() => {
       return { label: CONFIG.BIZ_LABELS[b], color: CONFIG.BIZ_COLORS[b], yearInflow, yearProc, monthInflow, monthProc, backlog };
     });
 
-    const totEl = document.getElementById('monthly-totals-' + co.toLowerCase());
+    const totEl = document.getElementById('monthly-totals');
     if (totEl) {
-      totEl.style.gridTemplateColumns = `repeat(${items.length},1fr)`;
-      totEl.innerHTML = items.map(it => `
-        <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
-          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:8px;text-align:center">${it.label}</div>
-          <div style="text-align:center;margin-bottom:8px">
-            <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--tx)">${formatNumber(it.backlog)}</div>
-            <div style="font-size:10px;color:var(--tx3);margin-top:1px">잔량 (누적)</div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);padding-top:6px;border-top:1px solid var(--bd)">
-            <span>이달 입고</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthInflow)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-top:2px">
-            <span>이달 처리</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthProc)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">
-            <span>${chartYear} 입고</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearInflow)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:2px">
-            <span>${chartYear} 처리</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearProc)}</span>
-          </div>
-        </div>`).join('');
+      if (!items.length) {
+        totEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--tx3);font-size:12px;padding:16px">선택된 사업이 없습니다</div>';
+        totEl.style.gridTemplateColumns = '1fr';
+      } else {
+        totEl.style.gridTemplateColumns = `repeat(${items.length},1fr)`;
+        totEl.innerHTML = items.map(it => `
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:8px;text-align:center">${it.label}</div>
+            <div style="text-align:center;margin-bottom:8px">
+              <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--tx)">${formatNumber(it.backlog)}</div>
+              <div style="font-size:10px;color:var(--tx3);margin-top:1px">잔량 (누적)</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);padding-top:6px;border-top:1px solid var(--bd)">
+              <span>이달 입고</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthInflow)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-top:2px">
+              <span>이달 처리</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthProc)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">
+              <span>${chartYear} 입고</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearInflow)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:2px">
+              <span>${chartYear} 처리</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearProc)}</span>
+            </div>
+          </div>`).join('');
+      }
     }
-  }
-
-  function renderChart() {
-    _renderCountryChart('SG');
-    _renderCountryChart('HK');
   }
 
   // ── 필터 ───────────────────────────────────────────────────
