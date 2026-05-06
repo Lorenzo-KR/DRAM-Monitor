@@ -50,11 +50,23 @@ const Api = (() => {
       try {
         const res  = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
         const data = await res.json();
-        if (data?.error) console.warn('[Api] Save error:', data.error);
+        if (data?.error) {
+          console.warn('[Api] Save error:', data.error);
+          UI.toast('저장 오류: ' + data.error + ' — 새로고침 후 다시 입력해 주세요', true);
+        }
       } catch (err) {
         console.warn('[Api] Network error:', err.message);
         // 1회 재시도
-        try { await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) }); } catch (_) {}
+        try {
+          const res2  = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
+          const data2 = await res2.json();
+          if (data2?.error) {
+            console.warn('[Api] Save error (retry):', data2.error);
+            UI.toast('저장 실패 — 새로고침 후 다시 입력해 주세요', true);
+          }
+        } catch (_) {
+          UI.toast('저장 실패 (네트워크 오류) — 새로고침 후 다시 입력해 주세요', true);
+        }
       }
     }
 
@@ -69,6 +81,37 @@ const Api = (() => {
     _timer = setTimeout(_flush, 300);
     // 즉시 성공으로 반환 — UI는 낙관적으로 먼저 업데이트
     return Promise.resolve({ success: true, optimistic: true });
+  }
+
+  // ── Direct (non-queued) fetch ───────────────────────────────
+  async function _sendNow(body) {
+    _setStatus('saving');
+    try {
+      const res  = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+      _setStatus('ok');
+      if (data?.error) {
+        UI.toast('저장 실패: ' + data.error + ' — 다시 시도해 주세요', true);
+        return { success: false, error: data.error };
+      }
+      return { success: true, data };
+    } catch (err) {
+      // 1회 재시도
+      try {
+        const res2  = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
+        const data2 = await res2.json();
+        _setStatus('ok');
+        if (data2?.error) {
+          UI.toast('저장 실패: ' + data2.error + ' — 다시 시도해 주세요', true);
+          return { success: false, error: data2.error };
+        }
+        return { success: true, data: data2 };
+      } catch (_) {
+        _setStatus('err');
+        UI.toast('저장 실패 (네트워크 오류) — 인터넷 연결을 확인하고 다시 시도해 주세요', true);
+        return { success: false, error: 'network' };
+      }
+    }
   }
 
   // ── Public API ──────────────────────────────────────────────
@@ -100,10 +143,18 @@ const Api = (() => {
     },
 
     /**
-     * 새 행 추가
+     * 새 행 추가 (낙관적 큐 — 즉시 반환)
      */
     append(sheet, data) {
       return _enqueue({ action: 'append', sheet, data, token: Auth.getToken() });
+    },
+
+    /**
+     * 새 행 추가 (동기 — 서버 응답 확인 후 반환)
+     * 중요 데이터(일별 처리) 저장에 사용
+     */
+    appendNow(sheet, data) {
+      return _sendNow({ action: 'append', sheet, data, token: Auth.getToken() });
     },
 
     /**

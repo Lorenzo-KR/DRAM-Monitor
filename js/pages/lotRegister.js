@@ -131,6 +131,15 @@ Pages.LotRegister = (() => {
       actualDone:   '',
     };
 
+    const saveBtn = document.getElementById('lr-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '등록 중...'; }
+
+    const result = await Api.appendNow(CONFIG.SHEETS.LOTS, record);
+
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'LOT 등록'; }
+
+    if (!result.success) return;
+
     Store.upsertLot(record);
     _renderTable();
     clearForm();
@@ -138,7 +147,6 @@ Pages.LotRegister = (() => {
     ok.style.display = 'inline';
     setTimeout(() => ok.style.display = 'none', 1500);
     UI.toast(CONFIG.BIZ_LABELS[_biz] + ' LOT 등록');
-    Api.append(CONFIG.SHEETS.LOTS, record);
     Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
   }
 

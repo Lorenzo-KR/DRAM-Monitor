@@ -183,6 +183,15 @@ Pages.DailyInput = (() => {
 
     const record = { id: Date.now(), date, lotId: lot.id, lotNo: lot.lotNo || lot.id, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew, note: document.getElementById('dp-note-' + lotId)?.value || '', done: isDone ? '1' : '0' };
 
+    const saveBtn = document.querySelector(`[onclick*="saveDaily(${lotId})"]`);
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+
+    const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
+
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+
+    if (!result.success) return;
+
     Store.upsertDaily(record);
     if (isDone) {
       const updated = { ...lot, done: '1', actualDone: date };
@@ -194,7 +203,6 @@ Pages.DailyInput = (() => {
     if (ok) { ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 1500); }
     UI.toast('저장됨');
     render();
-    Api.append(CONFIG.SHEETS.DAILY, record);
     Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date} 처리 ${formatNumber(proc)}개${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''} | 누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)}`);
   }
 
