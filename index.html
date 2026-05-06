@@ -171,26 +171,39 @@
         <div class="ph"><h1>LOT 진행 현황</h1></div>
         <button class="btn xl sm" onclick="Pages.Progress.exportExcel()">↓ 엑셀</button>
       </div>
-      <!-- 월별 처리량 차트 -->
+      <!-- 월별 입고/처리량 차트 -->
       <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">월별 처리량</div>
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">월별 입고/처리량</div>
           <div style="display:flex;gap:4px" id="chart-year-tabs"></div>
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <span style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">지표</span>
+          <button class="pill pa on" data-chart-metric="qty" onclick="Pages.Progress.setChartMetric(this)">입고량</button>
+          <button class="pill" data-chart-metric="proc" onclick="Pages.Progress.setChartMetric(this)">처리량</button>
+          <button class="pill" data-chart-metric="backlog" onclick="Pages.Progress.setChartMetric(this)">잔량</button>
+        </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-          <span style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">지역</span>
-          <button class="pill pa on" data-chart-co="" onclick="Pages.Progress.setChartCountry(this)">전체</button>
-          <button class="pill phk" data-chart-co="HK" onclick="Pages.Progress.setChartCountry(this)">홍콩</button>
-          <button class="pill psg" data-chart-co="SG" onclick="Pages.Progress.setChartCountry(this)">싱가포르</button>
-          <span class="sep"></span>
           <span style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">사업</span>
           <button class="pill pa on" data-chart-biz="" onclick="Pages.Progress.setChartBiz(this)">전체</button>
           <button class="pill pd" data-chart-biz="DRAM" onclick="Pages.Progress.setChartBiz(this)">DRAM</button>
           <button class="pill ps" data-chart-biz="SSD" onclick="Pages.Progress.setChartBiz(this)">SSD</button>
           <button class="pill pm" data-chart-biz="MID" onclick="Pages.Progress.setChartBiz(this)">MID</button>
         </div>
-        <div style="position:relative;height:220px"><canvas id="monthly-chart"></canvas></div>
-        <div id="monthly-totals" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px"></div>
+
+        <!-- 싱가포르 -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">싱가포르 (SG)</div>
+          <div style="position:relative;height:200px"><canvas id="monthly-chart-sg"></canvas></div>
+          <div id="monthly-totals-sg" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px"></div>
+        </div>
+
+        <!-- 홍콩 -->
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:6px">홍콩 (HK)</div>
+          <div style="position:relative;height:200px"><canvas id="monthly-chart-hk"></canvas></div>
+          <div id="monthly-totals-hk" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px"></div>
+        </div>
       </div>
       <!-- 필터 -->
       <div class="fb">
