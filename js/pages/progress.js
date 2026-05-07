@@ -108,10 +108,29 @@ Pages.Progress = (() => {
   }
 
   const METRIC_LABEL = { qty: '입고', proc: '처리', backlog: '잔량' };
+  const _patternCache = {};
+
+  function _stripePattern(color) {
+    if (_patternCache[color]) return _patternCache[color];
+    const cv = document.createElement('canvas');
+    cv.width = 10; cv.height = 10;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = color + '1A';
+    ctx.fillRect(0, 0, 10, 10);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = -5; i <= 15; i += 5) {
+      ctx.moveTo(i, -2);
+      ctx.lineTo(i + 12, 12);
+    }
+    ctx.stroke();
+    return _patternCache[color] = ctx.createPattern(cv, 'repeat');
+  }
 
   function _datasetStyle(metric, color) {
-    if (metric === 'qty')     return { backgroundColor: color + '33', borderColor: color, borderWidth: 2 };
-    if (metric === 'proc')    return { backgroundColor: color + 'BB', borderColor: color, borderWidth: 2 };
+    if (metric === 'qty')     return { backgroundColor: _stripePattern(color), borderColor: color, borderWidth: 2 };
+    if (metric === 'proc')    return { backgroundColor: color, borderColor: color, borderWidth: 2 };
     return { backgroundColor: color + '00', borderColor: color, borderWidth: 2, borderDash: [4, 3] };
   }
 
