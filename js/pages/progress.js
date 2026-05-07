@@ -129,8 +129,8 @@ Pages.Progress = (() => {
   }
 
   function _datasetStyle(metric, color) {
-    if (metric === 'qty')     return { backgroundColor: _stripePattern(color), borderColor: color, borderWidth: 2 };
-    if (metric === 'proc')    return { backgroundColor: color, borderColor: color, borderWidth: 2 };
+    if (metric === 'qty')     return { backgroundColor: color, borderColor: color, borderWidth: 2 };
+    if (metric === 'proc')    return { backgroundColor: _stripePattern(color), borderColor: color, borderWidth: 2 };
     return { backgroundColor: color + '00', borderColor: color, borderWidth: 2, borderDash: [4, 3] };
   }
 
