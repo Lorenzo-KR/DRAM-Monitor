@@ -22,7 +22,6 @@ const Store = (() => {
   // UI filter state
   let _lotFilter    = { biz: '', country: '', status: '' };
   let _chartFilter  = { biz: ['DRAM', 'SSD'], country: 'SG', year: new Date().getFullYear(), metric: ['qty', 'proc'] };
-  let _countryPeriod = 'month';
 
   // ── Getters ────────────────────────────────────────────────
   return {
@@ -88,9 +87,6 @@ const Store = (() => {
 
     getChartFilter:   () => ({ ..._chartFilter }),
     setChartFilter:   (patch) => { _chartFilter = { ..._chartFilter, ...patch }; },
-
-    getCountryPeriod: () => _countryPeriod,
-    setCountryPeriod: (p) => { _countryPeriod = p; },
 
     // ── Settings (서버 저장, 기기 무관) ──────────────────────
     getSetting(key) {
