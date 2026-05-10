@@ -114,7 +114,7 @@ Pages.Report = (() => {
         totalQty += qty; totalAmt += amt;
         const rowBg1 = inv1Sorted.indexOf(l) % 2 === 1 ? 'background:#FAFAFA' : '';
         return `<tr style="${rowBg1}">
-          ${TDM(l.lotNo || l.id, 'left', '')}
+          ${TDM(l.lotNo || l.id, 'left', 'word-break:break-all;overflow-wrap:anywhere')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
           ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
