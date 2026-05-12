@@ -774,6 +774,79 @@ Pages.KpiTarget = (() => {
       + colgroup + buildHeader()
       + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + annualPctRow + '</tbody></table>';
 
+    // ── 표 ③: 사업별 월 진척률 (연간 계획 대비) ────────────
+    // 셀 = 그 사업 그 월 실적(USD) / 그 사업 연간 계획(USD) × 100
+    // 진척률 = 그 사업 누적 실적(USD) / 그 사업 연간 계획(USD) × 100
+    // 누적/목표금액 = 표시 단위(억원/M USD/M SGD)로 변환된 누적 실적 / 연간 목표
+    const tgtByBizView = (isEcMode || !showEbit) ? revByBiz : ebitByBiz;
+    function _tgtRawToUsd(raw) {
+      if (isEcMode) return raw * 1000000;
+      return hasRate ? raw * 100000000 / _exchangeRate : 0;
+    }
+    var bizTgtAnnualRaw = {}, bizTgtAnnualUsd = {}, bizActCumUsd = {};
+    var totalTgtAnnualRaw = 0, totalTgtAnnualUsd = 0, totalActCumUsd = 0;
+    bizList.forEach(function(b) {
+      var raw = (tgtByBizView[b] || []).reduce(function(s, v) { return s + (v || 0); }, 0);
+      var usd = _tgtRawToUsd(raw);
+      bizTgtAnnualRaw[b] = raw;
+      bizTgtAnnualUsd[b] = usd;
+      var cum = 0;
+      for (var i = 0; i <= curMonIdx && i < 12; i++) cum += (actByBizView[b][i] || 0);
+      bizActCumUsd[b] = cum;
+      totalTgtAnnualRaw += raw;
+      totalTgtAnnualUsd += usd;
+      totalActCumUsd   += cum;
+    });
+
+    var progressRows = bizList.map(function(b) {
+      var tgtUsd = bizTgtAnnualUsd[b];
+      var cells = MONTHS.map(function(_, i) {
+        if (i > curMonIdx) return '<td style="' + TS.td + '">-</td>';
+        if (!tgtUsd || tgtUsd <= 0) return '<td style="' + TS.td + '">-</td>';
+        var actUsd = actByBizView[b][i] || 0;
+        var p = actUsd / tgtUsd * 100;
+        return '<td style="' + TS.td + '">' + p.toFixed(1) + '%</td>';
+      }).join('');
+      var pctCum  = tgtUsd > 0 ? bizActCumUsd[b] / tgtUsd * 100 : 0;
+      var actDisp = fmtActual(bizActCumUsd[b]);
+      var tgtDisp = fmtRolling(bizTgtAnnualRaw[b]);
+      return '<tr>'
+        + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+        + cells
+        + '<td style="' + TS.tdSum + '">' + (tgtUsd > 0 ? pctCum.toFixed(1) + '%' : '-') + '</td>'
+        + '<td style="' + TS.tdSum + '">' + (actDisp || '-') + ' / ' + (tgtDisp || '-') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    var progressSumRow = '<tr style="background:#F2F2F2">'
+      + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
+      + MONTHS.map(function(_, i) {
+          if (i > curMonIdx) return '<td style="' + TS.tdSum + '">-</td>';
+          if (!totalTgtAnnualUsd || totalTgtAnnualUsd <= 0) return '<td style="' + TS.tdSum + '">-</td>';
+          var monthActUsd = 0;
+          bizList.forEach(function(b) { monthActUsd += actByBizView[b][i] || 0; });
+          var p = monthActUsd / totalTgtAnnualUsd * 100;
+          return '<td style="' + TS.tdSum + '">' + p.toFixed(1) + '%</td>';
+        }).join('')
+      + '<td style="' + TS.tdSum + '">' + (totalTgtAnnualUsd > 0 ? (totalActCumUsd / totalTgtAnnualUsd * 100).toFixed(1) + '%' : '-') + '</td>'
+      + '<td style="' + TS.tdSum + '">' + (fmtActual(totalActCumUsd) || '-') + ' / ' + (fmtRolling(totalTgtAnnualRaw) || '-') + '</td>'
+      + '</tr>';
+
+    const progressColgroup = '<colgroup><col style="width:100px">'
+      + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
+      + '<col style="width:74px"><col style="width:150px"></colgroup>';
+
+    const progressHeader = '<thead><tr>'
+      + '<th style="' + TS.thBiz + '">Biz</th>'
+      + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
+      + '<th style="' + TS.thSum + '">진척률</th>'
+      + '<th style="' + TS.thSum + ';width:150px">누적/목표금액</th>'
+      + '</tr></thead>';
+
+    const progressTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+      + progressColgroup + progressHeader
+      + '<tbody>' + progressRows + progressSumRow + '</tbody></table>';
+
     // ── 엑셀 내보내기 데이터 캐시 (raw 값 저장) ─────────────
     _exportCache = {
       year: _year, mode, isEcMode,
@@ -808,7 +881,13 @@ Pages.KpiTarget = (() => {
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
       + '② ' + (showEbit ? 'EBIT 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
       + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
+      + '</div>'
+      + '<div style="margin-bottom:4px">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
+      + '③ 사업별 월 진척률 — ' + (showEbit ? 'EBIT' : '매출') + ' 기준 (연간 계획 대비)'
+      + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + progressTable + '</div>'
       + '</div>';
 
     // ================================================================
