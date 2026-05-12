@@ -804,13 +804,12 @@ Pages.KpiTarget = (() => {
       totalTgtCumUsd   += tcum;
     });
 
-    // 신호등 셀 HTML (±2%p 기준) — 앞섬=파랑, 정상=노랑, 뒤짐=빨강 (녹색 미사용)
+    // 계획대비 셀 HTML — 양수=빨강, 음수=파랑 (텍스트 색만)
     function _paceCell(diff) {
       if (diff === null) return '<td style="' + TS.tdSum + '">-</td>';
-      var color = Math.abs(diff) < 2 ? '#EAB308' : (diff >= 2 ? '#1B4F8A' : '#DC2626');
-      var dot   = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:5px;vertical-align:middle"></span>';
+      var color = diff > 0 ? '#DC2626' : (diff < 0 ? '#1B4F8A' : '#222');
       var sign  = diff > 0 ? '+' : '';
-      return '<td style="' + TS.tdSum + ';white-space:nowrap">' + dot + sign + diff.toFixed(1) + '%p</td>';
+      return '<td style="' + TS.tdSum + ';color:' + color + ';white-space:nowrap">' + sign + diff.toFixed(1) + '%p</td>';
     }
 
     var progressRows = bizList.map(function(b) {
@@ -1794,8 +1793,6 @@ Pages.KpiTarget = (() => {
         pctBlue:   'FF1B4F8A',
         pctRedBg:  'FFFEF2F2',
         pctRed:    'FFDC2626',
-        paceOnBg:  'FFFEF9C3',
-        paceOn:    'FFA16207',
         bd:        'FFCCCCCC',
         bdDark:    'FF999999',
       };
@@ -1853,15 +1850,15 @@ Pages.KpiTarget = (() => {
                 // 누적진척률
                 ws[addr] = mkCell(v, bg, C.tx, true, 'right');
               } else if (c === 15) {
-                // 계획대비 (신호등)
+                // 계획대비: + 빨강, - 파랑 (텍스트 색만)
                 if (pace === null || pace === undefined || v === '') {
                   ws[addr] = mkCell(v, bg, C.tx, false, 'right');
-                } else if (Math.abs(pace) < 2) {
-                  ws[addr] = mkCell(v, C.paceOnBg,  C.paceOn,  true, 'right');
-                } else if (pace >= 2) {
-                  ws[addr] = mkCell(v, C.pctBlueBg, C.pctBlue, true, 'right');
+                } else if (pace > 0) {
+                  ws[addr] = mkCell(v, bg, C.pctRed,  true, 'right');
+                } else if (pace < 0) {
+                  ws[addr] = mkCell(v, bg, C.pctBlue, true, 'right');
                 } else {
-                  ws[addr] = mkCell(v, C.pctRedBg,  C.pctRed,  true, 'right');
+                  ws[addr] = mkCell(v, bg, C.tx, false, 'right');
                 }
               } else if (c === 16) {
                 // 누적/연간목표금액
