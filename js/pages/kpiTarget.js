@@ -839,8 +839,8 @@ Pages.KpiTarget = (() => {
     const progressHeader = '<thead><tr>'
       + '<th style="' + TS.thBiz + '">Biz</th>'
       + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
-      + '<th style="' + TS.thSum + '">진척률</th>'
-      + '<th style="' + TS.thSum + ';width:150px">누적/목표금액</th>'
+      + '<th style="' + TS.thSum + '">누적진척률</th>'
+      + '<th style="' + TS.thSum + ';width:150px">누적/연간목표금액 (' + unitLabel + ')</th>'
       + '</tr></thead>';
 
     const progressTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
