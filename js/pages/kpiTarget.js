@@ -804,10 +804,10 @@ Pages.KpiTarget = (() => {
       totalTgtCumUsd   += tcum;
     });
 
-    // 신호등 셀 HTML (±2%p 기준)
+    // 신호등 셀 HTML (±2%p 기준) — 앞섬=파랑, 정상=노랑, 뒤짐=빨강 (녹색 미사용)
     function _paceCell(diff) {
       if (diff === null) return '<td style="' + TS.tdSum + '">-</td>';
-      var color = Math.abs(diff) < 2 ? '#EAB308' : (diff >= 2 ? '#22C55E' : '#DC2626');
+      var color = Math.abs(diff) < 2 ? '#EAB308' : (diff >= 2 ? '#1B4F8A' : '#DC2626');
       var dot   = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:5px;vertical-align:middle"></span>';
       var sign  = diff > 0 ? '+' : '';
       return '<td style="' + TS.tdSum + ';white-space:nowrap">' + dot + sign + diff.toFixed(1) + '%p</td>';
@@ -1789,12 +1789,13 @@ Pages.KpiTarget = (() => {
         titleBg:   'FFD9E8F7',
         tx:        'FF222222',
         txSub:     'FF888888',
-        green:     'FF1A6B3A',
         red:       'FFA32D2D',
         pctBlueBg: 'FFEBF2FB',
         pctBlue:   'FF1B4F8A',
         pctRedBg:  'FFFEF2F2',
         pctRed:    'FFDC2626',
+        paceOnBg:  'FFFEF9C3',
+        paceOn:    'FFA16207',
         bd:        'FFCCCCCC',
         bdDark:    'FF999999',
       };
@@ -1820,7 +1821,7 @@ Pages.KpiTarget = (() => {
         const ws = {};
         let maxC = 0;
         rows.forEach(function(row, r) {
-          const { type, vals, nums, pcts } = row;
+          const { type, vals, nums, pcts, pace } = row;
           const last = vals.length - 1;
           if (last > maxC) maxC = last;
           vals.forEach(function(v, c) {
@@ -1838,12 +1839,40 @@ Pages.KpiTarget = (() => {
               ws[addr] = mkCell(v, C.sumBg, c === 1 ? C.txSub : C.tx, true,  c === 0 ? 'center' : align);
             } else if (type === 'cum') {
               ws[addr] = mkCell(v, C.cumBg, c === 1 ? C.txSub : C.tx, false, c === 0 ? 'center' : align);
+            } else if (type === 'prog' || type === 'progSum') {
+              const isSum = type === 'progSum';
+              const bg = isSum ? C.sumBg : C.white;
+              if (c === 0) {
+                ws[addr] = mkCell(v, bg, C.tx, isSum, isSum ? 'center' : 'left');
+              } else if (c === 1) {
+                ws[addr] = mkCell(v, bg, C.txSub, false, 'left');
+              } else if (c >= 2 && c <= 13) {
+                // 월별 %
+                ws[addr] = mkCell(v, bg, C.tx, isSum, 'right');
+              } else if (c === 14) {
+                // 누적진척률
+                ws[addr] = mkCell(v, bg, C.tx, true, 'right');
+              } else if (c === 15) {
+                // 계획대비 (신호등)
+                if (pace === null || pace === undefined || v === '') {
+                  ws[addr] = mkCell(v, bg, C.tx, false, 'right');
+                } else if (Math.abs(pace) < 2) {
+                  ws[addr] = mkCell(v, C.paceOnBg,  C.paceOn,  true, 'right');
+                } else if (pace >= 2) {
+                  ws[addr] = mkCell(v, C.pctBlueBg, C.pctBlue, true, 'right');
+                } else {
+                  ws[addr] = mkCell(v, C.pctRedBg,  C.pctRed,  true, 'right');
+                }
+              } else if (c === 16) {
+                // 누적/연간목표금액
+                ws[addr] = mkCell(v, bg, C.tx, isSum, 'right');
+              }
             } else if (type === 'diff') {
               if (isLbl) {
                 ws[addr] = mkCell(v, C.white, c === 1 ? C.txSub : C.tx, c === 0, 'left');
               } else {
                 const n  = nums ? nums[c] : null;
-                const fg = (n === null || n === undefined) ? C.tx : (n >= 0 ? C.green : C.red);
+                const fg = (n === null || n === undefined) ? C.tx : (n < 0 ? C.pctBlue : (n > 0 ? C.pctRed : C.tx));
                 ws[addr] = mkCell(v, C.white, fg, n !== null && v !== '', 'right');
               }
             } else if (type === 'pct') {
@@ -1866,13 +1895,22 @@ Pages.KpiTarget = (() => {
           });
         });
         ws['!ref']  = XLSX.utils.encode_range({ s: { r:0, c:0 }, e: { r: rows.length-1, c: maxC } });
-        ws['!cols'] = [{ wch: 22 }, { wch: 11 }].concat(Array(maxC - 1).fill({ wch: 9 }));
+        const colsArr = [];
+        for (let c = 0; c <= maxC; c++) {
+          if      (c === 0)  colsArr.push({ wch: 22 });
+          else if (c === 1)  colsArr.push({ wch: 11 });
+          else if (c === 14) colsArr.push({ wch: 11 });   // 연간합계 / 누적진척률
+          else if (c === 15) colsArr.push({ wch: 12 });   // 계획대비
+          else if (c === 16) colsArr.push({ wch: 22 });   // 누적/연간목표금액
+          else               colsArr.push({ wch: 9  });
+        }
+        ws['!cols'] = colsArr;
         ws['!rows'] = rows.map(function() { return { hpt: 16 }; });
         return ws;
       }
 
-      // Build rows for one data section (계획 + 실적 + diff/pct)
-      function buildSection(sectionLabel, planByBiz, planSumR, planCumR, actByBiz, actSumUsd, actCumUsd, planConv, actConv) {
+      // Build rows for one data section (계획 + 실적 + diff/pct + 진척률)
+      function buildSection(sectionLabel, planByBiz, planSumR, planCumR, actByBiz, actSumUsd, actCumUsd, planConv, actConv, unitLabel) {
         const safe = v => (v === null || v === undefined) ? 0 : v;
         const fmtD = v => {
           if (v === null || isNaN(v)) return '';
@@ -1981,18 +2019,90 @@ Pages.KpiTarget = (() => {
             .concat(MONS.map((_, i) => (i > curMonIdx || !planTotal) ? '' : fmtP(safe(actCumD[i]) / planTotal * 100)))
             .concat([planTotal > 0 ? fmtP(actCumFinal / planTotal * 100) : '']) });
 
+        // ── ③ 사업별 월 진척률 (연간 계획 대비) ──────────────
+        // 셀 = (사업 그 월 실적 / 사업 연간 계획) × 100, 디스플레이 단위 비율은 단위 무관
+        rows.push({ type: 'blank', vals: Array(17).fill('') });
+        rows.push({ type: 'title', vals: [sectionLabel + ' 진척률 (연간 계획 대비)'].concat(Array(16).fill('')) });
+        rows.push({ type: 'header', vals:
+          ['사업', '구분'].concat(MONS).concat(['누적진척률', '계획대비', '누적/연간목표금액 (' + (unitLabel || '') + ')']) });
+
+        const fmtPp = function(p) {
+          if (p === null || p === undefined) return '';
+          return (p > 0 ? '+' : '') + p.toFixed(1) + '%p';
+        };
+        const fmtPctOnly = function(p) {
+          if (p === null || p === undefined) return '';
+          return p.toFixed(1) + '%';
+        };
+        const fmtPair = function(a, b) {
+          const aStr = a > 0 ? a.toFixed(2) : '—';
+          const bStr = b > 0 ? b.toFixed(2) : '—';
+          return aStr + ' / ' + bStr;
+        };
+
+        bizList.forEach(function(b) {
+          const bizAnnualPlan = planByBizD[b].reduce(function(s, v) { return s + safe(v); }, 0);
+          const monthCells = MONS.map(function(_, i) {
+            if (i > curMonIdx) return '';
+            if (!bizAnnualPlan) return '';
+            const a = safe(actByBizD[b][i]);
+            return (a / bizAnnualPlan * 100).toFixed(1) + '%';
+          });
+          let cumAct = 0, cumPlan = 0;
+          for (let i = 0; i <= curMonIdx && i < 12; i++) {
+            cumAct  += safe(actByBizD[b][i]);
+            cumPlan += safe(planByBizD[b][i]);
+          }
+          const pctCum    = bizAnnualPlan > 0 ? cumAct  / bizAnnualPlan * 100 : null;
+          const pctExpect = bizAnnualPlan > 0 ? cumPlan / bizAnnualPlan * 100 : null;
+          const paceDiff  = (pctCum !== null && pctExpect !== null) ? pctCum - pctExpect : null;
+          rows.push({
+            type: 'prog',
+            pace: paceDiff,
+            vals: [CONFIG.BIZ_LABELS[b] || b, '실적']
+              .concat(monthCells)
+              .concat([fmtPctOnly(pctCum), fmtPp(paceDiff), fmtPair(cumAct, bizAnnualPlan)])
+          });
+        });
+
+        // 진척률 합계
+        let totalAct = 0, totalPlan = 0, totalCumPlan = 0;
+        bizList.forEach(function(b) {
+          totalPlan += planByBizD[b].reduce(function(s, v) { return s + safe(v); }, 0);
+          for (let i = 0; i <= curMonIdx && i < 12; i++) {
+            totalAct     += safe(actByBizD[b][i]);
+            totalCumPlan += safe(planByBizD[b][i]);
+          }
+        });
+        const totalPctCum = totalPlan > 0 ? totalAct     / totalPlan * 100 : null;
+        const totalPctExp = totalPlan > 0 ? totalCumPlan / totalPlan * 100 : null;
+        const totalPace   = (totalPctCum !== null && totalPctExp !== null) ? totalPctCum - totalPctExp : null;
+        const totalMonthCells = MONS.map(function(_, i) {
+          if (i > curMonIdx) return '';
+          if (!totalPlan) return '';
+          const monthAct = bizList.reduce(function(s, b) { return s + safe(actByBizD[b][i]); }, 0);
+          return (monthAct / totalPlan * 100).toFixed(1) + '%';
+        });
+        rows.push({
+          type: 'progSum',
+          pace: totalPace,
+          vals: ['합계', '']
+            .concat(totalMonthCells)
+            .concat([fmtPctOnly(totalPctCum), fmtPp(totalPace), fmtPair(totalAct, totalPlan)])
+        });
+
         return rows;
       }
 
       // Build full sheet rows (매출 + EBIT sections separated by 2 blank rows)
-      function buildUnitSheet(planConv, actConv) {
-        let rows = buildSection('매출', revByBiz, revSumRaw, revCumRaw, actRevByBiz, actRevSumUsd, actRevCumUsd, planConv, actConv);
+      function buildUnitSheet(planConv, actConv, unitLabel) {
+        let rows = buildSection('매출', revByBiz, revSumRaw, revCumRaw, actRevByBiz, actRevSumUsd, actRevCumUsd, planConv, actConv, unitLabel);
         if (!isEcMode) {
           rows = rows.concat([
             { type: 'blank', vals: Array(NCOLS).fill('') },
             { type: 'blank', vals: Array(NCOLS).fill('') },
           ]);
-          rows = rows.concat(buildSection('EBIT', ebitByBiz, ebitSumRaw, ebitCumRaw, actEbitByBiz, actEbitSumUsd, actEbitCumUsd, planConv, actConv));
+          rows = rows.concat(buildSection('EBIT', ebitByBiz, ebitSumRaw, ebitCumRaw, actEbitByBiz, actEbitSumUsd, actEbitCumUsd, planConv, actConv, unitLabel));
         }
         return buildWs(rows);
       }
@@ -2001,15 +2111,15 @@ Pages.KpiTarget = (() => {
 
       if (isEcMode) {
         // EC mode: M USD only (plan already in M USD)
-        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v, v => v / 1e6), 'M USD');
+        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v, v => v / 1e6, 'M USD'), 'M USD');
       } else if (hasRate) {
         // KPI mode: 3 sheets
-        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v * 1e8 / rate / 1e6, v => v / 1e6),           'M USD');
-        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v,                     v => v * rate / 1e8),    '억원');
-        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v * 1e8 / rate * SGD_RATE / 1e6, v => v * SGD_RATE / 1e6), 'M SGD');
+        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v * 1e8 / rate / 1e6, v => v / 1e6,                              'M USD'), 'M USD');
+        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v,                     v => v * rate / 1e8,                       '억원'),  '억원');
+        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v * 1e8 / rate * SGD_RATE / 1e6, v => v * SGD_RATE / 1e6, 'M SGD'), 'M SGD');
       } else {
         // KPI mode without exchange rate: 억원 plan only
-        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v, () => null), '억원');
+        XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v, () => null, '억원'), '억원');
       }
 
       XLSX.writeFile(wb, 'KPI_' + year + '_' + _modeLabel(mode) + '.xlsx');
