@@ -1914,9 +1914,15 @@ Pages.KpiTarget = (() => {
           return (v > 0 ? '+' : '') + v.toFixed(2);
         };
         const fmtP = pct => {
+          // 달성률(누적, 계획대비) 표기 — 100% 대비 ±%
           if (pct === null) return '';
           const d = pct - 100;
           return (d > 0 ? '+' : '') + d.toFixed(1) + '%';
+        };
+        const fmtPctRaw = pct => {
+          // 연간 달성률 — 원래 % (예: 42.3%)
+          if (pct === null) return '';
+          return pct.toFixed(1) + '%';
         };
         const fmtV = v => (v === null || v <= 0) ? '—' : v.toFixed(2);
 
@@ -2007,14 +2013,14 @@ Pages.KpiTarget = (() => {
             .concat(MONS.map((_, i) => (i > curMonIdx || !planCumD[i]) ? '' : fmtP(safe(actCumD[i]) / planCumD[i] * 100)))
             .concat([planCumFin > 0 ? fmtP(actCumFinal / planCumFin * 100) : '']) });
 
-        // annual pct (달성률 vs 연간계획)
+        // annual pct (달성률 vs 연간계획) — HTML과 동일하게 raw % 표시
         const annPctNums = [null, null]
           .concat(MONS.map((_, i) => (i > curMonIdx || !planTotal) ? null : safe(actCumD[i]) / planTotal * 100))
           .concat([planTotal > 0 ? actCumFinal / planTotal * 100 : null]);
         rows.push({ type: 'pct', pcts: annPctNums, vals:
           ['연간 달성률 (계획대비)', '']
-            .concat(MONS.map((_, i) => (i > curMonIdx || !planTotal) ? '' : fmtP(safe(actCumD[i]) / planTotal * 100)))
-            .concat([planTotal > 0 ? fmtP(actCumFinal / planTotal * 100) : '']) });
+            .concat(MONS.map((_, i) => (i > curMonIdx || !planTotal) ? '' : fmtPctRaw(safe(actCumD[i]) / planTotal * 100)))
+            .concat([planTotal > 0 ? fmtPctRaw(actCumFinal / planTotal * 100) : '']) });
 
         // ── ③ 사업별 월 진척률 (연간 계획 대비) ──────────────
         // 셀 = (사업 그 월 실적 / 사업 연간 계획) × 100, 디스플레이 단위 비율은 단위 무관
