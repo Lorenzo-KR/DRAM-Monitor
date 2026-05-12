@@ -2122,7 +2122,10 @@ Pages.KpiTarget = (() => {
         XLSX.utils.book_append_sheet(wb, buildUnitSheet(v => v, () => null, '억원'), '억원');
       }
 
-      XLSX.writeFile(wb, 'KPI_' + year + '_' + _modeLabel(mode) + '.xlsx');
+      const _d = new Date();
+      const _pad = n => String(n).padStart(2, '0');
+      const _stamp = _d.getFullYear() + _pad(_d.getMonth() + 1) + _pad(_d.getDate()) + '_' + _pad(_d.getHours()) + _pad(_d.getMinutes());
+      XLSX.writeFile(wb, 'KPI_' + year + '_' + _modeLabel(mode) + '_' + _stamp + '.xlsx');
     },
 
     updateExchangeRate(val) {
