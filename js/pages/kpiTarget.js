@@ -777,26 +777,41 @@ Pages.KpiTarget = (() => {
     // ── 표 ③: 사업별 월 진척률 (연간 계획 대비) ────────────
     // 셀 = 그 사업 그 월 실적(USD) / 그 사업 연간 계획(USD) × 100
     // 진척률 = 그 사업 누적 실적(USD) / 그 사업 연간 계획(USD) × 100
-    // 누적/목표금액 = 표시 단위(억원/M USD/M SGD)로 변환된 누적 실적 / 연간 목표
+    // 계획대비 = 진척률 - 예상진척률(현재월까지 누적계획/연간계획). 신호등 ±2%p
+    // 누적/연간목표금액 = 표시 단위(억원/M USD/M SGD)로 변환된 누적 실적 / 연간 목표
     const tgtByBizView = (isEcMode || !showEbit) ? revByBiz : ebitByBiz;
     function _tgtRawToUsd(raw) {
       if (isEcMode) return raw * 1000000;
       return hasRate ? raw * 100000000 / _exchangeRate : 0;
     }
-    var bizTgtAnnualRaw = {}, bizTgtAnnualUsd = {}, bizActCumUsd = {};
-    var totalTgtAnnualRaw = 0, totalTgtAnnualUsd = 0, totalActCumUsd = 0;
+    var bizTgtAnnualRaw = {}, bizTgtAnnualUsd = {}, bizActCumUsd = {}, bizTgtCumUsd = {};
+    var totalTgtAnnualRaw = 0, totalTgtAnnualUsd = 0, totalActCumUsd = 0, totalTgtCumUsd = 0;
     bizList.forEach(function(b) {
       var raw = (tgtByBizView[b] || []).reduce(function(s, v) { return s + (v || 0); }, 0);
       var usd = _tgtRawToUsd(raw);
       bizTgtAnnualRaw[b] = raw;
       bizTgtAnnualUsd[b] = usd;
-      var cum = 0;
-      for (var i = 0; i <= curMonIdx && i < 12; i++) cum += (actByBizView[b][i] || 0);
+      var cum = 0, tcum = 0;
+      for (var i = 0; i <= curMonIdx && i < 12; i++) {
+        cum  += (actByBizView[b][i] || 0);
+        tcum += _tgtRawToUsd(tgtByBizView[b][i] || 0);
+      }
       bizActCumUsd[b] = cum;
+      bizTgtCumUsd[b] = tcum;
       totalTgtAnnualRaw += raw;
       totalTgtAnnualUsd += usd;
       totalActCumUsd   += cum;
+      totalTgtCumUsd   += tcum;
     });
+
+    // 신호등 셀 HTML (±2%p 기준)
+    function _paceCell(diff) {
+      if (diff === null) return '<td style="' + TS.tdSum + '">-</td>';
+      var color = Math.abs(diff) < 2 ? '#EAB308' : (diff >= 2 ? '#22C55E' : '#DC2626');
+      var dot   = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:5px;vertical-align:middle"></span>';
+      var sign  = diff > 0 ? '+' : '';
+      return '<td style="' + TS.tdSum + ';white-space:nowrap">' + dot + sign + diff.toFixed(1) + '%p</td>';
+    }
 
     var progressRows = bizList.map(function(b) {
       var tgtUsd = bizTgtAnnualUsd[b];
@@ -807,16 +822,23 @@ Pages.KpiTarget = (() => {
         var p = actUsd / tgtUsd * 100;
         return '<td style="' + TS.td + '">' + p.toFixed(1) + '%</td>';
       }).join('');
-      var pctCum  = tgtUsd > 0 ? bizActCumUsd[b] / tgtUsd * 100 : 0;
+      var pctCum     = tgtUsd > 0 ? bizActCumUsd[b] / tgtUsd * 100 : null;
+      var pctExpect  = tgtUsd > 0 ? bizTgtCumUsd[b] / tgtUsd * 100 : null;
+      var paceDiff   = (pctCum !== null && pctExpect !== null) ? (pctCum - pctExpect) : null;
       var actDisp = fmtActual(bizActCumUsd[b]);
       var tgtDisp = fmtRolling(bizTgtAnnualRaw[b]);
       return '<tr>'
         + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
         + cells
-        + '<td style="' + TS.tdSum + '">' + (tgtUsd > 0 ? pctCum.toFixed(1) + '%' : '-') + '</td>'
+        + '<td style="' + TS.tdSum + '">' + (pctCum !== null ? pctCum.toFixed(1) + '%' : '-') + '</td>'
+        + _paceCell(paceDiff)
         + '<td style="' + TS.tdSum + '">' + (actDisp || '-') + ' / ' + (tgtDisp || '-') + '</td>'
         + '</tr>';
     }).join('');
+
+    var totalPctCum    = totalTgtAnnualUsd > 0 ? totalActCumUsd / totalTgtAnnualUsd * 100 : null;
+    var totalPctExpect = totalTgtAnnualUsd > 0 ? totalTgtCumUsd / totalTgtAnnualUsd * 100 : null;
+    var totalPaceDiff  = (totalPctCum !== null && totalPctExpect !== null) ? (totalPctCum - totalPctExpect) : null;
 
     var progressSumRow = '<tr style="background:#F2F2F2">'
       + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
@@ -828,18 +850,20 @@ Pages.KpiTarget = (() => {
           var p = monthActUsd / totalTgtAnnualUsd * 100;
           return '<td style="' + TS.tdSum + '">' + p.toFixed(1) + '%</td>';
         }).join('')
-      + '<td style="' + TS.tdSum + '">' + (totalTgtAnnualUsd > 0 ? (totalActCumUsd / totalTgtAnnualUsd * 100).toFixed(1) + '%' : '-') + '</td>'
+      + '<td style="' + TS.tdSum + '">' + (totalPctCum !== null ? totalPctCum.toFixed(1) + '%' : '-') + '</td>'
+      + _paceCell(totalPaceDiff)
       + '<td style="' + TS.tdSum + '">' + (fmtActual(totalActCumUsd) || '-') + ' / ' + (fmtRolling(totalTgtAnnualRaw) || '-') + '</td>'
       + '</tr>';
 
     const progressColgroup = '<colgroup><col style="width:100px">'
       + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
-      + '<col style="width:74px"><col style="width:150px"></colgroup>';
+      + '<col style="width:74px"><col style="width:90px"><col style="width:150px"></colgroup>';
 
     const progressHeader = '<thead><tr>'
       + '<th style="' + TS.thBiz + '">Biz</th>'
       + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
       + '<th style="' + TS.thSum + '">누적진척률</th>'
+      + '<th style="' + TS.thSum + ';width:90px">계획대비</th>'
       + '<th style="' + TS.thSum + ';width:150px">누적/연간목표금액 (' + unitLabel + ')</th>'
       + '</tr></thead>';
 
