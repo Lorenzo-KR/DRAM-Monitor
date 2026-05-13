@@ -81,8 +81,9 @@ Pages.BizHistory = (() => {
     const startDate = allDates[0] || '';
     const operatingDays = startDate ? diffDays(startDate, today()) : 0;
 
-    // KPI 달성률 (현재년도)
-    const year = new Date().getFullYear();
+    // KPI 달성률 (현재년도) + 계획대비 페이스 차이
+    const year   = new Date().getFullYear();
+    const curMon = new Date().getMonth() + 1;
     const kpi = Pages.KpiTarget.getBizSummary
       ? Pages.KpiTarget.getBizSummary(year, _biz)
       : null;
@@ -94,17 +95,43 @@ Pages.BizHistory = (() => {
         ? `목표 ${(kpi.tgt/100000000).toFixed(2)}억원 · 실적 ${(kpi.act/100000000).toFixed(2)}억원`
         : `목표 $${formatNumber(Math.round(kpi.tgt))} · 실적 $${formatNumber(Math.round(kpi.act))}`;
 
+    // 계획대비 페이스 — 누적계획 vs 실적을 연간목표 기준 %p로
+    // paceDiff > 0: 계획보다 앞섬 (빨강), < 0: 뒤쳐짐 (파랑) — KPI탭 컬러규약과 동일
+    let pacePct = null, expectPct = null, paceLabel = '', paceColor = '';
+    if (kpi && kpi.tgt > 0 && Pages.KpiTarget.getMonthlyTarget) {
+      let cumPlan = 0;
+      for (let m = 1; m <= curMon; m++) {
+        cumPlan += Pages.KpiTarget.getMonthlyTarget(year, _biz, m) || 0;
+      }
+      expectPct = (cumPlan / kpi.tgt) * 100;
+      pacePct = kpiPct - expectPct;
+      if (Math.abs(pacePct) < 2) {
+        paceColor = '#6B6762'; paceLabel = '계획 부합';
+      } else if (pacePct > 0) {
+        paceColor = '#DC2626'; paceLabel = '앞섬';
+      } else {
+        paceColor = '#1B4F8A'; paceLabel = '뒤처짐';
+      }
+    }
+    const paceHtml = pacePct === null ? '' : `
+      <div style="margin-top:6px;display:inline-flex;align-items:center;gap:5px;padding:2px 7px;border-radius:4px;background:${paceColor}14;border:1px solid ${paceColor}33">
+        <span style="font-size:11px;font-weight:600;color:${paceColor}">${pacePct >= 0 ? '+' : ''}${pacePct.toFixed(1)}%p</span>
+        <span style="font-size:10px;color:${paceColor};opacity:.85">${paceLabel}</span>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${curMon}월 누적 계획 ${expectPct.toFixed(1)}% 대비</div>`;
+
     // 매출 (인보이스 합계)
     const revTotal = invoices.reduce((s, i) => s + parseNumber(i.total || i.amount), 0);
     const paidTotal = invoices
       .filter(i => i.status === 'paid')
       .reduce((s, i) => s + parseNumber(i.total || i.amount), 0);
 
-    function card(label, value, sub, color) {
+    function card(label, value, sub, color, extra) {
       return `<div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 18px">
         <div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${label}</div>
         <div style="font-size:22px;font-weight:600;line-height:1.1;${color?'color:'+color:''}">${value}</div>
         <div style="font-size:12px;color:var(--tx2);margin-top:6px">${sub || '&nbsp;'}</div>
+        ${extra || ''}
       </div>`;
     }
 
@@ -124,7 +151,8 @@ Pages.BizHistory = (() => {
       ${card(`${year} KPI`,
         kpiText,
         kpiSub,
-        kpiPct === null ? '' : kpiPct >= 100 ? '#0F6E56' : kpiPct >= 70 ? 'var(--tx)' : 'var(--tx2)'
+        kpiPct === null ? '' : kpiPct >= 100 ? '#0F6E56' : kpiPct >= 70 ? 'var(--tx)' : 'var(--tx2)',
+        paceHtml
       )}
     </div>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">
