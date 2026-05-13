@@ -20,6 +20,7 @@ const Nav = (() => {
     dash:       { render: () => Pages.Dashboard.render() },
     biweekly:   { render: () => Pages.Biweekly.render() },
     progress:   { render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
+    bizhistory: { render: () => Pages.BizHistory.render() },
     revenue:    { render: () => { Pages.Revenue.setMode('year'); } },
     kpitarget:  { render: () => Pages.KpiTarget.render() },
     verify:     { render: () => Pages.Verify.render() },
