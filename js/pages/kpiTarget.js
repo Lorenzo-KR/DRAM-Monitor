@@ -1031,19 +1031,24 @@ Pages.KpiTarget = (() => {
   return {
     selectYear, switchBiz,
 
-    getTarget:        (year,biz)        => _getTarget(year,biz,'kpi67'),
-    getTotalTarget:   (year)            => _getTotalTarget(year,'kpi67'),
-    getMonthlyTarget: (year,biz,month)  => _getMonthlyTarget(year,biz,month,'kpi67'),
-    loadFromSettings: ()                => _loadFromSettings(),
+    getTarget:        (year,biz,mode='kpi67')        => _getTarget(year,biz,mode),
+    getTotalTarget:   (year,mode='kpi67')            => _getTotalTarget(year,mode),
+    getMonthlyTarget: (year,biz,month,mode='kpi67')  => _getMonthlyTarget(year,biz,month,mode),
+    getExchangeRate:  ()                             => _exchangeRate,
+    getFactor:        (biz)                          => _getFactor(biz),
+    getActualProfit:  (year,biz)                     => _getActualProfit(year,biz),
+    loadFromSettings: ()                             => _loadFromSettings(),
 
-    getBizSummary(year, biz) {
+    getBizSummary(year, biz, mode='kpi67') {
       const hasRate = _exchangeRate > 0;
-      const tgt = _getTarget(year, biz, 'kpi67');
+      const tgt = _getTarget(year, biz, mode);
       if (!tgt) return null;
       const actUsd = _getActualProfit(year, biz);
       const actKrw = hasRate ? actUsd * _exchangeRate : null;
-      const pct = tgt > 0 ? Math.min(100, Math.round((hasRate ? actKrw : actUsd) / tgt * 100)) : 0;
-      return { tgt, act: hasRate ? actKrw : actUsd, pct, hasRate };
+      const actInTgtUnit = hasRate ? actKrw : actUsd;
+      const pctRaw = tgt > 0 ? actInTgtUnit / tgt * 100 : 0;
+      const pct = Math.min(100, Math.round(pctRaw));
+      return { tgt, act: actInTgtUnit, actUsd, pct, pctRaw, hasRate };
     },
 
     getKpiSummary(year) {
