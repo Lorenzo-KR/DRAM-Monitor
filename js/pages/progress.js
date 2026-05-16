@@ -136,7 +136,8 @@ Pages.Progress = (() => {
 
   function renderChart() {
     const canvas = document.getElementById('monthly-chart'); if (!canvas) return;
-    const { biz: bizArr = [], country: co = 'SG', year: chartYear, metric: metricArr = [] } = Store.getChartFilter();
+    let { biz: bizArr = [], country: co = 'SG', year: chartYear, metric: metricArr = [] } = Store.getChartFilter();
+    metricArr = metricArr.filter(m => m !== 'backlog');
     const lots    = Store.getLots();
     const dailies = Store.getDailies();
     const months  = [];
@@ -191,10 +192,7 @@ Pages.Progress = (() => {
       const yearProc    = dailies_co.filter(r => r.biz===b && String(r.date||'').startsWith(yearStr)).reduce((s,r)=>s+parseNumber(r.proc), 0);
       const monthInflow = lots_co.filter(l => l.biz===b && String(l.inDate||'').startsWith(curM)).reduce((s,l)=>s+parseNumber(l.qty), 0);
       const monthProc   = dailies_co.filter(r => r.biz===b && String(r.date||'').startsWith(curM)).reduce((s,r)=>s+parseNumber(r.proc), 0);
-      const totInflow   = lots_co.filter(l => l.biz===b).reduce((s,l)=>s+parseNumber(l.qty), 0);
-      const totProc     = dailies_co.filter(r => r.biz===b).reduce((s,r)=>s+parseNumber(r.proc), 0);
-      const backlog     = Math.max(0, totInflow - totProc);
-      return { label: CONFIG.BIZ_LABELS[b], color: CONFIG.BIZ_COLORS[b], yearInflow, yearProc, monthInflow, monthProc, backlog };
+      return { label: CONFIG.BIZ_LABELS[b], color: CONFIG.BIZ_COLORS[b], yearInflow, yearProc, monthInflow, monthProc };
     });
 
     const totEl = document.getElementById('monthly-totals');
@@ -204,24 +202,16 @@ Pages.Progress = (() => {
         totEl.style.gridTemplateColumns = '1fr';
       } else {
         totEl.style.gridTemplateColumns = `repeat(${items.length},1fr)`;
+        const cell = 'font-family:var(--font-mono);font-size:12px;text-align:right;padding:2px 0';
+        const lab  = 'font-size:10px;color:var(--tx3);text-align:right;padding:2px 0';
+        const row  = 'font-size:11px;color:var(--tx3);padding:2px 0';
         totEl.innerHTML = items.map(it => `
-          <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
-            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:8px;text-align:center">${it.label}</div>
-            <div style="text-align:center;margin-bottom:8px">
-              <div style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--tx)">${formatNumber(it.backlog)}</div>
-              <div style="font-size:10px;color:var(--tx3);margin-top:1px">잔량 (누적)</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);padding-top:6px;border-top:1px solid var(--bd)">
-              <span>이달 입고</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthInflow)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx2);margin-top:2px">
-              <span>이달 처리</span><span style="font-family:var(--font-mono);font-weight:600">${formatNumber(it.monthProc)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">
-              <span>${chartYear} 입고</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearInflow)}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:2px">
-              <span>${chartYear} 처리</span><span style="font-family:var(--font-mono)">${formatNumber(it.yearProc)}</span>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 12px">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:6px">${it.label}</div>
+            <div style="display:grid;grid-template-columns:32px 1fr 1fr;column-gap:8px;align-items:baseline">
+              <span></span><span style="${lab}">입고</span><span style="${lab}">처리</span>
+              <span style="${row}">이달</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthInflow)}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthProc)}</span>
+              <span style="${row}">연간</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearInflow)}</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearProc)}</span>
             </div>
           </div>`).join('');
       }
@@ -268,7 +258,6 @@ Pages.Progress = (() => {
         <td style="${tdS}">
           <input id="nl-qty" type="number" placeholder="수량" min="0" style="${inp};width:100%;padding:3px 6px;text-align:right">
         </td>
-        <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
         <td style="${tdS};color:var(--tx3);font-size:14px;text-align:right">—</td>
         <td style="${tdS};color:var(--tx3);font-size:14px">—</td>
         <td style="${tdS}">
@@ -395,7 +384,6 @@ Pages.Progress = (() => {
           <td class="td-l td-ellipsis" style="color:#000;font-weight:${rowBold?'600':'400'}">${lot.customerName||'—'}</td>
           <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:#000">${formatNumber(qty)}</td>
           <td class="td-num" style="color:#000">${st==='upcoming'?'—':formatNumber(cum)}</td>
-          <td class="td-num" style="color:${rem>0?'#92400e':'#000'};font-weight:${rem>0?'600':'400'}">${formatNumber(rem)}</td>
           <td class="td-c">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#888">입고예정</span>`
@@ -419,7 +407,7 @@ Pages.Progress = (() => {
         </tr>`;
 
       const expandRow = isOpen ? `
-        <tr><td colspan="14" style="padding:0;border-bottom:1px solid var(--bd)">
+        <tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--bd)">
           ${_renderExpand(lot, dailies)}
         </td></tr>` : '';
 
@@ -438,7 +426,6 @@ Pages.Progress = (() => {
             <col style="width:60px">
             <col style="width:70px">
             <col style="width:70px">
-            <col style="width:70px">
             <col style="width:80px">
             <col style="width:92px">
             <col style="width:92px">
@@ -448,13 +435,13 @@ Pages.Progress = (() => {
           </colgroup>
           <thead><tr>
             ${TH('')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
-            ${TH('수량','right')}${TH('처리','right')}${TH('잔량','right')}
+            ${TH('수량','right')}${TH('처리','right')}
             ${TH('진행률')}
             ${TH('입고일')}${TH('완료예정일')}${TH('완료일')}${TH('상태')}${TH('수정/삭제')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
-            ${rows || '<tr><td colspan="14" class="td-c">LOT가 없습니다</td></tr>'}
+            ${rows || '<tr><td colspan="13" class="td-c">LOT가 없습니다</td></tr>'}
           </tbody>
         </table>
       </div></div>`;
