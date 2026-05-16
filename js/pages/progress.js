@@ -322,8 +322,42 @@ Pages.Progress = (() => {
     Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
   }
 
+  // ── 현재 진행 중 요약 (싱가포르 / 홍콩) ───────────────────
+  function _renderActiveSummary() {
+    const el = document.getElementById('pr-active-summary'); if (!el) return;
+    const allLots = Store.getLots();
+    const BIZ = ['DRAM', 'SSD', 'MID'];
+    const COS = [
+      { code: 'SG', label: '싱가포르' },
+      { code: 'HK', label: '홍콩' },
+    ];
+
+    const cards = COS.map(co => {
+      const lotsCo = allLots.filter(l => l.country === co.code && _status(l) === 'inprog');
+      const total  = lotsCo.length;
+      const counts = BIZ.map(b => ({ biz: b, n: lotsCo.filter(l => l.biz === b).length }));
+      const items  = counts.map(c => `
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span style="font-size:11px;font-weight:700;color:${CONFIG.BIZ_COLORS[c.biz]};letter-spacing:.04em">${c.biz}</span>
+          <span style="font-family:var(--font-mono);font-size:16px;font-weight:600;color:${c.n>0?'var(--tx)':'var(--tx3)'}">${c.n}</span>
+          <span style="font-size:11px;color:var(--tx3)">건</span>
+        </div>`).join('');
+      return `
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 18px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+            <span style="font-size:13px;font-weight:600;color:var(--tx)">${co.label}</span>
+            <span><span style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--tx)">${total}</span><span style="font-size:11px;color:var(--tx3);margin-left:3px">건 진행 중</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(${BIZ.length},1fr);gap:8px">${items}</div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${cards}</div>`;
+  }
+
   // ── 메인 렌더 ──────────────────────────────────────────────
   function render() {
+    _renderActiveSummary();
     const filter  = Store.getLotFilter();
     const dailies = Store.getDailies();
     let lots      = Store.getLots();
