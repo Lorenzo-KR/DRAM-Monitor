@@ -94,17 +94,48 @@ Pages.Dashboard = (() => {
     const krwSub = revKrw > 0 ? '≈ ₩' + formatNumber(Math.round(revKrw)) : '';
     const fxInputHtml = '<input type="number" id="fx-rate-input" value="' + fxRate + '" min="1" step="1" style="width:70px;padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;font-family:var(--font-mono);background:var(--card);color:var(--tx);text-align:right" onkeydown="if(event.key===\'Enter\'){Store.setSetting(\'usd_krw\',this.value);Pages.Dashboard.render();}"><button onclick="Store.setSetting(\'usd_krw\',document.getElementById(\'fx-rate-input\').value);Pages.Dashboard.render();" style="padding:3px 8px;font-size:11px;font-weight:500;border:1px solid var(--bd2);border-radius:5px;background:var(--tx);color:#fff;cursor:pointer;white-space:nowrap;font-family:\'Pretendard\',sans-serif">적용</button>';
 
-    const kpiSum   = Pages.KpiTarget.getKpiSummary(year);
-    const kpiPct   = kpiSum.pct;
-    const kpiColor = kpiPct === null ? '' : kpiPct >= 100 ? 'var(--tx)' : kpiPct >= 70 ? 'var(--tx2)' : 'var(--tx3)';
-    const fmt      = function(v) { return kpiSum.hasRate ? (v / 100000000).toFixed(2) + '억원' : '$' + formatNumberShort(Math.round(v)); };
-    const kpiCardHtml = kpiSum.tgt === null
-      ? kpiCard('KPI 달성률', '—', '목표 미설정')
-      : kpiCard('KPI 달성률', kpiPct + '%', '목표 ' + fmt(kpiSum.tgt), kpiColor, '실적 ' + fmt(kpiSum.act));
+    // ── Job Orders: 국가별 진행중 + 완료 숫자 ──────────────────
+    const hkActive = kpi.activeLots.filter(function(l){ return l.country === 'HK'; }).length;
+    const sgActive = kpi.activeLots.filter(function(l){ return l.country === 'SG'; }).length;
+    const joValueHtml = '<div style="display:flex;align-items:baseline;gap:12px">'
+      + '<div style="display:flex;align-items:baseline;gap:4px"><span style="font-size:11px;color:var(--tx3);font-weight:500">HK</span><span style="font-size:22px;font-weight:600;line-height:1;color:#1B4F8A">' + hkActive + '</span></div>'
+      + '<div style="display:flex;align-items:baseline;gap:4px"><span style="font-size:11px;color:var(--tx3);font-weight:500">SG</span><span style="font-size:22px;font-weight:600;line-height:1;color:#0F6E56">' + sgActive + '</span></div>'
+      + '</div>';
+    const joCardHtml = '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
+      + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">Job Orders <span style="font-weight:400;text-transform:none;letter-spacing:0">진행중</span></div>'
+      + joValueHtml
+      + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">완료 ' + kpi.doneLots.length + '</div>'
+      + '</div>';
 
-    return '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px">'
-      + kpiCard('Job Orders', kpi.lots.length, '진행 ' + kpi.activeLots.length + ' · 완료 ' + kpi.doneLots.length)
-      + kpiCard('Total Units', formatNumber(kpi.totalUnits), '처리 ' + formatNumber(kpi.totalProc) + ' · 잔량 ' + formatNumber(Math.max(0, kpi.totalUnits - kpi.totalProc)))
+    // ── KPI 달성률: 103억 기준 + ahead/behind ─────────────────
+    const KPI_TARGET_KRW = 10_300_000_000;
+    const actKrw = kpi.revenue.total * fxRate;
+    const pct    = KPI_TARGET_KRW > 0 ? (actKrw / KPI_TARGET_KRW * 100) : 0;
+    // 연간 기준 pace
+    const yStart = new Date(year, 0, 1);
+    const yEnd   = new Date(year + 1, 0, 1);
+    const now    = new Date();
+    const daysElapsed = Math.max(1, Math.floor((now - yStart) / 86400000) + 1);
+    const totalDays   = Math.round((yEnd - yStart) / 86400000);
+    const pacePct     = daysElapsed / totalDays * 100;
+    const diffPct     = pct - pacePct;
+    const isAhead     = diffPct >= 0;
+    const trackColor  = isAhead ? '#1A7F37' : '#dc2626';
+    const trackLabel  = isAhead ? 'ahead' : 'behind';
+    const pctColor    = pct >= 100 ? '#1A7F37' : isAhead ? 'var(--tx)' : 'var(--tx2)';
+    const kpiValueHtml = pct.toFixed(1) + '%';
+    const kpiSubHtml   = '목표 ' + (KPI_TARGET_KRW / 100000000).toFixed(0) + '억 · 실적 ' + (actKrw / 100000000).toFixed(2) + '억';
+    const kpiExtraHtml = '<span style="color:' + trackColor + ';font-weight:600">' + trackLabel + ' ' + Math.abs(diffPct).toFixed(1) + '%</span>'
+      + ' <span style="color:var(--tx3)">(pace ' + pacePct.toFixed(1) + '%)</span>';
+    const kpiCardHtml = '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
+      + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
+      + '<div style="font-size:22px;font-weight:600;line-height:1;color:' + pctColor + '">' + kpiValueHtml + '</div>'
+      + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">' + kpiSubHtml + '</div>'
+      + '<div style="font-size:11px;margin-top:2px">' + kpiExtraHtml + '</div>'
+      + '</div>';
+
+    return '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px">'
+      + joCardHtml
       + kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', 'var(--tx)', krwSub, fxInputHtml)
       + kpiCard('Active Orders', kpi.activeLots.length, kpi.overdueLots.length > 0 ? '지연 ' + kpi.overdueLots.length + '건 포함' : '지연 없음', 'var(--tx2)')
       + kpiCardHtml
@@ -182,6 +213,127 @@ Pages.Dashboard = (() => {
           ? barCard('KPI 목표 달성', String(year) + '년', kpiBars, kpiFooter)
           : barCard('KPI 목표 달성', '', '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">목표 미설정 — <a href="#" onclick="Nav.go(\'kpitarget\');return false;" style="color:var(--navy)">설정하기</a></div>'))
       + '</div>';
+  }
+
+  // ── 주간 보고(입고/처리/매출) ─────────────────────────────
+  // 주차 정의: 1주=1~7일, 2주=8~14일, 3주=15~21일, 4주=22~28일, 5주=29~말일
+  function _weekOfMonth(dateStr) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return null;
+    const day = parseInt(dateStr.slice(8, 10), 10);
+    return Math.min(5, Math.floor((day - 1) / 7) + 1);
+  }
+
+  function _renderWeeklyTable() {
+    const now      = new Date();
+    const year     = now.getFullYear();
+    const month    = now.getMonth() + 1;
+    const ymPref   = year + '-' + String(month).padStart(2, '0');
+    const lots     = Store.getLots();
+    const dailies  = Store.getDailies();
+    const invoices = Store.getInvoices();
+
+    // 이번 달 마지막 날로 주차 수 결정
+    const lastDay  = new Date(year, month, 0).getDate();
+    const numWeeks = Math.min(5, Math.floor((lastDay - 1) / 7) + 1);
+    const weeks    = Array.from({ length: numWeeks }, function(_, i){ return i + 1; });
+
+    // 사업: 실제 데이터 있는 것만
+    const usedBiz = new Set();
+    lots.forEach(function(l){ if (l.inDate && String(l.inDate).startsWith(ymPref)) usedBiz.add(l.biz); });
+    dailies.forEach(function(d){ if (d.date && String(d.date).startsWith(ymPref)) usedBiz.add(d.biz); });
+    invoices.forEach(function(i){ if (i.date && String(i.date).startsWith(ymPref)) usedBiz.add(i.biz); });
+    const bizList = CONFIG.BIZ_LIST.filter(function(b){ return usedBiz.has(b); });
+
+    function sumIn(biz, wk) {
+      return lots.filter(function(l){
+        return l.biz === biz && String(l.inDate || '').startsWith(ymPref) && _weekOfMonth(l.inDate) === wk;
+      }).reduce(function(s, l){ return s + parseNumber(l.qty); }, 0);
+    }
+    function sumProc(biz, wk) {
+      return dailies.filter(function(d){
+        return d.biz === biz && String(d.date || '').startsWith(ymPref) && _weekOfMonth(d.date) === wk;
+      }).reduce(function(s, d){ return s + parseNumber(d.proc); }, 0);
+    }
+    function sumRev(biz, wk) {
+      return invoices.filter(function(i){
+        return i.biz === biz && String(i.date || '').startsWith(ymPref) && _weekOfMonth(i.date) === wk;
+      }).reduce(function(s, i){ return s + parseNumber(i.total || i.amount); }, 0);
+    }
+
+    const BD = '#E0E0E0', HBG = '#F0F0F0', HBG2 = '#E4ECF5', SBG = '#F7F7F7';
+    const TH = function(t, extra){ extra = extra || ''; return '<th style="padding:6px 8px;text-align:center;font-size:11px;font-weight:600;color:#222;background:' + HBG + ';border:1px solid ' + BD + ';white-space:nowrap;' + extra + '">' + t + '</th>'; };
+    const THM = function(t, bg, colspan){ bg = bg || HBG; colspan = colspan || 1; return '<th colspan="' + colspan + '" style="padding:6px 8px;text-align:center;font-size:11px;font-weight:600;color:#222;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + t + '</th>'; };
+    const TD = function(v, bg, color, fw){ bg = bg || '#fff'; color = color || '#333'; fw = fw || '400'; return '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:' + fw + ';color:' + color + ';background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + v + '</td>'; };
+    const TDL = function(t, bg){ bg = bg || HBG; return '<td style="padding:6px 10px;text-align:left;font-size:12px;font-weight:600;color:#1D1D1F;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + t + '</td>'; };
+
+    // 헤더: 주차 그룹 (입고/처리/매출 3열씩)
+    const curWk = _weekOfMonth(today());
+    const weekHeader = weeks.map(function(w){
+      const isCur = w === curWk;
+      return THM(month + '월 ' + w + '주', isCur ? HBG2 : HBG, 3);
+    }).join('') + THM('월 합계', SBG, 3);
+
+    const subHeader = weeks.map(function(w){
+      const isCur = w === curWk;
+      const bg = isCur ? HBG2 : HBG;
+      return THM('입고', bg) + THM('처리', bg) + THM('매출', bg);
+    }).join('') + THM('입고', SBG) + THM('처리', SBG) + THM('매출', SBG);
+
+    // 데이터 행
+    const colTotals = Array(weeks.length * 3 + 3).fill(0);
+    const dataRows = bizList.map(function(biz){
+      let rowIn = 0, rowProc = 0, rowRev = 0;
+      const cells = weeks.map(function(w, wi){
+        const vIn   = sumIn(biz, w);
+        const vProc = sumProc(biz, w);
+        const vRev  = sumRev(biz, w);
+        rowIn   += vIn;   rowProc += vProc; rowRev += vRev;
+        colTotals[wi * 3]     += vIn;
+        colTotals[wi * 3 + 1] += vProc;
+        colTotals[wi * 3 + 2] += vRev;
+        const isCur = w === curWk;
+        const bg    = isCur ? '#F4F8FC' : '#fff';
+        return TD(vIn > 0 ? formatNumber(vIn) : '—', bg, vIn > 0 ? '#333' : '#C7C7CC')
+             + TD(vProc > 0 ? formatNumber(vProc) : '—', bg, vProc > 0 ? (CONFIG.BIZ_COLORS[biz] || '#333') : '#C7C7CC')
+             + TD(vRev > 0 ? '$' + formatNumber(Math.round(vRev)) : '—', bg, vRev > 0 ? '#1A6B3A' : '#C7C7CC');
+      }).join('');
+      colTotals[weeks.length * 3]     += rowIn;
+      colTotals[weeks.length * 3 + 1] += rowProc;
+      colTotals[weeks.length * 3 + 2] += rowRev;
+      const totCells = TD(rowIn > 0 ? formatNumber(rowIn) : '—', SBG, rowIn > 0 ? '#1D1D1F' : '#C7C7CC', '600')
+                     + TD(rowProc > 0 ? formatNumber(rowProc) : '—', SBG, rowProc > 0 ? '#1D1D1F' : '#C7C7CC', '600')
+                     + TD(rowRev > 0 ? '$' + formatNumber(Math.round(rowRev)) : '—', SBG, rowRev > 0 ? '#1A6B3A' : '#C7C7CC', '600');
+      return '<tr>' + TDL(CONFIG.BIZ_LABELS[biz] || biz) + cells + totCells + '</tr>';
+    }).join('');
+
+    // 합계 행
+    const totalRow = '<tr>' + TDL('합계', SBG) + weeks.map(function(w, wi){
+      const isCur = w === curWk;
+      const bg    = isCur ? HBG2 : SBG;
+      const v0 = colTotals[wi * 3], v1 = colTotals[wi * 3 + 1], v2 = colTotals[wi * 3 + 2];
+      return TD(v0 > 0 ? formatNumber(v0) : '—', bg, v0 > 0 ? '#1D1D1F' : '#C7C7CC', '600')
+           + TD(v1 > 0 ? formatNumber(v1) : '—', bg, v1 > 0 ? '#1D1D1F' : '#C7C7CC', '600')
+           + TD(v2 > 0 ? '$' + formatNumber(Math.round(v2)) : '—', bg, v2 > 0 ? '#1A6B3A' : '#C7C7CC', '600');
+    }).join('')
+    + TD(colTotals[weeks.length * 3] > 0 ? formatNumber(colTotals[weeks.length * 3]) : '—', SBG, '#1D1D1F', '700')
+    + TD(colTotals[weeks.length * 3 + 1] > 0 ? formatNumber(colTotals[weeks.length * 3 + 1]) : '—', SBG, '#1D1D1F', '700')
+    + TD(colTotals[weeks.length * 3 + 2] > 0 ? '$' + formatNumber(Math.round(colTotals[weeks.length * 3 + 2])) : '—', SBG, '#1A6B3A', '700')
+    + '</tr>';
+
+    const body = bizList.length
+      ? dataRows + totalRow
+      : '<tr><td colspan="' + (weeks.length * 3 + 4) + '" style="padding:14px;text-align:center;font-size:12px;color:var(--tx3);border:1px solid ' + BD + '">' + month + '월 데이터 없음</td></tr>';
+
+    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
+      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">주간 보고 — ' + month + '월</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">사업별 입고/처리/매출 (2주 단위 보고)</div>'
+      + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:14px">'
+      + '<table style="border-collapse:collapse;table-layout:auto;font-family:\'Pretendard\',-apple-system,sans-serif">'
+      + '<thead><tr>' + TH('사업', 'width:100px') + weekHeader + '</tr>'
+      + '<tr>' + TH('') + subHeader + '</tr></thead>'
+      + '<tbody>' + body + '</tbody>'
+      + '</table></div>';
   }
 
   function _renderActiveTable(activeLots, dailies) {
@@ -368,6 +520,7 @@ Pages.Dashboard = (() => {
         + _renderAlerts(kpi.overdueLots, kpi.nearDueLots)
         + _renderKpiRow(kpi)
         + _renderBarCards(kpi)
+        + _renderWeeklyTable()
         + _renderActiveTable(kpi.activeLots, kpi.dailies)
         + _renderCompletedTable(kpi.doneLots, kpi.dailies, kpi.invoices)
         + _renderShipments(kpi.upcomingShipments)
