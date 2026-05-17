@@ -21,7 +21,7 @@ const Store = (() => {
 
   // UI filter state
   let _lotFilter    = { biz: '', country: '', status: '' };
-  let _chartFilter  = { biz: ['DRAM'], country: 'HK', year: new Date().getFullYear(), metric: ['qty'] };
+  let _chartFilter  = { biz: ['DRAM'], country: 'HK', year: new Date().getFullYear(), metric: ['qty', 'proc'] };
 
   // ── Getters ────────────────────────────────────────────────
   return {
