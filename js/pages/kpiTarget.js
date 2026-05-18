@@ -816,10 +816,10 @@ Pages.KpiTarget = (() => {
       var tgtUsd = bizTgtAnnualUsd[b];
       var cells = MONTHS.map(function(_, i) {
         if (i > curMonIdx) return '<td style="' + TS.td + '">-</td>';
-        if (!tgtUsd || tgtUsd <= 0) return '<td style="' + TS.td + '">-</td>';
         var actUsd = actByBizView[b][i] || 0;
-        var p = actUsd / tgtUsd * 100;
-        return '<td style="' + TS.td + '">' + p.toFixed(1) + '%</td>';
+        if (actUsd <= 0) return '<td style="' + TS.td + '">-</td>';
+        var disp = fmtActual(actUsd);
+        return '<td style="' + TS.td + '">' + (disp || '-') + '</td>';
       }).join('');
       var pctCum     = tgtUsd > 0 ? bizActCumUsd[b] / tgtUsd * 100 : null;
       var pctExpect  = tgtUsd > 0 ? bizTgtCumUsd[b] / tgtUsd * 100 : null;
@@ -829,9 +829,9 @@ Pages.KpiTarget = (() => {
       return '<tr>'
         + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
         + cells
+        + '<td style="' + TS.tdSum + '">' + (actDisp || '-') + ' / ' + (tgtDisp || '-') + '</td>'
         + '<td style="' + TS.tdSum + '">' + (pctCum !== null ? pctCum.toFixed(1) + '%' : '-') + '</td>'
         + _paceCell(paceDiff)
-        + '<td style="' + TS.tdSum + '">' + (actDisp || '-') + ' / ' + (tgtDisp || '-') + '</td>'
         + '</tr>';
     }).join('');
 
@@ -843,27 +843,27 @@ Pages.KpiTarget = (() => {
       + '<td style="' + TS.tdSum + ';text-align:center">합계</td>'
       + MONTHS.map(function(_, i) {
           if (i > curMonIdx) return '<td style="' + TS.tdSum + '">-</td>';
-          if (!totalTgtAnnualUsd || totalTgtAnnualUsd <= 0) return '<td style="' + TS.tdSum + '">-</td>';
           var monthActUsd = 0;
           bizList.forEach(function(b) { monthActUsd += actByBizView[b][i] || 0; });
-          var p = monthActUsd / totalTgtAnnualUsd * 100;
-          return '<td style="' + TS.tdSum + '">' + p.toFixed(1) + '%</td>';
+          if (monthActUsd <= 0) return '<td style="' + TS.tdSum + '">-</td>';
+          var disp = fmtActual(monthActUsd);
+          return '<td style="' + TS.tdSum + '">' + (disp || '-') + '</td>';
         }).join('')
+      + '<td style="' + TS.tdSum + '">' + (fmtActual(totalActCumUsd) || '-') + ' / ' + (fmtRolling(totalTgtAnnualRaw) || '-') + '</td>'
       + '<td style="' + TS.tdSum + '">' + (totalPctCum !== null ? totalPctCum.toFixed(1) + '%' : '-') + '</td>'
       + _paceCell(totalPaceDiff)
-      + '<td style="' + TS.tdSum + '">' + (fmtActual(totalActCumUsd) || '-') + ' / ' + (fmtRolling(totalTgtAnnualRaw) || '-') + '</td>'
       + '</tr>';
 
     const progressColgroup = '<colgroup><col style="width:100px">'
       + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
-      + '<col style="width:74px"><col style="width:90px"><col style="width:150px"></colgroup>';
+      + '<col style="width:150px"><col style="width:74px"><col style="width:90px"></colgroup>';
 
     const progressHeader = '<thead><tr>'
       + '<th style="' + TS.thBiz + '">Biz</th>'
       + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
-      + '<th style="' + TS.thSum + '">누적진척률</th>'
-      + '<th style="' + TS.thSum + ';width:90px">계획대비</th>'
-      + '<th style="' + TS.thSum + ';width:150px">누적/연간목표금액 (' + unitLabel + ')</th>'
+      + '<th style="' + TS.thSum + ';width:150px">누적 실적/연간목표 (' + unitLabel + ')</th>'
+      + '<th style="' + TS.thSum + '">달성률</th>'
+      + '<th style="' + TS.thSum + ';width:90px">목표대비 차이</th>'
       + '</tr></thead>';
 
     const progressTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
@@ -908,7 +908,7 @@ Pages.KpiTarget = (() => {
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + '③ 사업별 월 진척률 — ' + (showEbit ? 'EBIT' : '매출') + ' 기준 (연간 계획 대비)'
+      + '③ 사업별 월 실적 — ' + (showEbit ? 'EBIT' : '매출') + ' 기준 (' + unitLabel + ')'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + progressTable + '</div>'
       + '</div>';
