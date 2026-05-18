@@ -282,85 +282,185 @@ Pages.Dashboard = (() => {
       + '</div>';
   }
 
+  // ── 일별 처리 현황 (지역별, 영업일 14일 mini bar) ──────────
+  function _isBusinessDay(d) {
+    const dow = d.getDay();
+    return dow !== 0 && dow !== 6;
+  }
+  function _dStr(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function _businessDaysWindow(endStr, n) {
+    const result = [];
+    const parts = endStr.split('-').map(Number);
+    let cur = new Date(parts[0], parts[1]-1, parts[2]);
+    while (!_isBusinessDay(cur)) cur.setDate(cur.getDate() - 1);
+    while (result.length < n) {
+      if (_isBusinessDay(cur)) result.unshift(_dStr(cur));
+      cur.setDate(cur.getDate() - 1);
+    }
+    return result;
+  }
+  function _bizDaysBetween(fromStr, toStr) {
+    if (!fromStr || !toStr || fromStr >= toStr) return 0;
+    const a = fromStr.split('-').map(Number);
+    const b = toStr.split('-').map(Number);
+    let cur = new Date(a[0], a[1]-1, a[2]);
+    const end = new Date(b[0], b[1]-1, b[2]);
+    cur.setDate(cur.getDate() + 1);
+    let count = 0;
+    while (cur <= end) {
+      if (_isBusinessDay(cur)) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  }
 
-  function _renderActiveTable(activeLots, dailies) {
-    const invoices    = Store.getInvoices();
-    const upcomingLots   = activeLots.filter(function(l){ return l.inDate > today(); });
-    const inProgressLots = activeLots.filter(function(l){ return l.inDate <= today(); });
+  function _renderOpsFollowUp(activeLots, dailies) {
+    const inProgressLots = activeLots.filter(function(l){ return l.inDate && l.inDate <= today(); });
+    if (!inProgressLots.length) return '';
 
-    // ★ 입고일 역순 정렬 (완료 LOT은 제외)
-    const allLots = upcomingLots.concat(inProgressLots)
-      .sort(function(a, b){ return String(b.inDate || '').localeCompare(String(a.inDate || '')); });
-    if (!allLots.length) return '';
+    const N_DAYS  = 14;
+    const windowD = _businessDaysWindow(today(), N_DAYS);
+    const lastBD  = windowD[windowD.length - 1];
 
-    const rows = allLots.map(function(lot, rowIdx){
-      const isUpcoming = lot.inDate > today();
-      const isDone     = getLotStatus(lot) === 'done';
-      const inv        = invoices.find(function(r){ return String(r.lotId) === String(lot.id); });
-      const isUnpaid   = isDone && (!inv || inv.status === 'unpaid' || inv.status === 'partial');
-      const cum      = isUpcoming ? 0 : getLotCumulative(lot.id, dailies);
+    function procMap(lotId) {
+      const m = {};
+      dailies.filter(function(d){ return String(d.lotId) === String(lotId) && d.date; })
+             .forEach(function(d){ m[d.date] = (m[d.date] || 0) + parseNumber(d.proc); });
+      return m;
+    }
+    function lastEntryDate(lotId) {
+      const dates = dailies.filter(function(d){ return String(d.lotId) === String(lotId) && d.date && parseNumber(d.proc) > 0; })
+                           .map(function(d){ return d.date; }).sort();
+      return dates.length ? dates[dates.length-1] : null;
+    }
+
+    function buildLotRow(lot) {
+      const pmap     = procMap(lot.id);
+      const cum      = getLotCumulative(lot.id, dailies);
       const qty      = parseNumber(lot.qty);
-      const rem      = Math.max(0, qty - cum);
-      const pct      = (qty > 0 && !isUpcoming) ? Math.min(100, Math.round(cum / qty * 100)) : 0;
-      const st       = isUpcoming ? 'upcoming' : getLotStatus(lot);
-      const dd       = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const ddIn     = isUpcoming ? diffDays(today(), lot.inDate) : null;
-      const pctColor = st === 'overdue' ? '#dc2626' : pct >= 80 ? 'var(--tx3)' : 'var(--tx2)';
-      const barColor = st === 'overdue' ? '#dc2626' : st === 'upcoming' ? 'var(--tx3)' : st === 'done' ? 'var(--tx)' : pct >= 80 ? 'var(--tx3)' : 'var(--tx2)';
-      const stStyle  = st === 'upcoming' ? 'border:1px solid #5AC8FA;color:#0077A8;background:#F0F8FF' : (ST_STYLE[st] || '');
-      const stLabel  = st === 'upcoming' ? '입고예정' : (ST_LABEL[st] || st);
+      const pct      = qty > 0 ? Math.round(cum / qty * 100) : 0;
+      const last     = lastEntryDate(lot.id);
+      const refDate  = last || lot.inDate || lastBD;
+      const missDays = _bizDaysBetween(refDate, lastBD);
+      const bizColor = CONFIG.BIZ_COLORS[lot.biz] || '#666';
 
-      // ★ 지연: '진행중' + '지연' 배지 두 개
-      const statusCell = st === 'overdue'
-        ? badge('진행중', ST_STYLE['inprog']) + ' ' + badge('지연', ST_STYLE['overdue'])
-        : badge(stLabel, stStyle);
+      const vals = windowD.map(function(d){ return pmap[d] || 0; });
+      const maxV = Math.max.apply(null, vals.concat([1]));
 
-      const evenBg = rowIdx % 2 === 1 ? 'background:#FAFAFA' : 'background:#fff';
-      const rowBg  = isUpcoming ? 'background:#F8F8F8' : isUnpaid ? 'background:#FFF8F0' : evenBg;
-      const unpaidBadge = isUnpaid
-        ? badge(
-            inv && inv.status === 'partial' ? '부분수금' : '미수금',
-            inv && inv.status === 'partial'
-              ? 'border:1px solid var(--bd);color:var(--tx2);background:transparent'
-              : 'border:1px solid #FECACA;color:#dc2626;background:#FEF2F2')
-        : '';
+      const bars = windowD.map(function(d, i){
+        const v       = pmap[d] || 0;
+        const isLast  = i === windowD.length - 1;
+        const tip     = d + (v > 0 ? ' · ' + formatNumber(v) + '개' : ' · 누락');
+        if (v > 0) {
+          const h = Math.max(8, Math.round(v / maxV * 100));
+          const col = isLast ? '#1A7F37' : bizColor;
+          return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div></div>';
+        }
+        // 누락
+        if (isLast) {
+          // 오늘(또는 최근 영업일) 누락 → 빨강 빈 박스
+          return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div></div>';
+        }
+        return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:center;justify-content:center"><div style="width:3px;height:3px;background:#D0D0D0;border-radius:50%"></div></div>';
+      }).join('');
 
-      const ddTag = dd !== null && !isUpcoming && !isDone ? '<span style="font-size:10px;margin-left:3px;color:' + (dd < 0 ? '#dc2626' : 'var(--tx3)') + '">(' + (dd < 0 ? 'D+' + Math.abs(dd) : 'D-' + dd) + ')</span>' : '';
-      const targetColor = st === 'overdue' ? '#dc2626' : 'var(--tx3)';
-      const actualColor = lot.actualDone ? 'var(--tx)' : 'var(--tx3)';
-      const targetCell = '<div style="font-size:10px;color:' + targetColor + ';line-height:1.3">' + (lot.targetDate || '—') + ddTag + '</div>'
-                       + '<div style="color:' + actualColor + ';line-height:1.3;margin-top:2px;font-weight:' + (lot.actualDone ? 500 : 400) + '">' + (lot.actualDone || '—') + '</div>';
+      let statusBadge;
+      if (missDays === 0) {
+        statusBadge = '<span style="font-size:10px;color:#1A7F37;font-weight:500;padding:1px 7px;background:#F0FBF3;border:1px solid #34C759;border-radius:3px">정상</span>';
+      } else if (missDays === 1) {
+        statusBadge = '<span style="font-size:10px;color:#92400E;font-weight:600;padding:1px 7px;background:#FFFBEB;border:1px solid #F59E0B;border-radius:3px">1일 누락</span>';
+      } else {
+        statusBadge = '<span style="font-size:10px;color:#dc2626;font-weight:600;padding:1px 7px;background:#FEF2F2;border:1px solid #FECACA;border-radius:3px">' + missDays + '일 누락</span>';
+      }
+      const lastStr = last ? '마지막 ' + last.slice(5) : '<span style="color:#dc2626">입력 없음</span>';
 
-      return '<tr style="' + rowBg + '">'
-        + '<td style="' + S.td + ';font-family:var(--font-mono)">' + (lot.lotNo || lot.id) + '</td>'
-        + '<td style="' + S.td + '">' + badge(lot.country, CO_STYLE[lot.country] || '') + '</td>'
-        + '<td style="' + S.td + '">' + badge(lot.biz, BIZ_STYLE[lot.biz] || '') + '</td>'
-        + '<td style="' + S.tdm + '">' + (lot.customerName || '—') + '</td>'
-        + '<td style="' + S.tdr + '">' + formatNumber(qty) + '</td>'
-        + '<td style="' + S.tdr + ';color:' + (CONFIG.BIZ_COLORS[lot.biz] || 'var(--tx)') + '">' + (isUpcoming ? '—' : formatNumber(cum)) + '</td>'
-        + '<td style="' + S.tdr + '">' + formatNumber(rem) + '</td>'
-        + '<td style="' + S.td + ';min-width:120px">'
-        + (isUpcoming
-            ? '<span style="font-size:15px;color:#0C447C;font-weight:500">D-' + ddIn + '</span>'
-            : '<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:4px;background:#E0E0E0;border-radius:2px;overflow:hidden"><div style="height:100%;border-radius:2px;background:' + barColor + ';width:' + pct + '%"></div></div><span style="font-size:14px;font-weight:500;color:' + pctColor + ';min-width:28px;text-align:right">' + pct + '%</span></div>')
-        + '</td>'
-        + '<td style="' + S.tdm + ';color:' + (isUpcoming ? 'var(--tx2)' : 'var(--tx3)') + ';font-weight:' + (isUpcoming ? '500' : '400') + '">' + (lot.inDate || '—') + '</td>'
-        + '<td style="' + S.tdm + '">' + targetCell + '</td>'
-        + '<td style="' + S.td + '">' + statusCell + ' ' + unpaidBadge + '</td>'
-        + '</tr>';
-    }).join('');
+      return '<div onclick="Nav.go(\'daily\')" '
+        + 'style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s" '
+        + 'onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div>'
+        +   '<div style="display:flex;align-items:center;gap:6px;font-size:12px">'
+        +     '<span style="font-family:var(--font-mono);font-weight:600">' + (lot.lotNo || lot.id) + '</span>'
+        +     badge(lot.biz, BIZ_STYLE[lot.biz] || '')
+        +     '<span style="color:var(--tx2)">' + (lot.customerName || '—') + '</span>'
+        +   '</div>'
+        +   '<div style="font-size:11px;color:var(--tx3);margin-top:3px">'
+        +     '입고 ' + ((lot.inDate || '—').slice(5)) + ' · 진행 ' + pct + '% (' + formatNumber(cum) + '/' + formatNumber(qty) + ')'
+        +   '</div>'
+        + '</div>'
+        + '<div style="display:flex;align-items:flex-end;gap:2px;height:32px">' + bars + '</div>'
+        + '<div style="text-align:right">'
+        +   '<div style="font-size:11px;color:var(--tx3)">' + lastStr + '</div>'
+        +   '<div style="margin-top:3px">' + statusBadge + '</div>'
+        + '</div>'
+        + '</div>';
+    }
 
-    return '<div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정)</span></div>'
-      + '<div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">'
-      + '<table style="width:100%;border-collapse:collapse;font-family:\'Pretendard\',-apple-system,sans-serif">'
-      + '<thead><tr>'
-      + '<th style="' + S.th + '">LOT 번호</th><th style="' + S.th + '">지역</th><th style="' + S.th + '">사업</th><th style="' + S.th + '">고객사</th>'
-      + '<th style="' + S.thr + '">입고량</th><th style="' + S.thr + '">처리</th><th style="' + S.thr + '">잔량</th>'
-      + '<th style="' + S.th + ';min-width:120px">진행률</th>'
-      + '<th style="' + S.th + '">입고일</th><th style="' + S.th + '"><div style="font-size:10px;color:var(--tx3);font-weight:500;line-height:1.3">목표완료일</div><div style="line-height:1.3">실완료일</div></th><th style="' + S.th + '">상태</th>'
-      + '</tr></thead>'
-      + '<tbody>' + rows + '</tbody>'
-      + '</table></div>';
+    function buildRegion(country, lots) {
+      const label = country === 'HK' ? '홍콩 (HK)' : '싱가포르 (SG)';
+      const color = country === 'HK' ? '#1B4F8A' : '#0F6E56';
+      if (!lots.length) {
+        return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:var(--tx3)">' + label + ' — 진행중 LOT 없음</div>';
+      }
+      // 누락 많은 LOT 우선, 그다음 입고일 내림차순
+      const sorted = lots.slice().sort(function(a, b){
+        const la = lastEntryDate(a.id), lb = lastEntryDate(b.id);
+        const ra = la || a.inDate || lastBD;
+        const rb = lb || b.inDate || lastBD;
+        const ma = _bizDaysBetween(ra, lastBD);
+        const mb = _bizDaysBetween(rb, lastBD);
+        if (ma !== mb) return mb - ma;
+        return String(b.inDate || '').localeCompare(String(a.inDate || ''));
+      });
+
+      const todayMissCount = sorted.filter(function(l){
+        const pm = procMap(l.id);
+        return !pm[lastBD];
+      }).length;
+
+      const headerTag = todayMissCount > 0
+        ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">오늘 누락 ' + todayMissCount + '건</span>'
+        : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">오늘 입력 모두 OK</span>';
+
+      // 영업일 라벨 (1주마다 표시)
+      const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
+        + '<div></div>'
+        + '<div style="display:flex;gap:2px">'
+        +   windowD.map(function(d, i){
+              const showLabel = i === 0 || i === windowD.length - 1 || i === Math.floor(windowD.length / 2);
+              const isLast = i === windowD.length - 1;
+              return '<div style="flex:1;min-width:6px;text-align:center;' + (isLast ? 'color:#dc2626;font-weight:600' : '') + '">' + (showLabel ? d.slice(5) : '') + '</div>';
+            }).join('')
+        + '</div>'
+        + '<div></div>'
+        + '</div>';
+
+      return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;overflow:hidden">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">'
+        +   '<div>'
+        +     '<span style="font-size:13px;font-weight:600;color:' + color + '">' + label + '</span>'
+        +     '<span style="font-size:11px;color:var(--tx3);margin-left:6px">진행중 ' + lots.length + '건</span>'
+        +     headerTag
+        +   '</div>'
+        +   '<span style="font-size:10px;color:var(--tx3)">최근 ' + N_DAYS + '영업일 (주말 제외)</span>'
+        + '</div>'
+        + dateLabels
+        + sorted.map(buildLotRow).join('')
+        + '</div>';
+    }
+
+    const byCountry = { HK: [], SG: [] };
+    inProgressLots.forEach(function(l){ if (byCountry[l.country]) byCountry[l.country].push(l); });
+
+    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
+      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 높이 = 일 처리량 · 점 = 누락 · 빨강 박스 = 오늘 누락 (1영업일 기준)</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
+      + buildRegion('HK', byCountry.HK)
+      + buildRegion('SG', byCountry.SG)
+      + '</div>';
   }
 
   function _renderShipments(shipments) {
@@ -406,8 +506,8 @@ Pages.Dashboard = (() => {
         + '</div>'
         + _renderAlerts(kpi.overdueLots, kpi.nearDueLots)
         + _renderKpiRow(kpi)
+        + _renderOpsFollowUp(kpi.activeLots, kpi.dailies)
         + _renderWeeklyTable()
-        + _renderActiveTable(kpi.activeLots, kpi.dailies)
         + _renderShipments(kpi.upcomingShipments)
         + '</div>';
     },

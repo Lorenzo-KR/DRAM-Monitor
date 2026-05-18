@@ -18,6 +18,7 @@ const Nav = (() => {
    */
   const PAGES = {
     dash:       { render: () => Pages.Dashboard.render() },
+    daily:      { render: () => Pages.DailyInput.render() },
     biweekly:   { render: () => Pages.Biweekly.render() },
     progress:   { render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
     bizhistory: { render: () => Pages.BizHistory.render() },
