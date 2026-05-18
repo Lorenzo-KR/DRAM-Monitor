@@ -361,28 +361,30 @@ Pages.Dashboard = (() => {
         const isToday = (d === todayStr);
         const isRef   = (d === refStr);
         const dispMD  = d.slice(5).replace('-', '/');
-        const tip     = (isToday ? '오늘 (' + dispMD + ')' : dispMD)
-                      + (v > 0 ? ' · ' + formatNumber(v) + '개' : (isToday ? ' · 입력 전' : ' · 누락'));
+        const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD);
+        const tip     = tipBase + (v > 0 ? ' · ' + formatNumber(v) + '개' : (isToday ? ' · 입력 전 (클릭 입력)' : ' · 누락 (클릭 입력)'));
         const tipHtml = '<div class="dash-bar-tip" style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:3px 7px;background:#1D1D1F;color:#fff;font-size:11px;border-radius:4px;white-space:nowrap;pointer-events:none;font-family:Pretendard,sans-serif;opacity:0;transition:opacity 0.1s;z-index:10">' + tip + '<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:#1D1D1F"></div></div>';
-        const wrap = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center;cursor:default';
-        const hoverJs = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
+        const wrapBase = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center';
+        const hoverJs  = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
+        // 비어있는 칸 = 클릭하면 빠른 입력 모달
+        const clickJs  = v > 0
+          ? ''
+          : 'onclick="event.stopPropagation();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + d + '\')" style="cursor:pointer"';
 
         if (v > 0) {
           const h = Math.max(8, Math.round(v / maxV * 100));
-          // 오늘 입력 완료 = 진한 녹색, 직전 영업일 입력 = 사업 색상, 나머지 = 사업 색상
           const col = isToday ? '#1A7F37' : bizColor;
-          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
+          return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
-        // 누락 처리
+        // 누락 처리 — 모두 클릭 가능
         if (isToday) {
-          // 오늘은 아직 입력 안한 게 정상일 수 있음 → 연한 회색 점선 박스 ("입력 전")
-          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:100%;background:transparent;border:1px dashed #B0B0B0;border-radius:2px"></div>' + tipHtml + '</div>';
+          return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer"><div style="width:100%;height:100%;background:transparent;border:1px dashed #B0B0B0;border-radius:2px"></div>' + tipHtml + '</div>';
         }
         if (isRef) {
-          // 직전 영업일 누락 → 빨강 점선 박스
-          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div>' + tipHtml + '</div>';
+          return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div>' + tipHtml + '</div>';
         }
-        return '<div ' + hoverJs + ' style="' + wrap + ';align-items:center"><div style="width:3px;height:3px;background:#D0D0D0;border-radius:50%"></div>' + tipHtml + '</div>';
+        // 과거 누락
+        return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';align-items:center;cursor:pointer"><div style="width:8px;height:8px;background:transparent;border:1px solid #D0D0D0;border-radius:50%"></div>' + tipHtml + '</div>';
       }).join('');
 
       let statusBadge;
@@ -481,7 +483,7 @@ Pages.Dashboard = (() => {
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
       + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 높이 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 점선 = 오늘(입력 중) · 점 = 과거 누락 (호버 시 처리량 표시)</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 빈 칸 클릭 = 처리량 빠른 입력 (호버 시 상세)</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
@@ -519,7 +521,132 @@ Pages.Dashboard = (() => {
       + '</table></div>';
   }
 
+  // ── 빠른 일별 입력 모달 ───────────────────────────────────
+  function _openQuickInput(lotId, dateStr) {
+    const lot = Store.getLotById(lotId);
+    if (!lot) { UI.toast('LOT를 찾을 수 없습니다', true); return; }
+
+    // 같은 LOT × 같은 날짜에 이미 기록이 있는지 (중복 방지)
+    const existing = Store.getDailies().find(function(d){
+      return String(d.lotId) === String(lotId) && d.date === dateStr && parseNumber(d.proc) > 0;
+    });
+
+    const cum = getLotCumulative(lot.id, Store.getDailies());
+    const qty = parseNumber(lot.qty);
+    const rem = Math.max(0, qty - cum);
+
+    // dateStr → "5월 15일 (금)" 표시
+    const dParts = dateStr.split('-').map(Number);
+    const dObj   = new Date(dParts[0], dParts[1]-1, dParts[2]);
+    const dowKr  = ['일','월','화','수','목','금','토'][dObj.getDay()];
+    const dispDate = (dParts[1]) + '월 ' + dParts[2] + '일 (' + dowKr + ')';
+
+    // 기존 모달이 있으면 제거
+    const old = document.getElementById('dash-quick-modal');
+    if (old) old.remove();
+
+    const modalHtml = ''
+      + '<div id="dash-quick-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:Pretendard,sans-serif" onclick="if(event.target===this)Pages.Dashboard.closeQuickInput()">'
+      + '<div style="background:#fff;border-radius:10px;width:360px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,0.2);overflow:hidden">'
+      +   '<div style="padding:14px 18px;border-bottom:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:center">'
+      +     '<div>'
+      +       '<div style="font-size:14px;font-weight:600;color:#1D1D1F">일별 처리 빠른 입력</div>'
+      +       '<div style="font-size:11px;color:#86868B;margin-top:2px">' + (lot.lotNo || lot.id) + ' · ' + (CONFIG.BIZ_LABELS[lot.biz]||lot.biz) + ' · ' + (lot.customerName||'—') + '</div>'
+      +     '</div>'
+      +     '<button onclick="Pages.Dashboard.closeQuickInput()" style="border:none;background:none;font-size:22px;color:#86868B;cursor:pointer;padding:0 4px;line-height:1">×</button>'
+      +   '</div>'
+      +   '<div style="padding:16px 18px">'
+      +     '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">'
+      +       '<div style="font-size:13px;color:#3A3A3C">날짜</div>'
+      +       '<div style="font-size:14px;font-weight:600;color:#1D1D1F;font-family:var(--font-mono)">' + dispDate + '</div>'
+      +     '</div>'
+      +     (existing
+          ? '<div style="padding:8px 10px;background:#FFFBEB;border:1px solid #F59E0B;border-radius:4px;font-size:11px;color:#92400E;margin-bottom:10px">이미 ' + formatNumber(parseNumber(existing.proc)) + '개 입력됨. 새 값으로 추가 저장됩니다 (합산이 아닌 별도 기록).</div>'
+          : '')
+      +     '<div style="display:flex;justify-content:space-between;font-size:11px;color:#86868B;margin-bottom:6px">'
+      +       '<span>총 ' + formatNumber(qty) + '개</span>'
+      +       '<span>누적 처리 ' + formatNumber(cum) + ' · 잔량 ' + formatNumber(rem) + '</span>'
+      +     '</div>'
+      +     '<label style="display:block;font-size:12px;color:#3A3A3C;margin-bottom:6px">처리량</label>'
+      +     '<div style="display:flex;gap:8px;align-items:center">'
+      +       '<input id="dash-quick-proc" type="number" min="0" max="' + Math.max(rem, qty) + '" placeholder="0" style="flex:1;padding:8px 12px;border:1px solid #D2D2D7;border-radius:6px;font-size:15px;font-family:var(--font-mono);text-align:right" autofocus '
+      +       'onkeydown="if(event.key===\'Enter\')Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\');if(event.key===\'Escape\')Pages.Dashboard.closeQuickInput()">'
+      +       '<span style="font-size:12px;color:#86868B">개</span>'
+      +     '</div>'
+      +     '<div id="dash-quick-after" style="font-size:11px;color:#86868B;margin-top:6px;text-align:right">&nbsp;</div>'
+      +   '</div>'
+      +   '<div style="padding:12px 18px;background:#F7F7F7;display:flex;gap:8px;justify-content:flex-end">'
+      +     '<button onclick="Pages.Dashboard.closeQuickInput()" style="padding:7px 14px;border:1px solid #D2D2D7;background:#fff;color:#1D1D1F;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;font-family:Pretendard,sans-serif">취소</button>'
+      +     '<button id="dash-quick-save" onclick="Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\')" style="padding:7px 14px;border:none;background:#1B4F8A;color:#fff;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;font-family:Pretendard,sans-serif">저장</button>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const inp = document.getElementById('dash-quick-proc');
+    if (inp) {
+      inp.focus();
+      inp.addEventListener('input', function(){
+        const v = parseNumber(inp.value);
+        const newCum = cum + v;
+        const newRem = Math.max(0, qty - newCum);
+        const after  = document.getElementById('dash-quick-after');
+        if (after) after.innerHTML = v > 0 ? '입력 후 잔량 <b style="color:#1D1D1F">' + formatNumber(newRem) + '</b>개' + (newRem === 0 ? ' <span style="color:#1A7F37;font-weight:600">→ LOT 완료</span>' : '') : '&nbsp;';
+      });
+    }
+  }
+
+  function _closeQuickInput() {
+    const m = document.getElementById('dash-quick-modal');
+    if (m) m.remove();
+  }
+
+  async function _saveQuickInput(lotId, dateStr) {
+    const lot = Store.getLotById(lotId);
+    if (!lot) { UI.toast('LOT를 찾을 수 없습니다', true); return; }
+    const inp = document.getElementById('dash-quick-proc');
+    if (!inp) return;
+    const proc = parseNumber(inp.value);
+    if (!proc || proc <= 0) { UI.toast('처리량을 입력해 주세요', true); return; }
+
+    const cumNew = getLotCumulative(lot.id, Store.getDailies()) + proc;
+    const remNew = Math.max(0, parseNumber(lot.qty) - cumNew);
+    const isDone = remNew === 0;
+
+    const record = {
+      id: Date.now(), date: dateStr, lotId: lot.id, lotNo: lot.lotNo || lot.id,
+      biz: lot.biz, country: lot.country, customerName: lot.customerName || '',
+      proc, normal: 0, noBoot: 0, abnormal: 0, cumul: cumNew, remain: remNew,
+      note: '대시보드 빠른 입력', done: isDone ? '1' : '0'
+    };
+
+    const saveBtn = document.getElementById('dash-quick-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+
+    const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
+    if (!result || !result.success) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+      UI.toast('저장 실패', true);
+      return;
+    }
+
+    Store.upsertDaily(record);
+    if (isDone) {
+      const updated = Object.assign({}, lot, { done: '1', actualDone: dateStr });
+      Store.upsertLot(updated);
+      Api.update(CONFIG.SHEETS.LOTS, lot.id, updated);
+    }
+    Api.log('일별처리', '등록(빠른입력)', lot.lotNo || String(lot.id), dateStr + ' 처리 ' + formatNumber(proc) + '개 | 누적 ' + formatNumber(cumNew) + ' / 잔량 ' + formatNumber(remNew));
+
+    UI.toast(isDone ? lot.lotNo + ' 완료!' : '저장됨 (' + dateStr.slice(5) + ' · ' + formatNumber(proc) + '개)');
+    _closeQuickInput();
+    Pages.Dashboard.render();
+  }
+
   return {
+    openQuickInput: _openQuickInput,
+    closeQuickInput: _closeQuickInput,
+    saveQuickInput: _saveQuickInput,
     render: function() {
       const el = document.getElementById('dash-root');
       if (!el) return;
