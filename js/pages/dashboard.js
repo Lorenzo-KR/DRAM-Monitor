@@ -383,13 +383,12 @@ Pages.Dashboard = (() => {
           const col = isToday ? '#1A7F37' : bizColor;
           return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
-        // 누락 처리 — 모두 풀높이 네모 점선 박스 (색만 다름)
+        // 누락 셀 — position:absolute로 부모(wrap)를 완전히 채워 풀높이 네모 박스 보장
         let bg = 'transparent', bd = '#D0D0D0';
-        if (isToday)      { bg = 'transparent';  bd = '#9CA3AF'; }  // 오늘 = 진한 회색 점선
-        else if (isRef)   { bg = '#FEF2F2';      bd = '#dc2626'; }  // 직전 영업일 = 빨강 점선
-        // 과거 누락 = 옅은 회색 점선 (기본값 유지)
+        if (isToday)      { bg = 'transparent';  bd = '#9CA3AF'; }
+        else if (isRef)   { bg = '#FEF2F2';      bd = '#dc2626'; }
         return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
-          + '<div style="width:100%;height:100%;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px"></div>'
+          + '<div style="position:absolute;inset:0;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px;box-sizing:border-box"></div>'
           + tipHtml + '</div>';
       }).join('');
 
