@@ -142,79 +142,6 @@ Pages.Dashboard = (() => {
       + '</div>';
   }
 
-  function _renderBarCards(kpi) {
-    const year = new Date().getFullYear();
-
-    const BIZ_DOT = { SSD: '#6B6762', DRAM: '#A8A49E', MID: '#6B6762' };
-    const maxRev  = Math.max.apply(null, CONFIG.BIZ_LIST.map(function(b){ return kpi.revenue[b] || 0; }).concat([1]));
-    const revBars = CONFIG.BIZ_LIST.filter(function(b){ return kpi.revenue[b] > 0; }).map(function(b){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd)">'
-        + '<div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:100px">'
-        + '<span style="width:7px;height:7px;border-radius:50%;background:' + (BIZ_DOT[b]||'#999') + ';flex-shrink:0;display:inline-block"></span>' + CONFIG.BIZ_LABELS[b]
-        + '</div>'
-        + '<div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:' + (BIZ_DOT[b]||'#999') + ';width:' + Math.round((kpi.revenue[b]||0)/maxRev*100) + '%"></div></div>'
-        + '<div style="font-size:14px;font-weight:600;min-width:72px;text-align:right">$' + formatNumber(Math.round(kpi.revenue[b])) + '</div>'
-        + '</div>';
-    }).join('');
-
-    const CO_COLORS = { HK: '#6B6762', SG: '#A8A49E' };
-    const CO_LABELS = { HK: '홍콩 (HK)', SG: '싱가포르 (SG)' };
-    const maxRegRev = Math.max(kpi.revenue.HK || 0, kpi.revenue.SG || 0, 1);
-    const regBars   = ['HK', 'SG'].map(function(co){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd)">'
-        + '<div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:110px">'
-        + '<span style="width:7px;height:7px;border-radius:50%;background:' + CO_COLORS[co] + ';flex-shrink:0;display:inline-block"></span>' + CO_LABELS[co]
-        + '</div>'
-        + '<div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:' + CO_COLORS[co] + ';width:' + (kpi.revenue[co] > 0 ? Math.round(kpi.revenue[co]/maxRegRev*100) : 0) + '%"></div></div>'
-        + '<div style="font-size:14px;font-weight:600;min-width:72px;text-align:right;color:' + (kpi.revenue[co] > 0 ? 'var(--tx)' : 'var(--tx3)') + '">$' + formatNumber(Math.round(kpi.revenue[co]||0)) + '</div>'
-        + '</div>';
-    }).join('');
-    const regPadRow = '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--bd);opacity:0;pointer-events:none"><div style="min-width:110px;font-size:14px">—</div><div style="flex:1;height:5px"></div><div style="min-width:72px"></div></div>';
-
-    const kpiSum  = Pages.KpiTarget.getKpiSummary(year);
-    const kpiBars = CONFIG.BIZ_LIST.map(function(b){
-      if (!Pages.KpiTarget.getTarget(year, b)) return '';
-      const bizSum = Pages.KpiTarget.getBizSummary(year, b);
-      const pct    = bizSum ? (bizSum.pct || 0) : 0;
-      const color  = CONFIG.BIZ_COLORS[b];
-      return '<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:0.5px solid var(--bd)">'
-        + '<div style="display:flex;align-items:center;gap:6px;font-size:14px;color:var(--tx2);min-width:90px">'
-        + '<span style="width:7px;height:7px;border-radius:50%;background:' + color + ';flex-shrink:0;display:inline-block"></span>' + CONFIG.BIZ_LABELS[b]
-        + '</div>'
-        + '<div style="flex:1;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:' + color + ';width:' + Math.min(100,pct) + '%"></div></div>'
-        + '<div style="font-size:15px;font-weight:500;min-width:28px;text-align:right;color:' + (pct >= 70 ? color : 'var(--tx3)') + '">' + pct + '%</div>'
-        + '</div>';
-    }).filter(Boolean).join('');
-
-    const totalKpiPct    = kpiSum.pct;
-    const kpiFooterColor = totalKpiPct === null ? 'var(--tx3)' : totalKpiPct >= 100 ? 'var(--tx)' : totalKpiPct >= 70 ? 'var(--tx2)' : 'var(--tx3)';
-    const kpiFooter      = totalKpiPct !== null
-      ? '<span style="font-size:14px;font-weight:500;color:var(--tx)">총 달성률</span><span style="font-size:14px;font-weight:600;color:' + kpiFooterColor + '">' + totalKpiPct + '%</span>'
-      : '';
-
-    function barCard(title, sub, content, footer) {
-      footer = footer || '';
-      return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">'
-        + '<span style="font-size:14px;font-weight:600;color:var(--tx)">' + title + '</span>'
-        + '<span style="font-size:14px;color:var(--tx3)">' + sub + '</span>'
-        + '</div>' + content
-        + (footer ? '<div style="display:flex;justify-content:space-between;padding:8px 14px;background:var(--bg)">' + footer + '</div>' : '')
-        + '</div>';
-    }
-
-    const revTotal  = kpi.revenue.total;
-    const revFooter = revTotal > 0 ? '<span style="font-size:14px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$' + formatNumber(Math.round(revTotal)) + '</span>' : '';
-
-    return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'
-      + barCard('Revenue by business', 'USD', revBars || '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">데이터 없음</div>', revFooter)
-      + barCard('Revenue by region', 'USD', regBars + regPadRow, revTotal > 0 ? '<span style="font-size:14px;font-weight:500;color:var(--tx)">Total</span><span style="font-size:14px;font-weight:600;color:#085041">$' + formatNumber(Math.round(revTotal)) + '</span>' : '')
-      + (kpiBars
-          ? barCard('KPI 목표 달성', String(year) + '년', kpiBars, kpiFooter)
-          : barCard('KPI 목표 달성', '', '<div style="padding:12px 14px;font-size:14px;color:var(--tx3)">목표 미설정 — <a href="#" onclick="Nav.go(\'kpitarget\');return false;" style="color:var(--navy)">설정하기</a></div>'))
-      + '</div>';
-  }
-
   // ── 주간 보고(2주 사이클): 운영(입고/처리/WIP) + 수금(매출/Lead time) ──
   function _calcBiweekly(start, end) {
     const lots     = Store.getLots();
@@ -480,7 +407,6 @@ Pages.Dashboard = (() => {
         + '</div>'
         + _renderAlerts(kpi.overdueLots, kpi.nearDueLots)
         + _renderKpiRow(kpi)
-        + _renderBarCards(kpi)
         + _renderWeeklyTable()
         + _renderActiveTable(kpi.activeLots, kpi.dailies)
         + _renderShipments(kpi.upcomingShipments)
