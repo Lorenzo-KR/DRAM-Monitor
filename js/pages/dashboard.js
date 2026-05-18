@@ -373,10 +373,10 @@ Pages.Dashboard = (() => {
         const tipHtml = '<div class="dash-bar-tip" style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:3px 7px;background:#1D1D1F;color:#fff;font-size:11px;border-radius:4px;white-space:nowrap;pointer-events:none;font-family:Pretendard,sans-serif;opacity:0;transition:opacity 0.1s;z-index:10">' + tip + '<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:#1D1D1F"></div></div>';
         const wrapBase = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center';
         const hoverJs  = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
-        // 비어있는 칸 = 클릭하면 빠른 입력 모달
+        // 비어있는 칸 = 클릭하면 빠른 입력 모달 (style은 별도, onclick만)
         const clickJs  = v > 0
           ? ''
-          : 'onclick="event.stopPropagation();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + d + '\')" style="cursor:pointer"';
+          : 'onclick="event.stopPropagation();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + d + '\')"';
 
         if (v > 0) {
           const h = Math.max(8, Math.round(v / maxV * 100));
