@@ -141,8 +141,8 @@ Pages.Dashboard = (() => {
       + '</div>';
   }
 
-  // ── 주간 보고(2주 사이클): 운영(입고/처리/WIP) + 수금(매출/Lead time) ──
-  function _calcBiweekly(start, end) {
+  // ── 주간 보고(주단위): 입고 + 인보이스 (결제 LOT 입고시점/LT) ──
+  function _calcWeekly(start, end) {
     const lots     = Store.getLots();
     const dailies  = Store.getDailies();
     const invoices = Store.getInvoices();
@@ -185,100 +185,107 @@ Pages.Dashboard = (() => {
     periodDailies.forEach(function(d){ if (byBiz[d.biz]) byBiz[d.biz].proc += parseNumber(d.proc); });
     periodInvoices.forEach(function(i){ if (byBiz[i.biz]) byBiz[i.biz].rev += parseNumber(i.total || i.amount); });
 
-    return { totalIn, totalProc, totalRev, wip, avgLT, paidLotCount: paidLotIds.size, paidInDates, byBiz };
+    // 인보이스별 상세 (어떤 LOT, 언제 입고된 건 결제분인지)
+    const invDetails = periodInvoices.map(function(inv){
+      const lot = lots.find(function(l){ return String(l.id) === String(inv.lotId); });
+      const amt = parseNumber(inv.total || inv.amount);
+      const lt  = (lot && lot.inDate) ? diffDays(lot.inDate, inv.date) : null;
+      return {
+        lotNo: lot ? (lot.lotNo || lot.id) : (inv.lotNo || '—'),
+        biz:   lot ? lot.biz : inv.biz,
+        customer: lot ? lot.customerName : (inv.customerName || ''),
+        amt, inDate: lot ? lot.inDate : null, invDate: inv.date, lt
+      };
+    }).sort(function(a, b){ return b.amt - a.amt; });
+
+    return { totalIn, totalProc, totalRev, wip, avgLT, paidLotCount: paidLotIds.size, paidInDates, byBiz, invDetails };
   }
 
-  function _renderBiweeklyCard(label, start, end, p, isCur) {
+  function _renderWeeklyRow(start, end, p, isCur, idx) {
     const fmtMD = function(d){ return d.slice(5).replace('-', '/'); };
-    const labelStyle = 'font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.05em';
-    const valueStyle = 'font-size:20px;font-weight:600;line-height:1';
-    const metricBox  = 'display:flex;flex-direction:column;gap:3px';
 
-    // 사업별 mini-bars (입고 vs 처리)
-    const bizItems = CONFIG.BIZ_LIST.filter(function(b){ return p.byBiz[b].in > 0 || p.byBiz[b].proc > 0 || p.byBiz[b].rev > 0; });
-    const maxV = bizItems.length ? Math.max.apply(null, bizItems.flatMap(function(b){ return [p.byBiz[b].in, p.byBiz[b].proc]; }).concat([1])) : 1;
-    const bizBars = bizItems.map(function(b){
-      const x = p.byBiz[b];
-      const inPct   = Math.round(x.in   / maxV * 100);
-      const procPct = Math.round(x.proc / maxV * 100);
-      const color   = CONFIG.BIZ_COLORS[b] || '#666';
-      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px">'
-        + '<span style="min-width:80px;color:var(--tx2);font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</span>'
-        + '<span style="min-width:62px;text-align:right;color:var(--tx3);font-family:var(--font-mono)">입 ' + (x.in > 0 ? formatNumber(x.in) : '—') + '</span>'
-        + '<div style="flex:1;display:flex;gap:3px;height:7px">'
-        +   '<div style="flex:1;background:#F0F0F0;border-radius:2px;overflow:hidden"><div style="width:' + inPct + '%;height:100%;background:' + color + ';opacity:0.45"></div></div>'
-        +   '<div style="flex:1;background:#F0F0F0;border-radius:2px;overflow:hidden"><div style="width:' + procPct + '%;height:100%;background:' + color + '"></div></div>'
-        + '</div>'
-        + '<span style="min-width:62px;text-align:right;color:' + (x.proc > 0 ? color : 'var(--tx3)') + ';font-family:var(--font-mono);font-weight:500">처 ' + (x.proc > 0 ? formatNumber(x.proc) : '—') + '</span>'
-        + '<span style="min-width:62px;text-align:right;color:' + (x.rev > 0 ? '#1A6B3A' : 'var(--tx3)') + ';font-family:var(--font-mono)">' + (x.rev > 0 ? '$' + formatNumber(Math.round(x.rev)) : '매 —') + '</span>'
-        + '</div>';
-    }).join('');
+    // 입고 사업별 (값 있는 것만, 큰 순)
+    const inBizItems = CONFIG.BIZ_LIST
+      .filter(function(b){ return p.byBiz[b].in > 0; })
+      .sort(function(a, b){ return p.byBiz[b].in - p.byBiz[a].in; });
+    const inHtml = inBizItems.length
+      ? inBizItems.map(function(b){
+          const c = CONFIG.BIZ_COLORS[b] || '#666';
+          return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px">'
+               + '<span style="width:6px;height:6px;border-radius:50%;background:' + c + '"></span>'
+               + '<span style="color:var(--tx2)">' + (CONFIG.BIZ_LABELS[b] || b) + '</span>'
+               + '<span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + formatNumber(p.byBiz[b].in) + '</span>'
+               + '</span>';
+        }).join('')
+        + '<span style="color:var(--tx3);font-size:11px;margin-left:4px">계 ' + formatNumber(p.totalIn) + '</span>'
+      : '<span style="font-size:12px;color:var(--tx3)">입고 없음</span>';
 
-    const bizSection = bizItems.length
-      ? '<div style="margin-top:10px;padding-top:10px;border-top:0.5px dashed var(--bd)">' + bizBars + '</div>'
-      : '';
-
-    const opsSection = '<div style="padding:12px 14px;border-bottom:0.5px solid var(--bd)">'
-      + '<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;letter-spacing:.02em">◾ 운영 활동</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">입고</div><div style="' + valueStyle + '">' + formatNumber(p.totalIn) + '</div></div>'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">처리</div><div style="' + valueStyle + ';color:#1B4F8A">' + formatNumber(p.totalProc) + '</div></div>'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">기말 WIP</div><div style="' + valueStyle + ';color:#B45309">' + formatNumber(p.wip) + '</div></div>'
-      + '</div>'
-      + bizSection
-      + '</div>';
-
-    // 결제된 LOT 입고일 범위
-    let ltNote = '';
-    if (p.paidInDates.length) {
-      const sorted = p.paidInDates.slice().sort();
-      const oldest = sorted[0];
-      const newest = sorted[sorted.length - 1];
-      ltNote = '<div style="margin-top:8px;padding-top:8px;border-top:0.5px dashed var(--bd);font-size:11px;color:var(--tx3)">'
-        + '결제된 LOT 입고일 범위: <span style="font-family:var(--font-mono);color:var(--tx2)">' + fmtMD(oldest) + ' ~ ' + fmtMD(newest) + '</span>'
-        + '</div>';
+    // 인보이스 상세 (어떤 LOT, 언제 입고된 건)
+    let invHtml = '';
+    if (p.invDetails.length === 0) {
+      invHtml = '<span style="font-size:12px;color:var(--tx3)">인보이스 없음</span>';
+    } else {
+      // 총액 요약 + 평균 LT
+      const summary = '<span style="font-size:13px;font-weight:600;color:#1A6B3A;margin-right:8px">$' + formatNumber(Math.round(p.totalRev)) + '</span>'
+                    + '<span style="font-size:11px;color:var(--tx3)">' + p.invDetails.length + '건'
+                    + (p.avgLT !== null ? ' · 평균 LT ' + p.avgLT + '일' : '') + '</span>';
+      // 인보이스별 한 줄: LOT번호 · $금액 (입고 M/D · LT N일)
+      const rows = p.invDetails.map(function(d){
+        const ltStr = d.inDate
+          ? '<span style="color:var(--tx3)">입고 ' + fmtMD(d.inDate) + (d.lt !== null ? ' · LT ' + d.lt + '일' : '') + '</span>'
+          : '<span style="color:var(--tx3)">입고일 미상</span>';
+        const bizCol = CONFIG.BIZ_COLORS[d.biz] || '#666';
+        return '<div style="display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0">'
+          + '<span style="display:inline-block;width:3px;height:12px;background:' + bizCol + ';border-radius:1px"></span>'
+          + '<span style="font-family:var(--font-mono);font-weight:500;color:var(--tx);min-width:80px">' + d.lotNo + '</span>'
+          + '<span style="color:var(--tx2);min-width:120px">' + (d.customer || '—') + '</span>'
+          + '<span style="font-family:var(--font-mono);font-weight:600;color:#1A6B3A;min-width:80px;text-align:right">$' + formatNumber(Math.round(d.amt)) + '</span>'
+          + '<span style="font-family:var(--font-mono);flex:1">' + ltStr + '</span>'
+          + '</div>';
+      }).join('');
+      invHtml = summary
+        + '<div style="margin-top:6px;padding-top:6px;border-top:0.5px dashed var(--bd)">' + rows + '</div>';
     }
 
-    const revSection = '<div style="padding:12px 14px">'
-      + '<div style="font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:8px;letter-spacing:.02em">◾ 수금 (매출)</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">매출</div><div style="' + valueStyle + ';color:#0F6E56">' + (p.totalRev > 0 ? '$' + formatNumber(Math.round(p.totalRev)) : '—') + '</div></div>'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">결제 LOT</div><div style="' + valueStyle + '">' + p.paidLotCount + '<span style="font-size:12px;font-weight:500;color:var(--tx3);margin-left:2px">건</span></div></div>'
-      +   '<div style="' + metricBox + '"><div style="' + labelStyle + '">평균 lead time</div><div style="' + valueStyle + '">' + (p.avgLT !== null ? p.avgLT + '<span style="font-size:12px;font-weight:500;color:var(--tx3);margin-left:2px">일</span>' : '—') + '</div></div>'
-      + '</div>'
-      + ltNote
-      + '</div>';
+    const weekTag = isCur ? '<span style="font-size:10px;color:#0C447C;font-weight:600;margin-left:6px;padding:1px 7px;border:1px solid #9DC3F0;border-radius:3px;background:#EBF2FB">이번주</span>'
+                          : (idx === 1 ? '<span style="font-size:10px;color:var(--tx3);margin-left:6px">지난주</span>' : '');
+    const rowBg  = isCur ? '#FAFCFE' : (idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA');
 
-    const tag = isCur
-      ? '<span style="font-size:10px;color:#0C447C;font-weight:500;margin-left:6px;padding:1px 6px;border:1px solid #9DC3F0;border-radius:3px;background:#EBF2FB">이번 사이클</span>'
-      : '<span style="font-size:10px;color:var(--tx3);margin-left:6px">직전 사이클</span>';
-
-    return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;overflow:hidden">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">'
-      +   '<span style="font-size:13px;font-weight:600;color:var(--tx)">' + label + tag + '</span>'
-      +   '<span style="font-size:11px;color:var(--tx3);font-family:var(--font-mono)">' + fmtMD(start) + ' ~ ' + fmtMD(end) + '</span>'
+    return '<div style="display:grid;grid-template-columns:160px 1fr;gap:14px;padding:12px 14px;background:' + rowBg + ';border-bottom:0.5px solid var(--bd)">'
+      + '<div>'
+      +   '<div style="font-size:13px;font-weight:600;color:var(--tx);font-family:var(--font-mono)">' + fmtMD(start) + ' ~ ' + fmtMD(end) + '</div>'
+      +   '<div style="margin-top:4px">' + weekTag + '</div>'
       + '</div>'
-      + opsSection
-      + revSection
+      + '<div>'
+      +   '<div style="margin-bottom:6px">'
+      +     '<span style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:8px">입고</span>'
+      +     inHtml
+      +   '</div>'
+      +   '<div>'
+      +     '<span style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-right:8px">인보이스</span>'
+      +     invHtml
+      +   '</div>'
+      + '</div>'
       + '</div>';
   }
 
   function _renderWeeklyTable() {
-    const t         = today();
-    const curStart  = addDays(t, -13);
-    const curEnd    = t;
-    const prevStart = addDays(t, -27);
-    const prevEnd   = addDays(t, -14);
-    const cur  = _calcBiweekly(curStart,  curEnd);
-    const prev = _calcBiweekly(prevStart, prevEnd);
+    const N_WEEKS = 4;
+    const t = today();
+    const rows = [];
+    for (let i = 0; i < N_WEEKS; i++) {
+      const end   = addDays(t, -7 * i);
+      const start = addDays(end, -6);
+      const p     = _calcWeekly(start, end);
+      rows.push(_renderWeeklyRow(start, end, p, i === 0, i));
+    }
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
-      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">주간 보고 — 2주 사이클</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">운영(입고·처리·WIP) + 수금(매출·LT)을 분리해서 시간차 가시화</div>'
+      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">주간 보고 — 최근 ' + N_WEEKS + '주</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">주차별 사업별 입고 + 인보이스(어떤 LOT의 결제분인지 + lead time)</div>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
-      + _renderBiweeklyCard('이번 2주', curStart,  curEnd,  cur,  true)
-      + _renderBiweeklyCard('지난 2주', prevStart, prevEnd, prev, false)
+      + '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:14px">'
+      + rows.join('')
       + '</div>';
   }
 
@@ -376,15 +383,14 @@ Pages.Dashboard = (() => {
           const col = isToday ? '#1A7F37' : bizColor;
           return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
-        // 누락 처리 — 모두 클릭 가능
-        if (isToday) {
-          return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer"><div style="width:100%;height:100%;background:transparent;border:1px dashed #B0B0B0;border-radius:2px"></div>' + tipHtml + '</div>';
-        }
-        if (isRef) {
-          return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div>' + tipHtml + '</div>';
-        }
-        // 과거 누락
-        return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';align-items:center;cursor:pointer"><div style="width:8px;height:8px;background:transparent;border:1px solid #D0D0D0;border-radius:50%"></div>' + tipHtml + '</div>';
+        // 누락 처리 — 모두 풀높이 네모 점선 박스 (색만 다름)
+        let bg = 'transparent', bd = '#D0D0D0';
+        if (isToday)      { bg = 'transparent';  bd = '#9CA3AF'; }  // 오늘 = 진한 회색 점선
+        else if (isRef)   { bg = '#FEF2F2';      bd = '#dc2626'; }  // 직전 영업일 = 빨강 점선
+        // 과거 누락 = 옅은 회색 점선 (기본값 유지)
+        return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
+          + '<div style="width:100%;height:100%;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px"></div>'
+          + tipHtml + '</div>';
       }).join('');
 
       let statusBadge;
