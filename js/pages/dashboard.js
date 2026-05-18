@@ -223,16 +223,15 @@ Pages.Dashboard = (() => {
     return Math.min(5, Math.floor((day - 1) / 7) + 1);
   }
 
-  function _renderWeeklyTable() {
-    const now      = new Date();
-    const year     = now.getFullYear();
-    const month    = now.getMonth() + 1;
+  function _renderWeeklyTableFor(year, month, opts) {
+    opts = opts || {};
+    const isCurrent = !!opts.isCurrent;
     const ymPref   = year + '-' + String(month).padStart(2, '0');
     const lots     = Store.getLots();
     const dailies  = Store.getDailies();
     const invoices = Store.getInvoices();
 
-    // 이번 달 마지막 날로 주차 수 결정
+    // 해당 달 마지막 날로 주차 수 결정
     const lastDay  = new Date(year, month, 0).getDate();
     const numWeeks = Math.min(5, Math.floor((lastDay - 1) / 7) + 1);
     const weeks    = Array.from({ length: numWeeks }, function(_, i){ return i + 1; });
@@ -261,13 +260,13 @@ Pages.Dashboard = (() => {
     }
 
     const BD = '#E0E0E0', HBG = '#F0F0F0', HBG2 = '#E4ECF5', SBG = '#F7F7F7';
-    const TH = function(t, extra){ extra = extra || ''; return '<th style="padding:6px 8px;text-align:center;font-size:11px;font-weight:600;color:#222;background:' + HBG + ';border:1px solid ' + BD + ';white-space:nowrap;' + extra + '">' + t + '</th>'; };
-    const THM = function(t, bg, colspan, extra){ bg = bg || HBG; colspan = colspan || 1; extra = extra || ''; return '<th colspan="' + colspan + '" style="padding:6px 8px;text-align:center;font-size:11px;font-weight:600;color:#222;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap;' + extra + '">' + t + '</th>'; };
-    const TD = function(v, bg, color, fw){ bg = bg || '#fff'; color = color || '#333'; fw = fw || '400'; return '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:' + fw + ';color:' + color + ';background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + v + '</td>'; };
-    const TDL = function(t, bg){ bg = bg || HBG; return '<td style="padding:6px 10px;text-align:left;font-size:12px;font-weight:600;color:#1D1D1F;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + t + '</td>'; };
+    const TH  = function(t, extra){ extra = extra || ''; return '<th style="padding:5px 4px;text-align:center;font-size:10px;font-weight:600;color:#222;background:' + HBG + ';border:1px solid ' + BD + ';white-space:nowrap;' + extra + '">' + t + '</th>'; };
+    const THM = function(t, bg, colspan, extra){ bg = bg || HBG; colspan = colspan || 1; extra = extra || ''; return '<th colspan="' + colspan + '" style="padding:5px 4px;text-align:center;font-size:10px;font-weight:600;color:#222;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap;' + extra + '">' + t + '</th>'; };
+    const TD  = function(v, bg, color, fw){ bg = bg || '#fff'; color = color || '#333'; fw = fw || '400'; return '<td style="padding:5px 4px;text-align:right;font-size:11px;font-family:var(--font-mono);font-weight:' + fw + ';color:' + color + ';background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + v + '</td>'; };
+    const TDL = function(t, bg){ bg = bg || HBG; return '<td style="padding:5px 8px;text-align:left;font-size:11px;font-weight:600;color:#1D1D1F;background:' + bg + ';border:1px solid ' + BD + ';white-space:nowrap">' + t + '</td>'; };
 
     // ── 가로: 사업 (3열 입고/처리/매출씩) + 사업 합계 / 세로: 주차 + 월 합계
-    const curWk = _weekOfMonth(today());
+    const curWk = isCurrent ? _weekOfMonth(today()) : null;
 
     // 헤더 row1: 사업명
     const bizHeader = bizList.map(function(biz){
@@ -286,13 +285,13 @@ Pages.Dashboard = (() => {
     + THM('매출', SBG);
 
     // 데이터 행: 주차마다
-    const rowTotals = { in: 0, proc: 0, rev: 0 }; // 전체 월 합계
+    const rowTotals = { in: 0, proc: 0, rev: 0 };
     const bizColTotals = bizList.map(function(){ return { in: 0, proc: 0, rev: 0 }; });
 
     const dataRows = weeks.map(function(w){
       const isCur = w === curWk;
       const rowBg = isCur ? '#F4F8FC' : '#fff';
-      const weekLabel = month + '월 ' + w + '주' + (isCur ? ' <span style="font-size:10px;color:#0C447C;font-weight:500">(이번주)</span>' : '');
+      const weekLabel = month + '월 ' + w + '주' + (isCur ? ' <span style="font-size:9px;color:#0C447C;font-weight:500">(이번주)</span>' : '');
       let rowSumIn = 0, rowSumProc = 0, rowSumRev = 0;
       const cells = bizList.map(function(biz, bi){
         const vIn   = sumIn(biz, w);
@@ -304,7 +303,7 @@ Pages.Dashboard = (() => {
         bizColTotals[bi].rev  += vRev;
         const procColor = vProc > 0 ? (CONFIG.BIZ_COLORS[biz] || '#333') : '#C7C7CC';
         const leftBd = bi === 0 ? 'border-left:2px solid ' + BD : '';
-        const inCell = '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);color:' + (vIn > 0 ? '#333' : '#C7C7CC') + ';background:' + rowBg + ';border:1px solid ' + BD + ';white-space:nowrap;' + leftBd + '">' + (vIn > 0 ? formatNumber(vIn) : '—') + '</td>';
+        const inCell = '<td style="padding:5px 4px;text-align:right;font-size:11px;font-family:var(--font-mono);color:' + (vIn > 0 ? '#333' : '#C7C7CC') + ';background:' + rowBg + ';border:1px solid ' + BD + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' + leftBd + '">' + (vIn > 0 ? formatNumber(vIn) : '—') + '</td>';
         return inCell
              + TD(vProc > 0 ? formatNumber(vProc) : '—', rowBg, procColor)
              + TD(vRev > 0 ? '$' + formatNumber(Math.round(vRev)) : '—', rowBg, vRev > 0 ? '#1A6B3A' : '#C7C7CC');
@@ -313,42 +312,70 @@ Pages.Dashboard = (() => {
       rowTotals.proc += rowSumProc;
       rowTotals.rev  += rowSumRev;
       const sumBg = isCur ? '#EAF0F8' : SBG;
-      const sumCells = '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:600;color:' + (rowSumIn > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + sumBg + ';border:1px solid ' + BD + ';white-space:nowrap;border-left:2px solid #BBB">' + (rowSumIn > 0 ? formatNumber(rowSumIn) : '—') + '</td>'
+      const sumCells = '<td style="padding:5px 4px;text-align:right;font-size:11px;font-family:var(--font-mono);font-weight:600;color:' + (rowSumIn > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + sumBg + ';border:1px solid ' + BD + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid #BBB">' + (rowSumIn > 0 ? formatNumber(rowSumIn) : '—') + '</td>'
                     + TD(rowSumProc > 0 ? formatNumber(rowSumProc) : '—', sumBg, rowSumProc > 0 ? '#1D1D1F' : '#C7C7CC', '600')
                     + TD(rowSumRev > 0 ? '$' + formatNumber(Math.round(rowSumRev)) : '—', sumBg, rowSumRev > 0 ? '#1A6B3A' : '#C7C7CC', '600');
       const labelBg = isCur ? HBG2 : HBG;
       return '<tr>' + TDL(weekLabel, labelBg) + cells + sumCells + '</tr>';
     }).join('');
 
-    // 월 합계 행 (가장 아래)
+    // 월 합계 행
     const totalRowCells = bizList.map(function(biz, bi){
       const t = bizColTotals[bi];
       const procColor = t.proc > 0 ? (CONFIG.BIZ_COLORS[biz] || '#1D1D1F') : '#C7C7CC';
       const leftBd = bi === 0 ? 'border-left:2px solid ' + BD : '';
-      const inCell = '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:600;color:' + (t.in > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + SBG + ';border:1px solid ' + BD + ';white-space:nowrap;' + leftBd + '">' + (t.in > 0 ? formatNumber(t.in) : '—') + '</td>';
+      const inCell = '<td style="padding:5px 4px;text-align:right;font-size:11px;font-family:var(--font-mono);font-weight:600;color:' + (t.in > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + SBG + ';border:1px solid ' + BD + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;' + leftBd + '">' + (t.in > 0 ? formatNumber(t.in) : '—') + '</td>';
       return inCell
            + TD(t.proc > 0 ? formatNumber(t.proc) : '—', SBG, procColor, '600')
            + TD(t.rev > 0 ? '$' + formatNumber(Math.round(t.rev)) : '—', SBG, t.rev > 0 ? '#1A6B3A' : '#C7C7CC', '600');
     }).join('');
-    const totalRowGrand = '<td style="padding:6px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:700;color:' + (rowTotals.in > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + SBG + ';border:1px solid ' + BD + ';white-space:nowrap;border-left:2px solid #BBB">' + (rowTotals.in > 0 ? formatNumber(rowTotals.in) : '—') + '</td>'
+    const totalRowGrand = '<td style="padding:5px 4px;text-align:right;font-size:11px;font-family:var(--font-mono);font-weight:700;color:' + (rowTotals.in > 0 ? '#1D1D1F' : '#C7C7CC') + ';background:' + SBG + ';border:1px solid ' + BD + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid #BBB">' + (rowTotals.in > 0 ? formatNumber(rowTotals.in) : '—') + '</td>'
                        + TD(rowTotals.proc > 0 ? formatNumber(rowTotals.proc) : '—', SBG, '#1D1D1F', '700')
                        + TD(rowTotals.rev > 0 ? '$' + formatNumber(Math.round(rowTotals.rev)) : '—', SBG, '#1A6B3A', '700');
     const totalRow = '<tr>' + TDL(month + '월 합계', SBG) + totalRowCells + totalRowGrand + '</tr>';
 
+    // colgroup: 첫 컬럼 84px 고정, 나머지는 균등 분배
+    const dataColCount = (bizList.length + 1) * 3;
+    const colgroup = '<colgroup><col style="width:84px">'
+      + Array(dataColCount).fill(0).map(function(_, ci){
+          const w = (100 / dataColCount).toFixed(3) + '%';
+          return '<col style="width:' + w + '">';
+        }).join('')
+      + '</colgroup>';
+
     const body = bizList.length
       ? dataRows + totalRow
-      : '<tr><td colspan="' + (bizList.length * 3 + 4) + '" style="padding:14px;text-align:center;font-size:12px;color:var(--tx3);border:1px solid ' + BD + '">' + month + '월 데이터 없음</td></tr>';
+      : '<tr><td colspan="' + (dataColCount + 1) + '" style="padding:14px;text-align:center;font-size:12px;color:var(--tx3);border:1px solid ' + BD + '">' + month + '월 데이터 없음</td></tr>';
 
-    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
-      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">주간 보고 — ' + month + '월</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">주차(세로) × 사업(가로) — 입고/처리/매출 (2주 단위 보고)</div>'
+    const labelTag = isCurrent ? '<span style="font-size:11px;color:#0C447C;font-weight:500;margin-left:6px">(이번달)</span>'
+                               : '<span style="font-size:11px;color:var(--tx3);margin-left:6px">(지난달)</span>';
+
+    return '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:6px">'
+      + '<div style="font-size:13px;font-weight:600;color:var(--tx)">' + year + '년 ' + month + '월</div>'
+      + labelTag
       + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:14px">'
-      + '<table style="border-collapse:collapse;table-layout:auto;font-family:\'Pretendard\',-apple-system,sans-serif">'
-      + '<thead><tr>' + TH('주차', 'width:120px') + bizHeader + '</tr>'
+      + '<div style="margin-bottom:14px">'
+      + '<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-family:\'Pretendard\',-apple-system,sans-serif">'
+      + colgroup
+      + '<thead><tr>' + TH('주차') + bizHeader + '</tr>'
       + '<tr>' + TH('') + subHeader + '</tr></thead>'
       + '<tbody>' + body + '</tbody>'
       + '</table></div>';
+  }
+
+  function _renderWeeklyTable() {
+    const now      = new Date();
+    const curYear  = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+    const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
+    const prevYear  = curMonth === 1 ? curYear - 1 : curYear;
+
+    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
+      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">주간 보고</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">주차(세로) × 사업(가로) — 입고/처리/매출 (2주 단위 보고)</div>'
+      + '</div>'
+      + _renderWeeklyTableFor(curYear,  curMonth,  { isCurrent: true })
+      + _renderWeeklyTableFor(prevYear, prevMonth, { isCurrent: false });
   }
 
   function _renderActiveTable(activeLots, dailies) {
