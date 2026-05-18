@@ -522,7 +522,6 @@ Pages.Dashboard = (() => {
         + _renderBarCards(kpi)
         + _renderWeeklyTable()
         + _renderActiveTable(kpi.activeLots, kpi.dailies)
-        + _renderCompletedTable(kpi.doneLots, kpi.dailies, kpi.invoices)
         + _renderShipments(kpi.upcomingShipments)
         + '</div>';
     },
