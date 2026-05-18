@@ -320,9 +320,15 @@ Pages.Dashboard = (() => {
     const inProgressLots = activeLots.filter(function(l){ return l.inDate && l.inDate <= today(); });
     if (!inProgressLots.length) return '';
 
-    const N_DAYS  = 14;
-    const windowD = _businessDaysWindow(today(), N_DAYS);
-    const lastBD  = windowD[windowD.length - 1];
+    const N_DAYS   = 14;
+    const todayStr = today();
+    const windowD  = _businessDaysWindow(todayStr, N_DAYS);
+    // 직전 영업일 = 누락 평가 기준 (오늘은 아직 입력 진행 중이라 누락 아님)
+    const tParts = todayStr.split('-').map(Number);
+    let _ref = new Date(tParts[0], tParts[1]-1, tParts[2]);
+    _ref.setDate(_ref.getDate() - 1);
+    while (!_isBusinessDay(_ref)) _ref.setDate(_ref.getDate() - 1);
+    const refStr  = _dStr(_ref);
 
     function procMap(lotId) {
       const m = {};
@@ -342,28 +348,41 @@ Pages.Dashboard = (() => {
       const qty      = parseNumber(lot.qty);
       const pct      = qty > 0 ? Math.round(cum / qty * 100) : 0;
       const last     = lastEntryDate(lot.id);
-      const refDate  = last || lot.inDate || lastBD;
-      const missDays = _bizDaysBetween(refDate, lastBD);
-      const bizColor = CONFIG.BIZ_COLORS[lot.biz] || '#666';
+      // 누락일수: 직전 영업일(refStr) 기준
+      const refForMiss = last || lot.inDate || refStr;
+      const missDays   = _bizDaysBetween(refForMiss, refStr);
+      const bizColor   = CONFIG.BIZ_COLORS[lot.biz] || '#666';
 
       const vals = windowD.map(function(d){ return pmap[d] || 0; });
       const maxV = Math.max.apply(null, vals.concat([1]));
 
-      const bars = windowD.map(function(d, i){
+      const bars = windowD.map(function(d){
         const v       = pmap[d] || 0;
-        const isLast  = i === windowD.length - 1;
-        const tip     = d + (v > 0 ? ' · ' + formatNumber(v) + '개' : ' · 누락');
+        const isToday = (d === todayStr);
+        const isRef   = (d === refStr);
+        const dispMD  = d.slice(5).replace('-', '/');
+        const tip     = (isToday ? '오늘 (' + dispMD + ')' : dispMD)
+                      + (v > 0 ? ' · ' + formatNumber(v) + '개' : (isToday ? ' · 입력 전' : ' · 누락'));
+        const tipHtml = '<div class="dash-bar-tip" style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:3px 7px;background:#1D1D1F;color:#fff;font-size:11px;border-radius:4px;white-space:nowrap;pointer-events:none;font-family:Pretendard,sans-serif;opacity:0;transition:opacity 0.1s;z-index:10">' + tip + '<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:#1D1D1F"></div></div>';
+        const wrap = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center;cursor:default';
+        const hoverJs = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
+
         if (v > 0) {
           const h = Math.max(8, Math.round(v / maxV * 100));
-          const col = isLast ? '#1A7F37' : bizColor;
-          return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div></div>';
+          // 오늘 입력 완료 = 진한 녹색, 직전 영업일 입력 = 사업 색상, 나머지 = 사업 색상
+          const col = isToday ? '#1A7F37' : bizColor;
+          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
-        // 누락
-        if (isLast) {
-          // 오늘(또는 최근 영업일) 누락 → 빨강 빈 박스
-          return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div></div>';
+        // 누락 처리
+        if (isToday) {
+          // 오늘은 아직 입력 안한 게 정상일 수 있음 → 연한 회색 점선 박스 ("입력 전")
+          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:100%;background:transparent;border:1px dashed #B0B0B0;border-radius:2px"></div>' + tipHtml + '</div>';
         }
-        return '<div title="' + tip + '" style="flex:1;min-width:6px;height:32px;display:flex;align-items:center;justify-content:center"><div style="width:3px;height:3px;background:#D0D0D0;border-radius:50%"></div></div>';
+        if (isRef) {
+          // 직전 영업일 누락 → 빨강 점선 박스
+          return '<div ' + hoverJs + ' style="' + wrap + '"><div style="width:100%;height:100%;background:#FEF2F2;border:1px dashed #dc2626;border-radius:2px"></div>' + tipHtml + '</div>';
+        }
+        return '<div ' + hoverJs + ' style="' + wrap + ';align-items:center"><div style="width:3px;height:3px;background:#D0D0D0;border-radius:50%"></div>' + tipHtml + '</div>';
       }).join('');
 
       let statusBadge;
@@ -403,41 +422,48 @@ Pages.Dashboard = (() => {
       if (!lots.length) {
         return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:var(--tx3)">' + label + ' — 진행중 LOT 없음</div>';
       }
-      // 누락 많은 LOT 우선, 그다음 입고일 내림차순
+      // 누락 많은 LOT 우선, 그다음 입고일 내림차순 (기준: 직전 영업일 refStr)
       const sorted = lots.slice().sort(function(a, b){
         const la = lastEntryDate(a.id), lb = lastEntryDate(b.id);
-        const ra = la || a.inDate || lastBD;
-        const rb = lb || b.inDate || lastBD;
-        const ma = _bizDaysBetween(ra, lastBD);
-        const mb = _bizDaysBetween(rb, lastBD);
+        const ra = la || a.inDate || refStr;
+        const rb = lb || b.inDate || refStr;
+        const ma = _bizDaysBetween(ra, refStr);
+        const mb = _bizDaysBetween(rb, refStr);
         if (ma !== mb) return mb - ma;
         return String(b.inDate || '').localeCompare(String(a.inDate || ''));
       });
 
-      const todayMissCount = sorted.filter(function(l){
+      // 누락 카운트 = 직전 영업일(refStr)에 입력 없는 LOT 수
+      const missCount = sorted.filter(function(l){
         const pm = procMap(l.id);
-        return !pm[lastBD];
+        return !pm[refStr];
       }).length;
 
-      const headerTag = todayMissCount > 0
-        ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">오늘 누락 ' + todayMissCount + '건</span>'
-        : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">오늘 입력 모두 OK</span>';
+      const refMD = refStr.slice(5).replace('-', '/');
+      const headerTag = missCount > 0
+        ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">' + refMD + ' 누락 ' + missCount + '건</span>'
+        : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
 
-      // 영업일 라벨 (1주마다 표시)
+      // 영업일 라벨
       const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
         + '<div></div>'
         + '<div style="display:flex;gap:2px">'
         +   windowD.map(function(d, i){
-              const showLabel = i === 0 || i === windowD.length - 1 || i === Math.floor(windowD.length / 2);
-              const isLast = i === windowD.length - 1;
-              return '<div style="flex:1;min-width:6px;text-align:center;' + (isLast ? 'color:#dc2626;font-weight:600' : '') + '">' + (showLabel ? d.slice(5) : '') + '</div>';
+              const isToday = d === todayStr;
+              const isRef   = d === refStr;
+              const showLabel = i === 0 || isToday || isRef || i === Math.floor(windowD.length / 2);
+              let style = 'flex:1;min-width:6px;text-align:center';
+              let text  = d.slice(5);
+              if (isToday) { style += ';color:#0C447C;font-weight:600'; text = '오늘'; }
+              else if (isRef) { style += ';color:#dc2626;font-weight:600'; }
+              return '<div style="' + style + '">' + (showLabel ? text : '') + '</div>';
             }).join('')
         + '</div>'
         + '<div></div>'
         + '</div>';
 
-      return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;overflow:hidden">'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd)">'
+      return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;overflow:visible">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd);border-radius:8px 8px 0 0">'
         +   '<div>'
         +     '<span style="font-size:13px;font-weight:600;color:' + color + '">' + label + '</span>'
         +     '<span style="font-size:11px;color:var(--tx3);margin-left:6px">진행중 ' + lots.length + '건</span>'
@@ -455,7 +481,7 @@ Pages.Dashboard = (() => {
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
       + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 높이 = 일 처리량 · 점 = 누락 · 빨강 박스 = 오늘 누락 (1영업일 기준)</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 높이 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 점선 = 오늘(입력 중) · 점 = 과거 누락 (호버 시 처리량 표시)</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
