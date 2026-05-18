@@ -134,10 +134,9 @@ Pages.Dashboard = (() => {
       + '<div style="font-size:11px;margin-top:2px">' + kpiExtraHtml + '</div>'
       + '</div>';
 
-    return '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px">'
+    return '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">'
       + joCardHtml
       + kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', 'var(--tx)', krwSub, fxInputHtml)
-      + kpiCard('Active Orders', kpi.activeLots.length, kpi.overdueLots.length > 0 ? '지연 ' + kpi.overdueLots.length + '건 포함' : '지연 없음', 'var(--tx2)')
       + kpiCardHtml
       + '</div>';
   }
