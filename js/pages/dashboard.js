@@ -355,14 +355,9 @@ Pages.Dashboard = (() => {
     const invoices    = Store.getInvoices();
     const upcomingLots   = activeLots.filter(function(l){ return l.inDate > today(); });
     const inProgressLots = activeLots.filter(function(l){ return l.inDate <= today(); });
-    const doneLots       = Store.getLots().filter(function(l){ return getLotStatus(l) === 'done'; });
-    const unpaidLots     = doneLots.filter(function(l){
-      const inv = invoices.find(function(r){ return String(r.lotId) === String(l.id); });
-      return !inv || inv.status === 'unpaid' || inv.status === 'partial';
-    });
 
-    // ★ 입고일 역순 정렬
-    const allLots = upcomingLots.concat(inProgressLots, unpaidLots)
+    // ★ 입고일 역순 정렬 (완료 LOT은 제외)
+    const allLots = upcomingLots.concat(inProgressLots)
       .sort(function(a, b){ return String(b.inDate || '').localeCompare(String(a.inDate || '')); });
     if (!allLots.length) return '';
 
@@ -423,7 +418,7 @@ Pages.Dashboard = (() => {
         + '</tr>';
     }).join('');
 
-    return '<div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정 · 미수금)</span></div>'
+    return '<div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Active & Upcoming Job Orders <span style="font-size:12px;font-weight:400;color:var(--tx3);margin-left:4px">(진행중 · 입고예정)</span></div>'
       + '<div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">'
       + '<table style="width:100%;border-collapse:collapse;font-family:\'Pretendard\',-apple-system,sans-serif">'
       + '<thead><tr>'
@@ -433,61 +428,6 @@ Pages.Dashboard = (() => {
       + '<th style="' + S.th + '">입고일</th><th style="' + S.th + '"><div style="font-size:10px;color:var(--tx3);font-weight:500;line-height:1.3">목표완료일</div><div style="line-height:1.3">실완료일</div></th><th style="' + S.th + '">상태</th>'
       + '</tr></thead>'
       + '<tbody>' + rows + '</tbody>'
-      + '</table></div>';
-  }
-
-  function _renderCompletedTable(doneLots, dailies, invoices) {
-    const paidLots = doneLots.filter(function(l){
-      const inv = invoices.find(function(r){ return String(r.lotId) === String(l.id); });
-      return inv && (inv.status === 'paid' || inv.status === 'partial');
-    });
-    if (!paidLots.length) return '';
-
-    const sorted = paidLots.slice().sort(function(a, b){
-      return String(b.actualDone || b.inDate || '').localeCompare(String(a.actualDone || a.inDate || ''));
-    });
-
-    const rows = sorted.map(function(lot, ci){
-      const inv  = invoices.find(function(r){ return String(r.lotId) === String(lot.id); });
-      const rev  = inv ? parseNumber(inv.total || inv.amount) : parseNumber(lot.price) * parseNumber(lot.qty);
-      const tat  = (lot.inDate && lot.actualDone) ? diffDays(lot.inDate, lot.actualDone) + 'd' : '—';
-      const bg   = ci % 2 === 1 ? 'background:#FAFAFA' : 'background:#fff';
-      return '<tr style="' + bg + '">'
-        + '<td style="' + S.td + ';font-family:var(--font-mono)">' + (lot.lotNo || lot.id) + '</td>'
-        + '<td style="' + S.td + '">' + badge(lot.country, CO_STYLE[lot.country] || '') + '</td>'
-        + '<td style="' + S.td + '">' + badge(lot.biz, BIZ_STYLE[lot.biz] || '') + '</td>'
-        + '<td style="' + S.tdm + '">' + (lot.customerName || '—') + '</td>'
-        + '<td style="' + S.tdr + '">' + formatNumber(parseNumber(lot.qty)) + '</td>'
-        + '<td style="' + S.tdm + '">' + (lot.inDate || '—') + '</td>'
-        + '<td style="' + S.tdm + '">' + (lot.actualDone || '—') + '</td>'
-        + '<td style="' + S.tdm + '">' + tat + '</td>'
-        + '<td style="' + S.tdr + ';color:' + (rev > 0 ? 'var(--tx)' : 'var(--tx3)') + '">' + (rev > 0 ? '$' + formatNumber(Math.round(rev)) : '—') + '</td>'
-        + '</tr>';
-    }).join('');
-
-    const totalQty = sorted.reduce(function(s, l){ return s + parseNumber(l.qty); }, 0);
-    const totalRev = sorted.reduce(function(s, lot){
-      const inv = invoices.find(function(r){ return String(r.lotId) === String(lot.id); });
-      return s + (inv ? parseNumber(inv.total || inv.amount) : parseNumber(lot.price) * parseNumber(lot.qty));
-    }, 0);
-
-    // ★ 합계 행: border-top:2px solid #CCC (헤더와 동일), Pretendard 폰트
-    const sumRow = '<tr style="background:#F0F0F0">'
-      + '<td colspan="4" style="padding:7px 10px;' + FS + ';font-weight:600;color:var(--tx2);border-top:2px solid #CCC;border-right:1px solid #DDD">Total</td>'
-      + '<td style="padding:7px 10px;border-top:2px solid #CCC;border-right:1px solid #DDD;text-align:right;font-family:\'DM Mono\',monospace;font-size:12px;font-weight:700;color:#111">' + formatNumber(totalQty) + '</td>'
-      + '<td colspan="3" style="padding:7px 10px;border-top:2px solid #CCC;border-right:1px solid #DDD"></td>'
-      + '<td style="padding:7px 10px;border-top:2px solid #CCC;border-right:1px solid #DDD;text-align:right;font-family:\'DM Mono\',monospace;font-size:12px;font-weight:700;color:#1A6B3A">' + (totalRev > 0 ? '$' + formatNumber(Math.round(totalRev)) : '—') + '</td>'
-      + '</tr>';
-
-    return '<div style="font-size:14px;font-weight:600;color:var(--tx);margin-bottom:8px">Completed job orders</div>'
-      + '<div style="border:1px solid #E0E0E0;border-radius:6px;overflow:hidden;margin-bottom:12px">'
-      + '<table style="width:100%;border-collapse:collapse;font-family:\'Pretendard\',-apple-system,sans-serif">'
-      + '<thead><tr>'
-      + '<th style="' + S.th + '">LOT 번호</th><th style="' + S.th + '">지역</th><th style="' + S.th + '">사업</th><th style="' + S.th + '">고객사</th>'
-      + '<th style="' + S.thr + '">수량</th><th style="' + S.th + '">입고일</th><th style="' + S.th + '">완료일</th>'
-      + '<th style="' + S.th + '">TAT</th><th style="' + S.thr + '">매출액</th>'
-      + '</tr></thead>'
-      + '<tbody>' + rows + sumRow + '</tbody>'
       + '</table></div>';
   }
 
