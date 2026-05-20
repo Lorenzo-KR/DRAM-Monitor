@@ -408,10 +408,11 @@ Pages.Dashboard = (() => {
         statusBadge = '<span style="font-size:10px;color:#dc2626;font-weight:600;padding:1px 7px;background:#FEF2F2;border:1px solid #FECACA;border-radius:3px">' + missDays + '일 누락</span>';
       }
       const lastStr = last ? '마지막 ' + last.slice(5) : '<span style="color:#dc2626">입력 없음</span>';
+      const pctColor = (isDone || pct >= 100) ? '#1A7F37' : pct >= 70 ? 'var(--tx)' : pct > 0 ? 'var(--tx2)' : 'var(--tx3)';
 
       const rowBg = isDone ? '#FFFCF4' : 'transparent';
       return '<div onclick="Nav.go(\'daily\')" '
-        + 'style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s;background:' + rowBg + '" '
+        + 'style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s;background:' + rowBg + '" '
         + 'onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'' + rowBg + '\'">'
         + '<div>'
         +   '<div style="display:flex;align-items:center;gap:6px;font-size:12px">'
@@ -420,13 +421,17 @@ Pages.Dashboard = (() => {
         +     '<span style="color:var(--tx2)">' + (lot.customerName || '—') + '</span>'
         +   '</div>'
         +   '<div style="font-size:11px;color:var(--tx3);margin-top:3px">'
-        +     '입고 ' + ((lot.inDate || '—').slice(5)) + ' · 진행 ' + pct + '% (' + formatNumber(cum) + '/' + formatNumber(qty) + ')'
+        +     '입고 ' + ((lot.inDate || '—').slice(5)) + ' · ' + lastStr
         +   '</div>'
         + '</div>'
         + '<div style="display:flex;align-items:flex-end;gap:2px;height:32px">' + bars + '</div>'
         + '<div style="text-align:right">'
-        +   '<div style="font-size:11px;color:var(--tx3)">' + lastStr + '</div>'
-        +   '<div style="margin-top:3px">' + statusBadge + '</div>'
+        +   '<div style="display:flex;align-items:baseline;justify-content:flex-end;gap:3px;line-height:1">'
+        +     '<span style="font-size:26px;font-weight:700;color:' + pctColor + '">' + pct + '</span>'
+        +     '<span style="font-size:13px;font-weight:600;color:var(--tx3)">%</span>'
+        +   '</div>'
+        +   '<div style="font-size:10px;color:var(--tx3);font-family:var(--font-mono);margin-top:3px">' + formatNumber(cum) + ' / ' + formatNumber(qty) + '</div>'
+        +   '<div style="margin-top:4px">' + statusBadge + '</div>'
         + '</div>'
         + '</div>';
     }
@@ -468,7 +473,7 @@ Pages.Dashboard = (() => {
         : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
 
       // 영업일 라벨
-      const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
+      const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
         + '<div></div>'
         + '<div style="display:flex;gap:2px">'
         +   windowD.map(function(d, i){
