@@ -218,7 +218,8 @@
         <button class="pill"  data-k="st" data-v="upcoming" onclick="Pages.Progress.setFilter(this,'st')">입고예정</button>
         <button class="pill"  data-k="st" data-v="inprog" onclick="Pages.Progress.setFilter(this,'st')">진행중</button>
         <button class="pill"  data-k="st" data-v="overdue" onclick="Pages.Progress.setFilter(this,'st')">지연</button>
-        <button class="pill"  data-k="st" data-v="done" onclick="Pages.Progress.setFilter(this,'st')">완료</button>
+        <button class="pill"  data-k="st" data-v="ready" onclick="Pages.Progress.setFilter(this,'st')">출고준비</button>
+        <button class="pill"  data-k="st" data-v="shipped" onclick="Pages.Progress.setFilter(this,'st')">출고완료</button>
         <span style="margin-left:auto;font-size:13px;color:var(--tx3)" id="pr-cnt"></span>
       </div>
       <div id="pr-cards"></div>
@@ -274,14 +275,15 @@
           <div class="fld"><label>제품</label><input type="text" id="ep-prod"></div>
           <div class="fld"><label>비고</label><input type="text" id="ep-note"></div>
           <div style="border-top:0.5px solid var(--bd);padding-top:12px;margin-top:4px">
-            <div style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">완료 처리</div>
-            <div class="fld" style="margin-bottom:10px"><label>완료 여부</label>
+            <div style="font-size:12px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">작업완료 / 출고</div>
+            <div class="fld" style="margin-bottom:10px"><label>작업 완료 여부</label>
               <select id="ep-done">
                 <option value="0">진행 중</option>
-                <option value="1">완료</option>
+                <option value="1">작업완료 (출고준비)</option>
               </select>
             </div>
-            <div class="fld"><label>실제 완료일</label><input type="date" id="ep-actual-done"></div>
+            <div class="fld" style="margin-bottom:10px"><label>작업 완료일</label><input type="date" id="ep-actual-done"></div>
+            <div class="fld"><label>출고일 <span style="font-weight:400;color:var(--tx3)">(입력 시 출고완료)</span></label><input type="date" id="ep-ship-date"></div>
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-top:20px">

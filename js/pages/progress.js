@@ -15,19 +15,25 @@ Pages.Progress = (() => {
   // ── 상태 헬퍼 (입고예정 추가) ──────────────────────────────
   function _status(lot) {
     if (lot.inDate > today()) return 'upcoming';
-    return getLotStatus(lot); // done / overdue / inprog
+    // 출고일이 입력되면 '출고완료'
+    if (lot.shipDate) return 'shipped';
+    const base = getLotStatus(lot); // done / overdue / inprog
+    // 테스트 작업완료(done) → 출고 대기 단계 = '출고준비'
+    if (base === 'done') return 'ready';
+    return base;
   }
 
-  const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', done: '완료' };
+  const ST_LABEL = { upcoming: '입고예정', inprog: '진행중', overdue: '지연', ready: '출고준비', shipped: '출고완료' };
   const ST_STYLE = {
     upcoming: 'border:1px solid #999;color:#555;background:#F5F5F5',
     inprog:   'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0;font-weight:700',
     overdue:  'border:1px solid #F09595;color:#A32D2D;background:#FCEBEB;font-weight:700',
-    done:     'border:1px solid #BFBFBF;color:#999;background:#F5F5F5',
+    ready:    'border:1px solid #F0C36D;color:#92400E;background:#FEF6E6;font-weight:700',
+    shipped:  'border:1px solid #BFBFBF;color:#999;background:#F5F5F5',
   };
   const CO_STYLE  = { HK: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB', SG: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0' };
   const BIZ_STYLE = { DRAM: 'border:1px solid #9DC3F0;color:#1B4F8A;background:#EBF2FB', SSD: 'border:1px solid #8DCFBC;color:#0F6E56;background:#E8F5F0', MID: 'border:1px solid #C4A8DC;color:#6A3D7C;background:#F3EEF8' };
-  const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', done: 'var(--tx)' };
+  const BAR_COLOR = { upcoming: 'var(--tx3)', inprog: 'var(--tx2)', overdue: '#dc2626', ready: '#D97706', shipped: 'var(--tx)' };
 
   function _badge(text, style) {
     return `<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap;border:1px solid;${style}">${text}</span>`;
@@ -267,6 +273,7 @@ Pages.Progress = (() => {
           <input id="nl-tgt" type="date" style="${inp};width:100%;padding:3px 5px">
         </td>
         <td style="${tdS}"></td>
+        <td style="${tdS}"></td>
         <td style="${tdS}">
           <button onclick="Pages.Progress.saveLot()" style="width:100%;padding:4px 4px;background:var(--tx);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:600;cursor:pointer">+ 등록</button>
           <span id="nl-ok" style="display:none;font-size:13px;color:#3B6D11;font-weight:500">✓</span>
@@ -300,7 +307,7 @@ Pages.Progress = (() => {
       country: document.getElementById('nl-co')?.value || 'HK',
       customerName: custName, lotNo,
       inDate, targetDate: document.getElementById('nl-tgt')?.value || addDays(inDate, CONFIG.LOT_DEFAULT_TARGET_DAYS),
-      qty, unit: '개', price: 0, currency: 'USD', product: '', note: '', done: '0', actualDone: '',
+      qty, unit: '개', price: 0, currency: 'USD', product: '', note: '', done: '0', actualDone: '', shipDate: '',
     };
 
     const regBtn = document.querySelector('#new-lot-row button');
@@ -365,14 +372,7 @@ Pages.Progress = (() => {
     if (filter.biz)     lots = lots.filter(l => l.biz === filter.biz);
     if (filter.country) lots = lots.filter(l => l.country === filter.country);
     if (filter.status) {
-      lots = lots.filter(l => {
-        const st = _status(l);
-        if (filter.status === 'upcoming') return st === 'upcoming';
-        if (filter.status === 'done')     return st === 'done';
-        if (filter.status === 'overdue')  return st === 'overdue';
-        if (filter.status === 'inprog')   return st === 'inprog';
-        return true;
-      });
+      lots = lots.filter(l => _status(l) === filter.status);
     }
     lots.sort((a, b) => String(b.inDate||'').localeCompare(String(a.inDate||'')));
 
@@ -392,14 +392,15 @@ Pages.Progress = (() => {
       const rem   = Math.max(0, qty - cum);
       const pct   = (qty > 0 && st !== 'upcoming') ? Math.min(100, Math.round(cum/qty*100)) : 0;
       const dd    = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const pctColor  = st==='overdue'?'#dc2626': st==='done'?'#C7C7CC': pct>=80?'#EF9F27':'var(--tx2)';
+      const pctColor  = st==='overdue'?'#dc2626': st==='shipped'?'#C7C7CC': st==='ready'?'#1A6B3A': pct>=80?'#EF9F27':'var(--tx2)';
       const barColor  = BAR_COLOR[st] || 'var(--tx2)';
       const isOpen    = _openLotId === lot.id;
 
       const rowIdx = lots.indexOf(lot);
       const evenBg = rowIdx % 2 === 1 ? '#F2F2F2' : '#fff';
       const statusBg =
-        st==='done'    ? 'opacity:0.6' :
+        st==='shipped' ? 'opacity:0.6' :
+        st==='ready'   ? 'background:#FFFBF0 !important' :
         st==='overdue' ? 'background:#FFF5F5 !important' :
         st==='inprog'  ? 'background:#F5F9FF !important' : '';
       const rowBold = st==='inprog' || st==='overdue';
@@ -427,10 +428,17 @@ Pages.Progress = (() => {
                 </div>`}
           </td>
           <td class="td-c" style="color:#000;font-weight:${rowBold?'600':'400'}">${lot.inDate||'—'}</td>
-          <td class="td-c" style="color:${st==='overdue'?'#A32D2D':st==='done'?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
-            ${lot.targetDate||'—'}${st!=='done'&&dd!==null?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#92400e':'#888'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
+          <td class="td-c" style="color:${st==='overdue'?'#A32D2D':(st==='ready'||st==='shipped')?'#999':'#000'};font-weight:${st==='overdue'?'700':rowBold?'600':'400'}">
+            ${lot.targetDate||'—'}${st!=='ready'&&st!=='shipped'&&dd!==null?`<span style="font-size:10px;margin-left:3px;color:${dd<0?'#A32D2D':dd<=3?'#92400e':'#888'}">(${dd<0?'D+'+Math.abs(dd):'D-'+dd})</span>`:''}
           </td>
-          <td class="td-c" style="color:${st==='done'?'#1A6B3A':'#999'};font-weight:${st==='done'?'600':'400'}">${st==='done'?(lot.actualDone||'—'):'—'}</td>
+          <td class="td-c" style="color:${(st==='ready'||st==='shipped')?'#1A6B3A':'#999'};font-weight:${(st==='ready'||st==='shipped')?'600':'400'}">${(st==='ready'||st==='shipped')?(lot.actualDone||'—'):'—'}</td>
+          <td class="td-c" onclick="event.stopPropagation()">
+            ${st==='shipped'
+              ? `<span style="color:#1A6B3A;font-weight:600">${lot.shipDate}</span>`
+              : st==='ready'
+                ? `<input type="date" onchange="Pages.Progress.setShipDate(${lot.id},this.value)" title="출고일을 입력하면 출고완료로 처리됩니다" style="width:100%;padding:2px 4px;border:1px solid #E0A93D;border-radius:3px;background:#FEF6E6;font-size:11px;color:var(--tx);font-family:'Pretendard',sans-serif">`
+                : '—'}
+          </td>
           <td class="td-c">${_badge(ST_LABEL[st], ST_STYLE[st]||'')}</td>
           <td class="td-c">
             <div style="display:flex;flex-direction:column;gap:3px;align-items:center">
@@ -441,7 +449,7 @@ Pages.Progress = (() => {
         </tr>`;
 
       const expandRow = isOpen ? `
-        <tr><td colspan="13" style="padding:0;border-bottom:1px solid var(--bd)">
+        <tr><td colspan="14" style="padding:0;border-bottom:1px solid var(--bd)">
           ${_renderExpand(lot, dailies)}
         </td></tr>` : '';
 
@@ -464,6 +472,7 @@ Pages.Progress = (() => {
             <col style="width:92px">
             <col style="width:92px">
             <col style="width:92px">
+            <col style="width:104px">
             <col style="width:72px">
             <col style="width:60px">
           </colgroup>
@@ -471,11 +480,11 @@ Pages.Progress = (() => {
             ${TH('')}${TH('지역')}${TH('사업')}${TH('LOT 번호')}${TH('고객사')}
             ${TH('수량','right')}${TH('처리','right')}
             ${TH('진행률')}
-            ${TH('입고일')}${TH('완료예정일')}${TH('완료일')}${TH('상태')}${TH('수정/삭제')}
+            ${TH('입고일')}${TH('완료예정일')}${TH('작업완료일')}${TH('출고일')}${TH('상태')}${TH('수정/삭제')}
           </tr></thead>
           <tbody>
             ${_newRowHTML()}
-            ${rows || '<tr><td colspan="13" class="td-c">LOT가 없습니다</td></tr>'}
+            ${rows || '<tr><td colspan="14" class="td-c">LOT가 없습니다</td></tr>'}
           </tbody>
         </table>
       </div></div>`;
@@ -741,12 +750,13 @@ Pages.Progress = (() => {
       '고객사':     l.customerName || '',
       '입고일':     l.inDate || '',
       '목표완료일': l.targetDate || '',
-      '실완료일':   l.actualDone || '',
+      '작업완료일': l.actualDone || '',
+      '출고일':     l.shipDate || '',
       '총수량':     parseNumber(l.qty),
       '누적처리':   getLotCumulative(l.id, dailies),
       '잔량':       getLotRemaining(l, dailies),
       '진행률(%)':  getLotProgress(l, dailies),
-      '상태':       _status(l)==='upcoming' ? '입고예정' : getLotStatus(l)==='done' ? '완료' : getLotStatus(l)==='overdue' ? '지연' : '진행중',
+      '상태':       ST_LABEL[_status(l)] || '',
       '단가(USD)':  parseNumber(l.price),
       '통화':       l.currency || '',
     }));
@@ -823,6 +833,8 @@ Pages.Progress = (() => {
     document.getElementById('ep-note').value         = lot.note        || '';
     document.getElementById('ep-done').value         = lot.done        || '0';
     document.getElementById('ep-actual-done').value  = lot.actualDone  || '';
+    const epShip = document.getElementById('ep-ship-date');
+    if (epShip) epShip.value = lot.shipDate || '';
 
     const ok = document.getElementById('ep-ok'); if (ok) ok.style.display = 'none';
     document.getElementById('lot-edit-panel').style.display   = 'block';
@@ -861,6 +873,7 @@ Pages.Progress = (() => {
       note:         document.getElementById('ep-note').value.trim(),
       done:         doneVal,
       actualDone:   doneVal === '1' ? (actualDone || today()) : actualDone,
+      shipDate:     document.getElementById('ep-ship-date')?.value || '',
     };
     Store.upsertLot(updated);
     Api.update(CONFIG.SHEETS.LOTS, _editLotId, updated);
@@ -868,6 +881,20 @@ Pages.Progress = (() => {
     const ok = document.getElementById('ep-ok');
     if (ok) { ok.style.display = 'block'; setTimeout(() => { ok.style.display = 'none'; closeEditPanel(); }, 1000); }
     UI.toast('LOT 수정됨');
+    render();
+  }
+
+  // ── 출고 처리 ──────────────────────────────────────────────
+  // 출고준비(작업완료) LOT 의 출고일을 입력하면 '출고완료' 상태로 전환
+  async function setShipDate(lotId, val) {
+    const lot = Store.getLotById(lotId); if (!lot) return;
+    if (!val) return;
+    const updated = { ...lot, shipDate: val };
+    Store.upsertLot(updated);
+    Api.update(CONFIG.SHEETS.LOTS, lotId, updated);
+    Api.log('LOT', '출고완료', updated.lotNo || String(lotId),
+      `${val} 출고 — ${CONFIG.BIZ_LABELS[updated.biz]||updated.biz} · ${updated.customerName||''}`);
+    UI.toast((updated.lotNo || lotId) + ' 출고완료 (' + val + ')');
     render();
   }
 
@@ -1027,6 +1054,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete };
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete };
 
 })();
