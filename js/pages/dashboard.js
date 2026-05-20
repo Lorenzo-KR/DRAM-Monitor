@@ -484,7 +484,12 @@ Pages.Dashboard = (() => {
               let text  = d.slice(5);
               if (isToday) { style += ';color:#0C447C;font-weight:600'; text = '오늘'; }
               else if (isRef) { style += ';color:#dc2626;font-weight:600'; }
-              return '<div style="' + style + '">' + (showLabel ? text : '') + '</div>';
+              const dp  = d.split('-').map(Number);
+              const dow = ['일','월','화','수','목','금','토'][new Date(dp[0], dp[1]-1, dp[2]).getDay()];
+              return '<div style="' + style + '">'
+                + (showLabel ? text : '')
+                + '<div style="font-size:8px;opacity:0.65;margin-top:1px">' + (showLabel ? dow : '') + '</div>'
+                + '</div>';
             }).join('')
         + '</div>'
         + '<div></div>'
