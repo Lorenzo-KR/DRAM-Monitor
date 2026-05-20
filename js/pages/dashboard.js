@@ -476,19 +476,18 @@ Pages.Dashboard = (() => {
       const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
         + '<div></div>'
         + '<div style="display:flex;gap:2px">'
-        +   windowD.map(function(d, i){
+        +   windowD.map(function(d){
               const isToday = d === todayStr;
               const isRef   = d === refStr;
-              const showLabel = i === 0 || isToday || isRef || i === Math.floor(windowD.length / 2);
               let style = 'flex:1;min-width:6px;text-align:center';
-              let text  = d.slice(5);
-              if (isToday) { style += ';color:#0C447C;font-weight:600'; text = '오늘'; }
-              else if (isRef) { style += ';color:#dc2626;font-weight:600'; }
+              if (isToday)    style += ';color:#0C447C;font-weight:600';
+              else if (isRef) style += ';color:#dc2626;font-weight:600';
               const dp  = d.split('-').map(Number);
+              const md  = dp[1] + '/' + dp[2];
               const dow = ['일','월','화','수','목','금','토'][new Date(dp[0], dp[1]-1, dp[2]).getDay()];
               return '<div style="' + style + '">'
-                + (showLabel ? text : '')
-                + '<div style="font-size:8px;opacity:0.65;margin-top:1px">' + (showLabel ? dow : '') + '</div>'
+                + md
+                + '<div style="font-size:8px;opacity:0.65;margin-top:1px">' + dow + (isToday ? ' · 오늘' : '') + '</div>'
                 + '</div>';
             }).join('')
         + '</div>'
