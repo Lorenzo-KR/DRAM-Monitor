@@ -323,8 +323,12 @@ Pages.Dashboard = (() => {
     return count;
   }
 
-  function _renderOpsFollowUp(activeLots, dailies) {
-    const inProgressLots = activeLots.filter(function(l){ return l.inDate && l.inDate <= today(); });
+  function _renderOpsFollowUp(lots, dailies) {
+    // 출고완료(shipDate 입력됨) LOT 은 제외. 그 외 입고된 LOT 표시 (출고준비 포함)
+    const inProgressLots = lots.filter(function(l){
+      if (l.shipDate) return false;
+      return l.inDate && l.inDate <= today();
+    });
     if (!inProgressLots.length) return '';
 
     const N_DAYS   = 14;
@@ -359,6 +363,7 @@ Pages.Dashboard = (() => {
       const refForMiss = last || lot.inDate || refStr;
       const missDays   = _bizDaysBetween(refForMiss, refStr);
       const bizColor   = CONFIG.BIZ_COLORS[lot.biz] || '#666';
+      const isDone     = getLotStatus(lot) === 'done'; // 작업완료 → 출고준비
 
       const vals = windowD.map(function(d){ return pmap[d] || 0; });
       const maxV = Math.max.apply(null, vals.concat([1]));
@@ -385,15 +390,17 @@ Pages.Dashboard = (() => {
         }
         // 누락 셀 — position:absolute로 부모(wrap)를 완전히 채워 풀높이 네모 박스 보장
         let bg = 'transparent', bd = '#D0D0D0';
-        if (isToday)      { bg = 'transparent';  bd = '#9CA3AF'; }
-        else if (isRef)   { bg = '#FEF2F2';      bd = '#dc2626'; }
+        if (isToday)            { bg = 'transparent';  bd = '#9CA3AF'; }
+        else if (isRef && !isDone) { bg = '#FEF2F2';   bd = '#dc2626'; }
         return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
           + '<div style="position:absolute;inset:0;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px;box-sizing:border-box"></div>'
           + tipHtml + '</div>';
       }).join('');
 
       let statusBadge;
-      if (missDays === 0) {
+      if (isDone) {
+        statusBadge = '<span style="font-size:10px;color:#92400E;font-weight:600;padding:1px 7px;background:#FEF6E6;border:1px solid #F0C36D;border-radius:3px">출고준비</span>';
+      } else if (missDays === 0) {
         statusBadge = '<span style="font-size:10px;color:#1A7F37;font-weight:500;padding:1px 7px;background:#F0FBF3;border:1px solid #34C759;border-radius:3px">정상</span>';
       } else if (missDays === 1) {
         statusBadge = '<span style="font-size:10px;color:#92400E;font-weight:600;padding:1px 7px;background:#FFFBEB;border:1px solid #F59E0B;border-radius:3px">1일 누락</span>';
@@ -402,9 +409,10 @@ Pages.Dashboard = (() => {
       }
       const lastStr = last ? '마지막 ' + last.slice(5) : '<span style="color:#dc2626">입력 없음</span>';
 
+      const rowBg = isDone ? '#FFFCF4' : 'transparent';
       return '<div onclick="Nav.go(\'daily\')" '
-        + 'style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s" '
-        + 'onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'transparent\'">'
+        + 'style="display:grid;grid-template-columns:300px 1fr 130px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s;background:' + rowBg + '" '
+        + 'onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'' + rowBg + '\'">'
         + '<div>'
         +   '<div style="display:flex;align-items:center;gap:6px;font-size:12px">'
         +     '<span style="font-family:var(--font-mono);font-weight:600">' + (lot.lotNo || lot.id) + '</span>'
@@ -431,6 +439,9 @@ Pages.Dashboard = (() => {
       }
       // 누락 많은 LOT 우선, 그다음 입고일 내림차순 (기준: 직전 영업일 refStr)
       const sorted = lots.slice().sort(function(a, b){
+        // 출고준비(작업완료) LOT 은 맨 아래로
+        const da = getLotStatus(a) === 'done', db = getLotStatus(b) === 'done';
+        if (da !== db) return da ? 1 : -1;
         const la = lastEntryDate(a.id), lb = lastEntryDate(b.id);
         const ra = la || a.inDate || refStr;
         const rb = lb || b.inDate || refStr;
@@ -440,11 +451,16 @@ Pages.Dashboard = (() => {
         return String(b.inDate || '').localeCompare(String(a.inDate || ''));
       });
 
-      // 누락 카운트 = 직전 영업일(refStr)에 입력 없는 LOT 수
+      // 누락 카운트 = 직전 영업일(refStr)에 입력 없는 LOT 수 (출고준비 제외)
       const missCount = sorted.filter(function(l){
+        if (getLotStatus(l) === 'done') return false;
         const pm = procMap(l.id);
         return !pm[refStr];
       }).length;
+
+      const doneCnt   = lots.filter(function(l){ return getLotStatus(l) === 'done'; }).length;
+      const activeCnt = lots.length - doneCnt;
+      const countLabel = '진행중 ' + activeCnt + '건' + (doneCnt ? ' · 출고준비 ' + doneCnt + '건' : '');
 
       const refMD = refStr.slice(5).replace('-', '/');
       const headerTag = missCount > 0
@@ -473,7 +489,7 @@ Pages.Dashboard = (() => {
         + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-bottom:0.5px solid var(--bd);border-radius:8px 8px 0 0">'
         +   '<div>'
         +     '<span style="font-size:13px;font-weight:600;color:' + color + '">' + label + '</span>'
-        +     '<span style="font-size:11px;color:var(--tx3);margin-left:6px">진행중 ' + lots.length + '건</span>'
+        +     '<span style="font-size:11px;color:var(--tx3);margin-left:6px">' + countLabel + '</span>'
         +     headerTag
         +   '</div>'
         +   '<span style="font-size:10px;color:var(--tx3)">최근 ' + N_DAYS + '영업일 (주말 제외)</span>'
@@ -488,7 +504,7 @@ Pages.Dashboard = (() => {
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
       + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 빈 칸 클릭 = 처리량 빠른 입력 (호버 시 상세)</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 노랑 행 = 출고준비(작업완료·출고대기) · 출고완료 시 목록 제외</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
@@ -691,7 +707,7 @@ Pages.Dashboard = (() => {
         + '</div>'
         + _renderAlerts(kpi.overdueLots, kpi.nearDueLots)
         + _renderKpiRow(kpi)
-        + _renderOpsFollowUp(kpi.activeLots, kpi.dailies)
+        + _renderOpsFollowUp(kpi.lots, kpi.dailies)
         + _renderWeeklyTable()
         + _renderShipments(kpi.upcomingShipments)
         + '</div>';

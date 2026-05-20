@@ -21,6 +21,7 @@ const DataLoader = (() => {
       inDate:       normalizeDate(row.inDate),
       targetDate:   normalizeDate(row.targetDate),
       actualDone:   normalizeDate(row.actualDone),
+      shipDate:     normalizeDate(row.shipDate),
     };
   }
 
