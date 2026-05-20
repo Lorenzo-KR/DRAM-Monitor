@@ -473,7 +473,7 @@ Pages.Dashboard = (() => {
         : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
 
       // 영업일 라벨
-      const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:9px;color:var(--tx3);font-family:var(--font-mono)">'
+      const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:12px;color:var(--tx3);font-family:var(--font-mono)">'
         + '<div></div>'
         + '<div style="display:flex;gap:2px">'
         +   windowD.map(function(d){
@@ -487,7 +487,7 @@ Pages.Dashboard = (() => {
               const dow = ['일','월','화','수','목','금','토'][new Date(dp[0], dp[1]-1, dp[2]).getDay()];
               return '<div style="' + style + '">'
                 + md
-                + '<div style="font-size:8px;opacity:0.65;margin-top:1px">' + dow + (isToday ? ' · 오늘' : '') + '</div>'
+                + '<div style="font-size:12px;opacity:0.65;margin-top:1px">' + dow + (isToday ? ' · 오늘' : '') + '</div>'
                 + '</div>';
             }).join('')
         + '</div>'
