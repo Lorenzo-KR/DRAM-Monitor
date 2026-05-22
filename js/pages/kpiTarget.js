@@ -460,7 +460,7 @@ Pages.KpiTarget = (() => {
 
     const mc = _modeColor(mode);
     const cards = [
-      { label: '연간 목표', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) },
+      { label: '연간 목표', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : 'EBIT') + ' 기준' },
       { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
       { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
       { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
