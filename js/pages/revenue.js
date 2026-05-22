@@ -508,33 +508,50 @@ Pages.Revenue = (() => {
   }
 
   function exportExcel() {
-    const lots     = Store.getLots();
+    // 화면 하단 표와 동일하게 — 사업/지역 필터 적용 + 입고일 내림차순
+    let lots = Store.getLots();
+    if (_biz) lots = lots.filter(l => l.biz === _biz);
+    if (_co)  lots = lots.filter(l => l.country === _co);
+    lots = [...lots].sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')));
+
+    if (!lots.length) { UI.toast('데이터 없음', true); return; }
+
     const invoices = Store.getInvoices();
     const dailies  = Store.getDailies();
 
     const data = lots.map((lot, i) => {
-      const inv = invoices.find(r => String(r.lotId) === String(lot.id));
-      const amt = inv ? parseNumber(inv.amount) : 0;
-      const pct = getLotProgress(lot, dailies);
-      const st  = lot.inDate > today() ? '입고예정' : getLotStatus(lot) === 'done' ? '완료' : getLotStatus(lot) === 'overdue' ? '지연' : '진행중';
+      const inv     = invoices.find(r => String(r.lotId) === String(lot.id));
+      const amt     = inv ? parseNumber(inv.amount) : 0;
+      const hasInv  = !!inv;
+      const st      = lot.inDate > today() ? 'upcoming' : getLotStatus(lot);
+      const pct     = st === 'upcoming' ? 0 : getLotProgress(lot, dailies);
+      const qty     = parseNumber(lot.qty);
+      const isDone  = st === 'done';
+      const stLabel = st === 'upcoming' ? '입고예정' : isDone ? '완료' : st === 'overdue' ? '지연' : '진행중';
+      const claim   = (!isDone && st !== 'upcoming') ? '작업 진행중'
+                    : (isDone && !hasInv) ? '입력 대기'
+                    : (isDone && hasInv)  ? '청구 완료' : '—';
+      const doneDate = isDone ? (lot.actualDone || lot.targetDate || '') : '';
       return {
-        'No':         i + 1,
-        '입고일':      lot.inDate     || '',
-        '작업완료일':  lot.actualDone || '',
-        'LOT번호':     lot.lotNo      || '',
-        '사업':        CONFIG.BIZ_LABELS[lot.biz] || lot.biz,
-        '지역':        lot.country    || '',
-        '고객사':      lot.customerName || '',
-        '수량':        parseNumber(lot.qty),
-        '진행률(%)':   pct,
-        '상태':        st,
-        '매출액(USD)': amt > 0 ? amt : '',
-        '입력상태':    inv ? (inv.status === 'paid' ? '입력완료' : inv.status === 'partial' ? '부분입력' : '미입력') : '입력대기',
+        'No':           lots.length - i,
+        'LOT번호':       lot.lotNo || lot.id || '',
+        '사업':          CONFIG.BIZ_LABELS[lot.biz] || lot.biz || '',
+        '지역':          lot.country || '',
+        '고객사':        lot.customerName || '',
+        '수량':          qty,
+        '진행률(%)':     pct,
+        '진행상태':      stLabel,
+        '입고일':        lot.inDate || '',
+        '작업완료일':    doneDate,
+        '청구일':        inv?.date || '',
+        '매출액(USD)':   amt > 0 ? amt : '',
+        '평균단가(USD)': (hasInv && qty > 0) ? Number((amt / qty).toFixed(2)) : '',
+        '청구상태':      claim,
       };
     });
     _xlsxExport(data, '매출현황_' + today() + '.xlsx', '매출현황');
   }
 
-  return { render, setMode, setBiz, setCo, saveInvoice };
+  return { render, setMode, setBiz, setCo, saveInvoice, exportExcel };
 
 })();
