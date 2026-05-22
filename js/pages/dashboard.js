@@ -575,6 +575,30 @@ Pages.Dashboard = (() => {
     const old = document.getElementById('dash-quick-modal');
     if (old) old.remove();
 
+    // 처리량 입력 — DRAM만 Normal/NoBoot/Abnormal 분류, 그 외(SSD 등)는 단일 처리량
+    const isDram = lot.biz === 'DRAM';
+    const _kd = 'onkeydown="if(event.key===\'Enter\')Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\');if(event.key===\'Escape\')Pages.Dashboard.closeQuickInput()" ';
+    const inputHtml = isDram
+      ? ('<label style="display:block;font-size:12px;color:#3A3A3C;margin-bottom:6px">처리량 분류 입력 <span style="color:#86868B;font-weight:400">(합계 자동)</span></label>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'
+        +   '<div><label style="display:block;font-size:11px;color:#166534;margin-bottom:3px;font-weight:600">Normal</label>'
+        +     '<input id="dash-quick-normal" type="number" min="0" placeholder="0" autofocus ' + _kd
+        +       'style="width:100%;padding:7px 9px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
+        +   '<div><label style="display:block;font-size:11px;color:#92400e;margin-bottom:3px;font-weight:600">No Boot</label>'
+        +     '<input id="dash-quick-noboot" type="number" min="0" placeholder="0" ' + _kd
+        +       'style="width:100%;padding:7px 9px;border:1px solid #fde68a;background:#fefce8;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
+        +   '<div><label style="display:block;font-size:11px;color:#991b1b;margin-bottom:3px;font-weight:600">Abnormal</label>'
+        +     '<input id="dash-quick-abnormal" type="number" min="0" placeholder="0" ' + _kd
+        +       'style="width:100%;padding:7px 9px;border:1px solid #fca5a5;background:#fef2f2;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#F0F4F8;border:1px solid #D2D2D7;border-radius:5px">'
+        +   '<span style="font-size:12px;color:#3A3A3C;font-weight:500">합계</span>'
+        +   '<span id="dash-quick-sum" style="font-size:16px;font-weight:700;color:#1B4F8A;font-family:var(--font-mono)">0</span>'
+        + '</div>')
+      : ('<label style="display:block;font-size:12px;color:#3A3A3C;margin-bottom:6px">처리량</label>'
+        + '<input id="dash-quick-proc" type="number" min="0" placeholder="0" autofocus ' + _kd
+        +   'style="width:100%;padding:9px 11px;border:1px solid #C9D4E0;background:#F4F8FC;border-radius:5px;font-size:16px;font-weight:700;font-family:var(--font-mono);text-align:right;box-sizing:border-box">');
+
     const modalHtml = ''
       + '<div id="dash-quick-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:Pretendard,sans-serif" onclick="if(event.target===this)Pages.Dashboard.closeQuickInput()">'
       + '<div style="background:#fff;border-radius:10px;width:360px;max-width:90vw;box-shadow:0 12px 36px rgba(0,0,0,0.2);overflow:hidden">'
@@ -597,25 +621,7 @@ Pages.Dashboard = (() => {
       +       '<span>총 ' + formatNumber(qty) + '개</span>'
       +       '<span>누적 처리 ' + formatNumber(cum) + ' · 잔량 ' + formatNumber(rem) + '</span>'
       +     '</div>'
-      +     '<label style="display:block;font-size:12px;color:#3A3A3C;margin-bottom:6px">처리량 분류 입력 <span style="color:#86868B;font-weight:400">(합계 자동)</span></label>'
-      +     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'
-      +       '<div><label style="display:block;font-size:11px;color:#166534;margin-bottom:3px;font-weight:600">Normal</label>'
-      +         '<input id="dash-quick-normal" type="number" min="0" placeholder="0" autofocus '
-      +           'onkeydown="if(event.key===\'Enter\')Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\');if(event.key===\'Escape\')Pages.Dashboard.closeQuickInput()" '
-      +           'style="width:100%;padding:7px 9px;border:1px solid #bbf7d0;background:#f0fdf4;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
-      +       '<div><label style="display:block;font-size:11px;color:#92400e;margin-bottom:3px;font-weight:600">No Boot</label>'
-      +         '<input id="dash-quick-noboot" type="number" min="0" placeholder="0" '
-      +           'onkeydown="if(event.key===\'Enter\')Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\');if(event.key===\'Escape\')Pages.Dashboard.closeQuickInput()" '
-      +           'style="width:100%;padding:7px 9px;border:1px solid #fde68a;background:#fefce8;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
-      +       '<div><label style="display:block;font-size:11px;color:#991b1b;margin-bottom:3px;font-weight:600">Abnormal</label>'
-      +         '<input id="dash-quick-abnormal" type="number" min="0" placeholder="0" '
-      +           'onkeydown="if(event.key===\'Enter\')Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\');if(event.key===\'Escape\')Pages.Dashboard.closeQuickInput()" '
-      +           'style="width:100%;padding:7px 9px;border:1px solid #fca5a5;background:#fef2f2;border-radius:5px;font-size:14px;font-family:var(--font-mono);text-align:right;box-sizing:border-box"></div>'
-      +     '</div>'
-      +     '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#F0F4F8;border:1px solid #D2D2D7;border-radius:5px">'
-      +       '<span style="font-size:12px;color:#3A3A3C;font-weight:500">합계</span>'
-      +       '<span id="dash-quick-sum" style="font-size:16px;font-weight:700;color:#1B4F8A;font-family:var(--font-mono)">0</span>'
-      +     '</div>'
+      +     inputHtml
       +     '<div id="dash-quick-after" style="font-size:11px;color:#86868B;margin-top:6px;text-align:right">&nbsp;</div>'
       +   '</div>'
       +   '<div style="padding:12px 18px;background:#F7F7F7;display:flex;gap:8px;justify-content:flex-end">'
@@ -626,26 +632,36 @@ Pages.Dashboard = (() => {
       + '</div>';
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const inNm = document.getElementById('dash-quick-normal');
-    const inNb = document.getElementById('dash-quick-noboot');
-    const inAb = document.getElementById('dash-quick-abnormal');
-    const sumEl = document.getElementById('dash-quick-sum');
     const after = document.getElementById('dash-quick-after');
-    function recalc() {
-      const total = parseNumber(inNm.value) + parseNumber(inNb.value) + parseNumber(inAb.value);
-      if (sumEl) sumEl.textContent = formatNumber(total);
-      if (after) {
-        if (total > 0) {
-          const newRem = Math.max(0, qty - (cum + total));
-          after.innerHTML = '입력 후 잔량 <b style="color:#1D1D1F">' + formatNumber(newRem) + '</b>개'
-            + (newRem === 0 ? ' <span style="color:#1A7F37;font-weight:600">→ LOT 완료</span>' : '');
-        } else {
-          after.innerHTML = '&nbsp;';
-        }
+    function _updateAfter(total) {
+      if (!after) return;
+      if (total > 0) {
+        const newRem = Math.max(0, qty - (cum + total));
+        after.innerHTML = '입력 후 잔량 <b style="color:#1D1D1F">' + formatNumber(newRem) + '</b>개'
+          + (newRem === 0 ? ' <span style="color:#1A7F37;font-weight:600">→ LOT 완료</span>' : '');
+      } else {
+        after.innerHTML = '&nbsp;';
       }
     }
-    [inNm, inNb, inAb].forEach(function(el){ if (el) el.addEventListener('input', recalc); });
-    if (inNm) inNm.focus();
+    if (isDram) {
+      const inNm  = document.getElementById('dash-quick-normal');
+      const inNb  = document.getElementById('dash-quick-noboot');
+      const inAb  = document.getElementById('dash-quick-abnormal');
+      const sumEl = document.getElementById('dash-quick-sum');
+      const recalc = function() {
+        const total = parseNumber(inNm.value) + parseNumber(inNb.value) + parseNumber(inAb.value);
+        if (sumEl) sumEl.textContent = formatNumber(total);
+        _updateAfter(total);
+      };
+      [inNm, inNb, inAb].forEach(function(el){ if (el) el.addEventListener('input', recalc); });
+      if (inNm) inNm.focus();
+    } else {
+      const inProc = document.getElementById('dash-quick-proc');
+      if (inProc) {
+        inProc.addEventListener('input', function(){ _updateAfter(parseNumber(inProc.value)); });
+        inProc.focus();
+      }
+    }
   }
 
   function _closeQuickInput() {
@@ -656,15 +672,24 @@ Pages.Dashboard = (() => {
   async function _saveQuickInput(lotId, dateStr) {
     const lot = Store.getLotById(lotId);
     if (!lot) { UI.toast('LOT를 찾을 수 없습니다', true); return; }
-    const inNm = document.getElementById('dash-quick-normal');
-    const inNb = document.getElementById('dash-quick-noboot');
-    const inAb = document.getElementById('dash-quick-abnormal');
-    if (!inNm || !inNb || !inAb) return;
-    const normal   = parseNumber(inNm.value);
-    const noBoot   = parseNumber(inNb.value);
-    const abnormal = parseNumber(inAb.value);
-    const proc     = normal + noBoot + abnormal;
-    if (!proc || proc <= 0) { UI.toast('Normal/NoBoot/Abnormal 중 하나는 입력해 주세요', true); return; }
+    const isDram = lot.biz === 'DRAM';
+    let normal = 0, noBoot = 0, abnormal = 0, proc = 0;
+    if (isDram) {
+      const inNm = document.getElementById('dash-quick-normal');
+      const inNb = document.getElementById('dash-quick-noboot');
+      const inAb = document.getElementById('dash-quick-abnormal');
+      if (!inNm || !inNb || !inAb) return;
+      normal   = parseNumber(inNm.value);
+      noBoot   = parseNumber(inNb.value);
+      abnormal = parseNumber(inAb.value);
+      proc     = normal + noBoot + abnormal;
+      if (!proc || proc <= 0) { UI.toast('Normal/NoBoot/Abnormal 중 하나는 입력해 주세요', true); return; }
+    } else {
+      const inProc = document.getElementById('dash-quick-proc');
+      if (!inProc) return;
+      proc = parseNumber(inProc.value);
+      if (!proc || proc <= 0) { UI.toast('처리량을 입력해 주세요', true); return; }
+    }
 
     const cumNew = getLotCumulative(lot.id, Store.getDailies()) + proc;
     const remNew = Math.max(0, parseNumber(lot.qty) - cumNew);
