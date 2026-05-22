@@ -405,10 +405,12 @@ Pages.KpiTarget = (() => {
       else actRevCumUsd.push(null);
     });
 
-    // 요약카드/달성률 계산 기준: EC=매출, KPI=EBIT
-    const tgtSumRaw = isEcMode ? revSumRaw  : ebitSumRaw;
-    const tgtCumRaw = isEcMode ? revCumRaw  : ebitCumRaw;
-    const actCumUsd = isEcMode ? actRevCumUsd : actEbitCumUsd;
+    // 요약카드/달성률 계산 기준
+    //   EC: 항상 매출 / KPI: 표 보기 토글(EBIT·매출)에 따라 전환
+    const showEbit  = isEcMode ? false : (_tableView === 'ebit');
+    const tgtSumRaw = isEcMode ? revSumRaw    : (showEbit ? ebitSumRaw    : revSumRaw);
+    const tgtCumRaw = isEcMode ? revCumRaw    : (showEbit ? ebitCumRaw    : revCumRaw);
+    const actCumUsd = isEcMode ? actRevCumUsd : (showEbit ? actEbitCumUsd : actRevCumUsd);
 
     const totalTgtRaw = tgtSumRaw.reduce((s, v) => s + v, 0);
     if (totalTgtRaw === 0) {
@@ -460,7 +462,7 @@ Pages.KpiTarget = (() => {
 
     const mc = _modeColor(mode);
     const cards = [
-      { label: '연간 목표', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : 'EBIT') + ' 기준' },
+      { label: '연간 목표', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출')) + ' 기준' },
       { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
       { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
       { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
@@ -497,8 +499,7 @@ Pages.KpiTarget = (() => {
         + '</div>';
     }
 
-    // EC 모드는 항상 매출 뷰 (EBIT 없음)
-    var showEbit = isEcMode ? false : (_tableView === 'ebit');
+    // showEbit은 요약카드 계산부에서 이미 선언됨 (EC=false, KPI=표 보기 토글)
 
     // 표/차트 레이블: EC=매출, KPI=EBIT or 매출
     var planLabel  = isEcMode ? '매출(계획)' : (showEbit ? 'EBIT(계획)' : '매출(계획)');
