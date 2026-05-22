@@ -1831,7 +1831,7 @@ Pages.KpiTarget = (() => {
       const cmCol = cmIdx >= 0 ? COL(cmIdx + 2) : null; // 현재월 컬럼 letter
 
       // 숫자 표시 형식 (수식 결과 셀에 적용)
-      const Z_AMT  = '0.00;-0.00;"—"';                   // 금액
+      const Z_AMT  = '0.00;-0.00;"-"';                   // 금액 (0은 짧은 하이픈)
       const Z_DIFF = '+0.00;-0.00;0.00';                 // 실적-계획 차이
       const Z_PCTD = '+0.0%;-0.0%;0.0%';                 // 달성률(계획대비, 100% 기준 ±)
       const Z_PCT  = '0.0%';                             // 연간달성률 / 진척률
