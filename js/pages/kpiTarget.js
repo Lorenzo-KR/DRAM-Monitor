@@ -828,14 +828,14 @@ Pages.KpiTarget = (() => {
 
     const progressColgroup = '<colgroup><col style="width:100px">'
       + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
-      + '<col style="width:150px"><col style="width:74px"><col style="width:90px"></colgroup>';
+      + '<col style="width:150px"><col style="width:74px"><col style="width:130px"></colgroup>';
 
     const progressHeader = '<thead><tr>'
       + '<th style="' + TS.thBiz + '">Biz</th>'
       + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
       + '<th style="' + TS.thSum + ';width:150px">누적 실적/연간목표 (' + unitLabel + ')</th>'
       + '<th style="' + TS.thSum + '">달성률</th>'
-      + '<th style="' + TS.thSum + ';width:90px">목표대비 차이</th>'
+      + '<th style="' + TS.thSum + ';width:130px">달성률 Gap(실적-계획)</th>'
       + '</tr></thead>';
 
     const progressTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
@@ -1973,7 +1973,7 @@ Pages.KpiTarget = (() => {
           else if (c === 1)  colsArr.push({ wch: 11 });
           else if (c === 14) colsArr.push({ wch: 22 });   // 연간합계 / 누적실적·연간목표
           else if (c === 15) colsArr.push({ wch: 11 });   // 달성률
-          else if (c === 16) colsArr.push({ wch: 13 });   // 목표대비 차이
+          else if (c === 16) colsArr.push({ wch: 20 });   // 달성률 Gap(실적-계획)
           else               colsArr.push({ wch: 9  });
         }
         ws['!cols'] = colsArr;
@@ -2152,7 +2152,7 @@ Pages.KpiTarget = (() => {
         rows.push({ type: 'blank', vals: Array(NCOLS).fill('') });
         rows.push({ type: 'title', vals: [sectionLabel + ' 사업별 월 실적'].concat(Array(16).fill('')) });
         rows.push({ type: 'header', vals:
-          ['사업', '구분'].concat(MONS).concat(['누적실적 / 연간목표 (' + (unitLabel || '') + ')', '달성률', '목표대비 차이']) });
+          ['사업', '구분'].concat(MONS).concat(['누적실적 / 연간목표 (' + (unitLabel || '') + ')', '달성률', '달성률 Gap(실적-계획)']) });
 
         bizList.forEach((b, k) => {
           const aEr = R(actBiz0 + k), pEr = R(planBiz0 + k);
