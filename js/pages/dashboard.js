@@ -411,7 +411,7 @@ Pages.Dashboard = (() => {
       const pctColor = (isDone || pct >= 100) ? '#1A7F37' : pct >= 70 ? 'var(--tx)' : pct > 0 ? 'var(--tx2)' : 'var(--tx3)';
 
       const rowBg = isDone ? '#FFFCF4' : 'transparent';
-      return '<div onclick="Nav.go(\'daily\')" '
+      return '<div onclick="Pages.Dashboard.openLotDetail(' + lot.id + ')" '
         + 'style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;align-items:center;padding:8px 12px;border-bottom:0.5px solid var(--bd);cursor:pointer;transition:background 0.1s;background:' + rowBg + '" '
         + 'onmouseover="this.style.background=\'#FAFAFA\'" onmouseout="this.style.background=\'' + rowBg + '\'">'
         + '<div>'
@@ -725,10 +725,139 @@ Pages.Dashboard = (() => {
     Pages.Dashboard.render();
   }
 
+  // ── LOT 상세 우측 오버레이 ───────────────────────────────
+  function _openLotDetail(lotId) {
+    const lot = Store.getLotById(lotId);
+    if (!lot) { UI.toast('LOT를 찾을 수 없습니다', true); return; }
+
+    const dailies = Store.getDailies()
+      .filter(function(d){ return String(d.lotId) === String(lotId); })
+      .sort(function(a, b){ return String(b.date||'').localeCompare(String(a.date||'')); });
+
+    const qty  = parseNumber(lot.qty);
+    const cum  = getLotCumulative(lot.id, Store.getDailies());
+    const rem  = Math.max(0, qty - cum);
+    const pct  = qty > 0 ? Math.round(cum / qty * 100) : 0;
+    const isDram = lot.biz === 'DRAM';
+    const isDone = String(lot.done) === '1';
+
+    // 상태 배지
+    let statusBadge;
+    if (lot.shipDate) {
+      statusBadge = '<span style="font-size:11px;color:#1A7F37;font-weight:600;padding:2px 8px;background:#F0FBF3;border:1px solid #34C759;border-radius:4px">출고완료</span>';
+    } else if (isDone) {
+      statusBadge = '<span style="font-size:11px;color:#92400E;font-weight:600;padding:2px 8px;background:#FEF6E6;border:1px solid #F0C36D;border-radius:4px">출고준비</span>';
+    } else if (lot.targetDate && lot.targetDate < today()) {
+      statusBadge = '<span style="font-size:11px;color:#dc2626;font-weight:600;padding:2px 8px;background:#FEF2F2;border:1px solid #FECACA;border-radius:4px">지연</span>';
+    } else {
+      statusBadge = '<span style="font-size:11px;color:#1B4F8A;font-weight:600;padding:2px 8px;background:#EBF2FB;border:1px solid #9DC3F0;border-radius:4px">진행중</span>';
+    }
+
+    // 일별 처리 이력 테이블
+    let historyHtml = '';
+    if (dailies.length === 0) {
+      historyHtml = '<div style="padding:24px;text-align:center;font-size:12px;color:var(--tx3)">처리 이력 없음</div>';
+    } else {
+      const rows = dailies.map(function(d){
+        const dt = (d.date || '').slice(5);
+        const dow = d.date ? ['일','월','화','수','목','금','토'][new Date(d.date).getDay()] : '';
+        const cls = isDram
+          ? '<span style="color:#166534">' + formatNumber(parseNumber(d.normal)) + '</span> / '
+            + '<span style="color:#92400e">' + formatNumber(parseNumber(d.noBoot)) + '</span> / '
+            + '<span style="color:#991b1b">' + formatNumber(parseNumber(d.abnormal)) + '</span>'
+          : '<span style="color:var(--tx3)">—</span>';
+        const note = d.note ? '<div style="font-size:10px;color:var(--tx3);margin-top:2px">' + d.note + '</div>' : '';
+        return '<tr>'
+          + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;font-family:var(--font-mono);font-size:11px;white-space:nowrap">' + dt + ' (' + dow + ')</td>'
+          + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">' + formatNumber(parseNumber(d.proc)) + '</td>'
+          + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;text-align:center;font-family:var(--font-mono);font-size:11px">' + cls + note + '</td>'
+          + '</tr>';
+      }).join('');
+      historyHtml = '<table style="width:100%;border-collapse:collapse;font-family:Pretendard,sans-serif">'
+        + '<thead><tr style="background:#F7F7F7">'
+        +   '<th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--tx2);font-weight:600;border-bottom:1px solid #DDD">날짜</th>'
+        +   '<th style="padding:6px 8px;text-align:right;font-size:11px;color:var(--tx2);font-weight:600;border-bottom:1px solid #DDD">처리량</th>'
+        +   '<th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--tx2);font-weight:600;border-bottom:1px solid #DDD">' + (isDram ? 'N / NB / AB' : '비고') + '</th>'
+        + '</tr></thead>'
+        + '<tbody>' + rows + '</tbody></table>';
+    }
+
+    const old = document.getElementById('dash-lot-detail');
+    if (old) old.remove();
+
+    const html = ''
+      + '<div id="dash-lot-detail" style="position:fixed;inset:0;z-index:9998;font-family:Pretendard,sans-serif" onclick="if(event.target===this)Pages.Dashboard.closeLotDetail()">'
+      +   '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>'
+      +   '<div style="position:absolute;top:0;right:0;bottom:0;width:480px;max-width:95vw;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,0.15);display:flex;flex-direction:column;animation:slideInRight 0.18s ease-out">'
+      +     '<div style="padding:16px 20px;border-bottom:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+      +       '<div style="min-width:0;flex:1">'
+      +         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +           '<span style="font-size:16px;font-weight:700;font-family:var(--font-mono)">' + (lot.lotNo || lot.id) + '</span>'
+      +           badge(lot.biz, BIZ_STYLE[lot.biz] || '')
+      +           badge(CONFIG.COUNTRY_LABELS[lot.country] || lot.country, CO_STYLE[lot.country] || '')
+      +           statusBadge
+      +         '</div>'
+      +         '<div style="font-size:12px;color:var(--tx2)">' + (lot.customerName || '—') + (lot.product ? ' · ' + lot.product : '') + '</div>'
+      +       '</div>'
+      +       '<button onclick="Pages.Dashboard.closeLotDetail()" style="border:none;background:none;font-size:24px;color:#86868B;cursor:pointer;padding:0 4px;line-height:1">×</button>'
+      +     '</div>'
+      +     '<div style="flex:1;overflow-y:auto;padding:16px 20px">'
+      +       '<div style="background:#F7F9FC;border:1px solid #E0E6ED;border-radius:8px;padding:14px;margin-bottom:14px">'
+      +         '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">'
+      +           '<span style="font-size:12px;color:var(--tx2);font-weight:500">진행률</span>'
+      +           '<span style="font-size:24px;font-weight:700;color:' + (pct >= 100 ? '#1A7F37' : pct >= 70 ? 'var(--tx)' : 'var(--tx2)') + '">' + pct + '<span style="font-size:14px;color:var(--tx3)">%</span></span>'
+      +         '</div>'
+      +         '<div style="height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;margin-bottom:10px">'
+      +           '<div style="width:' + Math.min(100, pct) + '%;height:100%;background:' + (CONFIG.BIZ_COLORS[lot.biz] || '#1B4F8A') + ';border-radius:3px"></div>'
+      +         '</div>'
+      +         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">'
+      +           '<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">누적</div><div style="font-size:14px;font-weight:600;font-family:var(--font-mono)">' + formatNumber(cum) + '</div></div>'
+      +           '<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">잔량</div><div style="font-size:14px;font-weight:600;font-family:var(--font-mono);color:' + (rem === 0 ? '#1A7F37' : 'var(--tx)') + '">' + formatNumber(rem) + '</div></div>'
+      +           '<div><div style="font-size:10px;color:var(--tx3);margin-bottom:2px">총량</div><div style="font-size:14px;font-weight:600;font-family:var(--font-mono);color:var(--tx2)">' + formatNumber(qty) + '</div></div>'
+      +         '</div>'
+      +       '</div>'
+      +       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-bottom:18px;font-size:12px">'
+      +         '<div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">입고일</div><div style="font-family:var(--font-mono)">' + (lot.inDate || '—') + '</div></div>'
+      +         '<div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">목표완료일</div><div style="font-family:var(--font-mono)">' + (lot.targetDate || '—') + '</div></div>'
+      +         '<div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">실제 완료일</div><div style="font-family:var(--font-mono)">' + (lot.actualDone || '—') + '</div></div>'
+      +         '<div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">출고일</div><div style="font-family:var(--font-mono)">' + (lot.shipDate || '—') + '</div></div>'
+      +         (parseNumber(lot.price) > 0
+          ? '<div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">단가</div><div style="font-family:var(--font-mono)">' + formatNumber(lot.price) + ' ' + (lot.currency || '') + '</div></div><div><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">금액</div><div style="font-family:var(--font-mono);font-weight:600">' + formatNumber(parseNumber(lot.price) * qty) + ' ' + (lot.currency || '') + '</div></div>'
+          : '')
+      +         (lot.note ? '<div style="grid-column:1/-1"><div style="color:var(--tx3);font-size:11px;margin-bottom:2px">비고</div><div>' + lot.note + '</div></div>' : '')
+      +       '</div>'
+      +       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +         '<div style="font-size:13px;font-weight:600">일별 처리 이력 <span style="font-size:11px;color:var(--tx3);font-weight:400">(' + dailies.length + '건)</span></div>'
+      +         (rem > 0 && !lot.shipDate
+          ? '<button onclick="Pages.Dashboard.closeLotDetail();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + today() + '\')" style="padding:5px 10px;border:1px solid #1B4F8A;background:#fff;color:#1B4F8A;font-size:11px;font-weight:600;border-radius:5px;cursor:pointer;font-family:Pretendard,sans-serif">+ 오늘 입력</button>'
+          : '')
+      +       '</div>'
+      +       historyHtml
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      + '<style>@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}</style>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.addEventListener('keydown', _detailKeyHandler);
+  }
+
+  function _detailKeyHandler(e) {
+    if (e.key === 'Escape') _closeLotDetail();
+  }
+
+  function _closeLotDetail() {
+    const m = document.getElementById('dash-lot-detail');
+    if (m) m.remove();
+    document.removeEventListener('keydown', _detailKeyHandler);
+  }
+
   return {
     openQuickInput: _openQuickInput,
     closeQuickInput: _closeQuickInput,
     saveQuickInput: _saveQuickInput,
+    openLotDetail: _openLotDetail,
+    closeLotDetail: _closeLotDetail,
     render: function() {
       const el = document.getElementById('dash-root');
       if (!el) return;
