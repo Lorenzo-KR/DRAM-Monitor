@@ -513,36 +513,7 @@ Pages.KpiTarget = (() => {
       { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
     ]);
 
-    var unitBtns = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap">'
-      // 단위 전환
-      + '<div style="display:flex;align-items:center;gap:8px">'
-      + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
-      + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
-      + '<button onclick="Pages.KpiTarget.setTrackingUnit(\'usd\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (_trackingUnit==='usd' ? '#1D1D1F' : '#fff') + ';color:' + (_trackingUnit==='usd' ? '#fff' : '#555') + '">M USD</button>'
-      + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'krw\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useKrw ? '#1D1D1F' : '#fff') + ';color:' + (useKrw ? '#fff' : '#555') + ';' + (!hasRate ? 'opacity:0.4;cursor:not-allowed;' : '') + '"' + (!hasRate ? ' disabled' : '') + '>억원</button>'
-        : '')
-      + (isKpiMode
-        ? '<button onclick="Pages.KpiTarget.setTrackingUnit(\'sgd\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (useSgd ? '#1D1D1F' : '#fff') + ';color:' + (useSgd ? '#fff' : '#555') + '">M SGD</button>'
-        : '')
-      + '</div>'
-      + '<span style="font-size:13px;color:var(--tx3);font-family:Pretendard,sans-serif">'
-      + unitLabel
-      + (useKrw && hasRate ? ' · ₩' + _exchangeRate.toLocaleString() + '/USD' : '')
-      + (useSgd ? ' · ' + _SGD_RATE.toFixed(2) + ' SGD/USD (계획환율)' : '')
-      + '</span>'
-      + '</div>'
-      // 표 뷰 전환 (KPI 모드에서만)
-      + (isKpiMode
-        ? '<div style="display:flex;align-items:center;gap:8px">'
-          + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">표 보기:</span>'
-          + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'ebit\')" style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (showEbit ? '#1D1D1F' : '#fff') + ';color:' + (showEbit ? '#fff' : '#555') + '">EBIT</button>'
-          + '<button onclick="Pages.KpiTarget.setTableView(\'rev\')"  style="padding:5px 14px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:Pretendard,sans-serif;background:' + (!showEbit ? '#1D1D1F' : '#fff') + ';color:' + (!showEbit ? '#fff' : '#555') + '">매출</button>'
-          + '</div>'
-          + '</div>'
-        : '')
-      + '</div>';
+    // 단위/지표 토글은 상단(render)으로 이동됨 → _buildUnitBar()
 
     // ── 표: EBIT or 매출 선택 뷰 ─────────────────────────────
     // showEbit=true  → EBIT(계획)/EBIT(실적) 행만 표시
@@ -891,7 +862,6 @@ Pages.KpiTarget = (() => {
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
-      + unitBtns
       + '<div style="margin-bottom:4px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
@@ -1028,6 +998,70 @@ Pages.KpiTarget = (() => {
     }, 50);
   }
 
+  // ── 단위/지표 전역 토글 헬퍼 ─────────────────────────────
+  function _unitCtx() {
+    const mode    = _rollingMode;
+    const isKpiM  = _isKpi(mode);
+    const hasRate = isKpiM && _exchangeRate > 0;
+    const tunit   = isKpiM ? _trackingUnit : 'usd';   // EC는 항상 M USD
+    const useEbit = isKpiM && _tableView === 'ebit';  // EC는 항상 매출
+    const unitLabel  = !isKpiM ? 'M USD'
+      : (tunit === 'krw' ? '억원' : tunit === 'sgd' ? 'M SGD' : 'M USD');
+    const basisLabel = useEbit ? 'EBIT' : '매출';
+    return { mode, isKpiM, hasRate, tunit, useEbit, unitLabel, basisLabel };
+  }
+  // 롤링 raw(억원/M USD) → 표시 단위 숫자
+  function _tgtToDisp(raw, ctx) {
+    if (!ctx.isKpiM)         return raw;              // EC: M USD
+    if (ctx.tunit === 'krw') return raw;              // 억원
+    if (!ctx.hasRate)        return null;
+    const mUsd = raw * 100000000 / _exchangeRate / 1000000;
+    return ctx.tunit === 'sgd' ? mUsd * 1.27 : mUsd;
+  }
+  // 실적 USD → 표시 단위 숫자
+  function _actToDisp(usd, ctx) {
+    if (!ctx.isKpiM)         return usd / 1000000;    // M USD
+    if (ctx.tunit === 'krw') return ctx.hasRate ? usd * _exchangeRate / 100000000 : null;
+    if (ctx.tunit === 'sgd') return usd * 1.27 / 1000000;
+    return usd / 1000000;                              // M USD
+  }
+  // 롤링 raw → USD (달성률 계산용)
+  function _tgtToUsd(raw, ctx) {
+    if (!ctx.isKpiM) return raw * 1000000;
+    return ctx.hasRate ? raw * 100000000 / _exchangeRate : 0;
+  }
+  // 상단 단위/지표 토글 바 (KPI 모드 전용)
+  function _buildUnitBar() {
+    const c = _unitCtx();
+    if (!c.isKpiM) return '';
+    const seg = (active, fn, label, disabled) =>
+      '<button onclick="' + fn + '"' + (disabled ? ' disabled' : '')
+      + ' style="padding:5px 16px;border:none;font-size:13px;font-weight:600;'
+      + 'font-family:Pretendard,sans-serif;cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';'
+      + 'background:' + (active ? '#1D1D1F' : '#fff') + ';color:' + (active ? '#fff' : '#555') + ';'
+      + (disabled ? 'opacity:0.4;' : '') + '">' + label + '</button>';
+    return '<div style="display:flex;align-items:center;gap:18px;margin-bottom:16px;flex-wrap:wrap">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">단위:</span>'
+      + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
+      + seg(c.tunit==='usd', "Pages.KpiTarget.setTrackingUnit('usd')", 'M USD', false)
+      + seg(c.tunit==='krw', "Pages.KpiTarget.setTrackingUnit('krw')", '억원', !c.hasRate)
+      + seg(c.tunit==='sgd', "Pages.KpiTarget.setTrackingUnit('sgd')", 'M SGD', false)
+      + '</div>'
+      + '<span style="font-size:13px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+      + c.unitLabel
+      + (c.tunit==='krw' && c.hasRate ? ' · ₩' + _exchangeRate.toLocaleString() + '/USD' : '')
+      + (c.tunit==='sgd' ? ' · 1.27 SGD/USD (계획환율)' : '')
+      + '</span></div>'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="font-size:13px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">지표:</span>'
+      + '<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">'
+      + seg(c.useEbit,  "Pages.KpiTarget.setTableView('ebit')", 'EBIT', false)
+      + seg(!c.useEbit, "Pages.KpiTarget.setTableView('rev')",  '매출', false)
+      + '</div></div>'
+      + '</div>';
+  }
+
   // ── 메인 렌더 ─────────────────────────────────────────────
   return {
     selectYear, switchBiz,
@@ -1071,64 +1105,69 @@ Pages.KpiTarget = (() => {
       const mc      = _modeColor(mode);
       const ml      = _modeLabel(mode);
 
-      const bizRows = CONFIG.BIZ_LIST.map(b => {
-        const tgtRaw = _getTarget(year, b, mode);
-        const rawAct = _getActual(year, b);
-        const tgtKrw = tgtRaw;
-        const actKrw = hasRate ? _getActualProfit(year,b)*_exchangeRate : null;
-        const tgtUsd = tgtRaw;
-        const actUsd = rawAct;
-        const tgt = isKpiM ? tgtKrw : tgtUsd;
-        const act = isKpiM ? (hasRate ? actKrw : _getActualProfit(year,b)) : actUsd;
-        const pct   = tgt>0&&act!==null ? Math.min(100,Math.round(act/tgt*100)) : 0;
-        const rem   = tgt>0&&act!==null ? Math.max(0,tgt-act) : 0;
-        const color = CONFIG.BIZ_COLORS[b];
-        const factor= _getFactor(b);
-        const barClr= '#4B5563';
+      // ── 단위/지표 컨텍스트 (전역 토글) ───────────────────
+      const ctx    = _unitCtx();
+      const uLabel = ctx.unitLabel;     // '억원' | 'M USD' | 'M SGD'
+      const basis  = ctx.basisLabel;    // 'EBIT' | '매출'
+      const _store = _getRollingStore(mode);
 
-        const fmtTgt=()=>{
-          if (!tgt) return '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>';
-          if (isKpiM) return `<div style="font-weight:600">${(tgt/100000000).toFixed(2)}억원</div>`;
-          return '$'+formatNumber(Math.round(tgt));
-        };
-        const fmtAct=()=>{
-          if (isKpiM) {
-            if (hasRate&&actKrw>0) return `<div style="font-weight:600">${(actKrw/100000000).toFixed(2)}억원</div><div style="font-size:10px;color:#888">$${formatNumber(Math.round(_getActualProfit(year,b)))} × ${_exchangeRate.toLocaleString()}</div><div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>`;
-            if (rawAct>0) return `<div style="color:#888">환율 미입력</div><div style="font-size:10px;color:#aaa">매출 $${formatNumber(Math.round(rawAct))}</div>`;
-            return '—';
-          }
-          return actUsd>0?'$'+formatNumber(Math.round(actUsd)):'—';
-        };
-        const fmtRem=()=>{
-          if (!tgt) return '—';
-          if (isKpiM&&hasRate) return `<div>${(rem/100000000).toFixed(2)}억원</div>`;
-          if (isKpiM) return `${(rem/100000000).toFixed(2)}억원`;
-          return '$'+formatNumber(Math.round(rem));
-        };
+      // 사업별 목표 raw (KPI=억원 / EC=M USD)
+      const _bizTgtRaw = b => {
+        if (!isKpiM) return _getRollingEbitRaw(_store, year, b).reduce((s,v)=>s+v,0);
+        const arr = ctx.useEbit ? _getRollingEbitRaw(_store, year, b)
+                                : _getRollingRevRaw(_store, year, b);
+        return arr.reduce((s,v)=>s+v,0);
+      };
+      // 사업별 실적 USD (EBIT 지표면 Factor 적용)
+      const _bizActUsd = b => {
+        const rev = _getActual(year, b);
+        return ctx.useEbit ? rev * _getFactor(b) : rev;
+      };
+      const _fmtN = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toFixed(2);
+
+      const bizRows = CONFIG.BIZ_LIST.map(b => {
+        const tgtRaw  = _bizTgtRaw(b);
+        const actUsd  = _bizActUsd(b);
+        const tgtDisp = _tgtToDisp(tgtRaw, ctx);
+        const actDisp = _actToDisp(actUsd, ctx);
+        const tgtUsd  = _tgtToUsd(tgtRaw, ctx);
+        const pct     = tgtUsd>0 ? Math.min(100, Math.round(actUsd/tgtUsd*100)) : 0;
+        const remDisp = (tgtDisp!==null && actDisp!==null) ? Math.max(0, tgtDisp-actDisp) : null;
+        const factor  = _getFactor(b);
+        const barClr  = '#4B5563';
+        const canBar  = tgtRaw>0 && tgtDisp!==null && actDisp!==null;
+
+        const fmtTgt = () => !tgtRaw
+          ? '<span style="color:var(--tbl-tx-body);font-weight:400">미입력</span>'
+          : `<div style="font-weight:600">${_fmtN(tgtDisp)}</div>`;
+        const fmtAct = () => actUsd>0
+          ? `<div style="font-weight:600">${_fmtN(actDisp)}</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(actUsd))}</div>`
+          : '—';
+        const fmtRem = () => !tgtRaw ? '—' : _fmtN(remDisp);
 
         return `<tr style="border-top:1px solid var(--tbl-row-bd)">
           <td style="padding:12px 14px;font-family:Pretendard,sans-serif;font-size:13px">
             <span style="font-size:13px;font-weight:500;color:var(--tx);font-family:Pretendard,sans-serif">${CONFIG.BIZ_LABELS[b]}</span>
-            ${isKpiM?`<span style="font-size:11px;color:var(--tx3);margin-left:5px;font-family:Pretendard,sans-serif">×${factor}</span>`:''}
+            ${isKpiM&&ctx.useEbit?`<span style="font-size:11px;color:var(--tx3);margin-left:5px;font-family:Pretendard,sans-serif">×${factor}</span>`:''}
           </td>
           <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px">${fmtTgt()}</td>
           <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;color:var(--tx)">${fmtAct()}</td>
           <td style="padding:12px 14px;min-width:160px">
-            ${tgt>0&&(hasRate||!isKpiM)?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div></div><span style="font-size:13px;font-weight:600;color:${barClr};min-width:36px;text-align:right;font-family:Pretendard,sans-serif">${pct}%</span></div>`:isKpiM?'<span style="font-size:12px;color:#999;font-family:Pretendard,sans-serif">환율 입력 필요</span>':'<span style="font-size:13px;color:var(--tbl-tx-body);font-family:Pretendard,sans-serif">롤링 필요</span>'}
+            ${canBar?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${barClr};width:${pct}%"></div></div><span style="font-size:13px;font-weight:600;color:${barClr};min-width:36px;text-align:right;font-family:Pretendard,sans-serif">${pct}%</span></div>`:isKpiM?'<span style="font-size:12px;color:#999;font-family:Pretendard,sans-serif">환율 입력 필요</span>':'<span style="font-size:13px;color:var(--tbl-tx-body);font-family:Pretendard,sans-serif">롤링 필요</span>'}
           </td>
           <td style="padding:12px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;color:var(--tx)">${fmtRem()}</td>
         </tr>`;
       }).join('');
 
-      const totalTgtRaw = _getTotalTarget(year, mode);
-      const totalActKrw = hasRate ? CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b)*_exchangeRate,0) : CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0);
-      const totalActUsd = CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActual(year,b),0);
-      const totalTgt = totalTgtRaw;
-      const totalAct = isKpiM ? totalActKrw : totalActUsd;
-      const totalPct    = totalTgt>0 ? Math.min(100, totalAct/totalTgt*100) : 0;
-      const totalPctFmt = totalPct.toFixed(1) + '%';
-      const totalRem = Math.max(0,totalTgt-totalAct);
-      const totalClr = '#4B5563';
+      const totalTgtRaw  = CONFIG.BIZ_LIST.reduce((s,b)=>s+_bizTgtRaw(b),0);
+      const totalActUsd  = CONFIG.BIZ_LIST.reduce((s,b)=>s+_bizActUsd(b),0);
+      const totalTgtUsd  = _tgtToUsd(totalTgtRaw, ctx);
+      const totalTgtDisp = _tgtToDisp(totalTgtRaw, ctx);
+      const totalActDisp = _actToDisp(totalActUsd, ctx);
+      const totalTgt     = totalTgtRaw;
+      const totalPct     = totalTgtUsd>0 ? Math.min(100, totalActUsd/totalTgtUsd*100) : 0;
+      const totalPctFmt  = totalPct.toFixed(1) + '%';
+      const totalRemDisp = (totalTgtDisp!==null && totalActDisp!==null) ? Math.max(0, totalTgtDisp-totalActDisp) : null;
 
       const yearTabs=[year-1,year,year+1].map(y=>{
         const active=y===year;
@@ -1137,8 +1176,8 @@ Pages.KpiTarget = (() => {
 
       const TH  = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
       const THR = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
-      const actHeader = isKpiM ? '누적 EBIT (억원)' : '누적 실적 (USD)';
-      const tgtHeader = isKpiM ? '목표 EBIT (억원)' : '목표 매출 (USD)';
+      const tgtHeader = `목표 ${basis} (${uLabel})`;
+      const actHeader = `누적 ${basis} (${uLabel})`;
 
       const bizBtns=[{key:'all',label:'전체',color:'#1B4F8A'},...CONFIG.BIZ_LIST.map(b=>({key:b,label:CONFIG.BIZ_LABELS[b],color:CONFIG.BIZ_COLORS[b]}))].map(({key,label,color})=>{
         const on=_bizSet.has(key);
@@ -1184,23 +1223,25 @@ Pages.KpiTarget = (() => {
           </div>
         </div>
 
+        <!-- ② 단위/지표 토글 (전역) -->
+        ${_buildUnitBar()}
 
         <!-- ③ 요약 카드 -->
         ${totalTgt>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
             <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">연간 목표 (${ml})</div>
-            <div style="font-size:22px;font-weight:600;color:var(--tx)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</div>
-            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${isKpiM?'목표 EBIT (롤링 합계)':'롤링 데이터 합계'}</div>
+            <div style="font-size:22px;font-weight:600;color:var(--tx)">${_fmtN(totalTgtDisp)} ${uLabel}</div>
+            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${basis} 기준 · 롤링 합계</div>
           </div>
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
-            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">${isKpiM?'누적 EBIT':'누적 달성'}</div>
-            <div style="font-size:22px;font-weight:600;color:var(--tx)">${isKpiM&&hasRate?(totalActKrw/100000000).toFixed(2)+'억원':isKpiM?'$'+formatNumber(Math.round(totalActKrw)):'$'+formatNumber(Math.round(totalActUsd))}</div>
-            ${isKpiM&&hasRate?`<div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">$${formatNumber(Math.round(CONFIG.BIZ_LIST.reduce((s,b)=>s+_getActualProfit(year,b),0)))} × ${_exchangeRate.toLocaleString()}원</div>`:''}
+            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">누적 ${basis}</div>
+            <div style="font-size:22px;font-weight:600;color:var(--tx)">${_fmtN(totalActDisp)} ${uLabel}</div>
+            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">$${formatNumber(Math.round(totalActUsd))}</div>
           </div>
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
             <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">전체 달성률</div>
             <div style="font-size:22px;font-weight:600;color:var(--tx)">${totalPctFmt}</div>
-            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${isKpiM?(hasRate?'원화 기준':'환율 미입력'):'USD 기준'}</div>
+            <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${basis} · ${uLabel} 기준</div>
           </div>
         </div>`:`<div style="background:var(--tbl-sum-bg);border-left:3px solid var(--bd);padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:var(--tx)">
           롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
@@ -1215,10 +1256,10 @@ Pages.KpiTarget = (() => {
             <tbody>${bizRows}</tbody>
             ${totalTgt>0?`<tfoot><tr style="background:var(--tbl-sum-bg)">
               <td style="padding:10px 14px;font-size:13px;font-weight:500;font-family:Pretendard,sans-serif;color:var(--tx2);border-top:0.5px solid var(--bd)">합계</td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;border-top:0.5px solid var(--bd)">${isKpiM?(totalTgt/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalTgt))}</td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM&&hasRate?(totalAct/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalAct))}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;border-top:0.5px solid var(--bd)">${_fmtN(totalTgtDisp)}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${_fmtN(totalActDisp)}</td>
               <td style="padding:10px 14px;border-top:0.5px solid var(--bd)"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:#4B5563;width:${Math.min(100,Math.round(totalPct))}%"></div></div><span style="font-size:13px;font-weight:600;color:var(--tx);min-width:36px;text-align:right">${totalPctFmt}</span></div></td>
-              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${isKpiM?(totalRem/100000000).toFixed(2)+'억원':'$'+formatNumber(Math.round(totalRem))}</td>
+              <td style="padding:10px 14px;text-align:right;font-family:Pretendard,sans-serif;font-size:13px;font-weight:600;color:var(--tx);border-top:0.5px solid var(--bd)">${_fmtN(totalRemDisp)}</td>
             </tr></tfoot>`:''}
           </table>
         </div>
@@ -1730,8 +1771,8 @@ Pages.KpiTarget = (() => {
 
     setMode(mode) { _rollingMode=mode; Pages.KpiTarget.render(); },
 
-    setTrackingUnit(unit) { _trackingUnit = unit; _renderTracking(); },
-    setTableView(view)    { _tableView    = view; _renderTracking(); },
+    setTrackingUnit(unit) { _trackingUnit = unit; Pages.KpiTarget.render(); },
+    setTableView(view)    { _tableView    = view; Pages.KpiTarget.render(); },
 
     openFactorPanel() {
       const el=document.getElementById('kpi-factor-panel');
