@@ -308,6 +308,21 @@ Pages.Dashboard = (() => {
     }
     return result;
   }
+  function _calendarDaysWindow(endStr, n) {
+    const result = [];
+    const parts = endStr.split('-').map(Number);
+    let cur = new Date(parts[0], parts[1]-1, parts[2]);
+    while (result.length < n) {
+      result.unshift(_dStr(cur));
+      cur.setDate(cur.getDate() - 1);
+    }
+    return result;
+  }
+  function _isWeekendStr(dStr) {
+    const p = dStr.split('-').map(Number);
+    const dow = new Date(p[0], p[1]-1, p[2]).getDay();
+    return dow === 0 || dow === 6;
+  }
   function _bizDaysBetween(fromStr, toStr) {
     if (!fromStr || !toStr || fromStr >= toStr) return 0;
     const a = fromStr.split('-').map(Number);
@@ -333,7 +348,7 @@ Pages.Dashboard = (() => {
 
     const N_DAYS   = 14;
     const todayStr = today();
-    const windowD  = _businessDaysWindow(todayStr, N_DAYS);
+    const windowD  = _calendarDaysWindow(todayStr, N_DAYS);
     // 직전 영업일 = 누락 평가 기준 (오늘은 아직 입력 진행 중이라 누락 아님)
     const tParts = todayStr.split('-').map(Number);
     let _ref = new Date(tParts[0], tParts[1]-1, tParts[2]);
@@ -372,11 +387,12 @@ Pages.Dashboard = (() => {
         const v       = pmap[d] || 0;
         const isToday = (d === todayStr);
         const isRef   = (d === refStr);
+        const isWknd  = _isWeekendStr(d);
         const dispMD  = d.slice(5).replace('-', '/');
-        const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD);
-        const tip     = tipBase + (v > 0 ? ' · ' + formatNumber(v) + '개' : (isToday ? ' · 입력 전 (클릭 입력)' : ' · 누락 (클릭 입력)'));
+        const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD) + (isWknd ? ' · 주말' : '');
+        const tip     = tipBase + (v > 0 ? ' · ' + formatNumber(v) + '개' : (isToday ? ' · 입력 전 (클릭 입력)' : (isWknd ? ' · (클릭 입력)' : ' · 누락 (클릭 입력)')));
         const tipHtml = '<div class="dash-bar-tip" style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:3px 7px;background:#1D1D1F;color:#fff;font-size:11px;border-radius:4px;white-space:nowrap;pointer-events:none;font-family:Pretendard,sans-serif;opacity:0;transition:opacity 0.1s;z-index:10">' + tip + '<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:#1D1D1F"></div></div>';
-        const wrapBase = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center';
+        const wrapBase = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center' + (isWknd ? ';background:#F7F7FA' : '');
         const hoverJs  = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
         // 비어있는 칸 = 클릭하면 빠른 입력 모달 (style은 별도, onclick만)
         const clickJs  = v > 0
@@ -389,8 +405,10 @@ Pages.Dashboard = (() => {
           return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
         // 누락 셀 — position:absolute로 부모(wrap)를 완전히 채워 풀높이 네모 박스 보장
+        // 주말은 누락 평가 대상이 아님 (영업일만 빨강 박스)
         let bg = 'transparent', bd = '#D0D0D0';
-        if (isToday)            { bg = 'transparent';  bd = '#9CA3AF'; }
+        if (isWknd)             { bg = 'transparent';  bd = '#E5E5E5'; }
+        else if (isToday)       { bg = 'transparent';  bd = '#9CA3AF'; }
         else if (isRef && !isDone) { bg = '#FEF2F2';   bd = '#dc2626'; }
         return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
           + '<div style="position:absolute;inset:0;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px;box-sizing:border-box"></div>'
@@ -472,16 +490,18 @@ Pages.Dashboard = (() => {
         ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">' + refMD + ' 누락 ' + missCount + '건</span>'
         : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
 
-      // 영업일 라벨
+      // 날짜 라벨 (주말 포함)
       const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:12px;color:var(--tx3);font-family:var(--font-mono)">'
         + '<div></div>'
         + '<div style="display:flex;gap:2px">'
         +   windowD.map(function(d){
               const isToday = d === todayStr;
               const isRef   = d === refStr;
+              const isWknd  = _isWeekendStr(d);
               let style = 'flex:1;min-width:6px;text-align:center';
-              if (isToday)    style += ';color:#0C447C;font-weight:600';
-              else if (isRef) style += ';color:#dc2626;font-weight:600';
+              if (isToday)         style += ';color:#0C447C;font-weight:600';
+              else if (isRef)      style += ';color:#dc2626;font-weight:600';
+              else if (isWknd)     style += ';color:#B0B0B5';
               const dp  = d.split('-').map(Number);
               const md  = dp[1] + '/' + dp[2];
               const dow = ['일','월','화','수','목','금','토'][new Date(dp[0], dp[1]-1, dp[2]).getDay()];
@@ -501,7 +521,7 @@ Pages.Dashboard = (() => {
         +     '<span style="font-size:11px;color:var(--tx3);margin-left:6px">' + countLabel + '</span>'
         +     headerTag
         +   '</div>'
-        +   '<span style="font-size:10px;color:var(--tx3)">최근 ' + N_DAYS + '영업일 (주말 제외)</span>'
+        +   '<span style="font-size:10px;color:var(--tx3)">최근 ' + N_DAYS + '일 (주말 포함)</span>'
         + '</div>'
         + dateLabels
         + sorted.map(buildLotRow).join('')
