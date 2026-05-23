@@ -460,17 +460,8 @@ Pages.Dashboard = (() => {
       if (!lots.length) {
         return '<div style="background:var(--card);border:0.5px solid var(--bd);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:var(--tx3)">' + label + ' — 진행중 LOT 없음</div>';
       }
-      // 누락 많은 LOT 우선, 그다음 입고일 내림차순 (기준: 직전 영업일 refStr)
+      // 입고일 내림차순 — 최근 입고가 맨 위, 빠른(오래된) 입고가 맨 아래
       const sorted = lots.slice().sort(function(a, b){
-        // 출고준비(작업완료) LOT 은 맨 아래로
-        const da = getLotStatus(a) === 'done', db = getLotStatus(b) === 'done';
-        if (da !== db) return da ? 1 : -1;
-        const la = lastEntryDate(a.id), lb = lastEntryDate(b.id);
-        const ra = la || a.inDate || refStr;
-        const rb = lb || b.inDate || refStr;
-        const ma = _bizDaysBetween(ra, refStr);
-        const mb = _bizDaysBetween(rb, refStr);
-        if (ma !== mb) return mb - ma;
         return String(b.inDate || '').localeCompare(String(a.inDate || ''));
       });
 
