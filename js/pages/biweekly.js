@@ -5,6 +5,9 @@
 
 Pages.Biweekly = (() => {
 
+  // 사업 선택 상태 — 페이지 리렌더 사이에 유지
+  let _selectedBiz = null;
+
   function _getMonthPrefix(year, month) {
     return `${year}-${String(month).padStart(2,'0')}`;
   }
@@ -80,7 +83,12 @@ Pages.Biweekly = (() => {
       const BIZ        = CONFIG.BIZ_LIST;
       const CO         = CONFIG.COUNTRY_LIST;
       const BIZ_LABELS = CONFIG.BIZ_LABELS;
+      const BIZ_COLORS = CONFIG.BIZ_COLORS || {};
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
+
+      // 사업 선택 상태 초기화 (최초 진입 시 전체 선택)
+      if (!_selectedBiz) _selectedBiz = new Set(BIZ);
+      const visibleBiz = BIZ.filter(b => _selectedBiz.has(b));
 
       // ── 공통 색상 상수 ──────────────────────────────────────
       // 표 선색: 헤더와 본문 모두 동일하게 #D2D2D7 사용
@@ -111,75 +119,127 @@ Pages.Biweekly = (() => {
       const TDL = (t, bg=HBG, fw='600', extra='') =>
         `<td style="padding:9px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</td>`;
 
-      // ── 1. 월별 표 ───────────────────────────────────────
+      // ── 1. 월별 표 (피벗: 월=행, 사업=열) ────────────────
       function buildMonthlyTable(type) {
         const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
         const unit  = type === 'proc' ? 'ea'          : 'USD';
 
-        // 월 헤더 행 — colspan으로 HK+SG 열 병합
-        const monthHeaders = MONTHS.map(m => {
-          const isCur = m === curMonth;
-          return THM(`${m}월`, isCur ? HBG2 : HBG, `font-weight:${isCur?700:600}`, CO.length);
-        }).join('') + THM('연간합계', SBG, `background:${SBG}`);
+        // 일정한 칸 사이즈
+        const W_MONTH = 72;
+        const W_DATA  = 92;
+        const W_SUB   = 100;
+        const W_TOTAL = 116;
 
-        // 지역 소헤더 행
-        const coHeaders = MONTHS.map(m => {
-          const isCur = m === curMonth;
-          return CO.map(co => THM(CO_LABELS[co], isCur ? HBG2 : HBG)).join('');
-        }).join('') + THM('합계', SBG, `background:${SBG};width:80px`);
+        // 사업 선택이 비어있는 경우 안내
+        if (visibleBiz.length === 0) {
+          return `
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
+              <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
+            </div>
+            <div style="padding:24px;background:#F5F5F7;border:1px dashed ${BD};border-radius:8px;text-align:center;font-size:12px;color:#86868B;margin-bottom:24px">
+              상단의 사업 토글에서 표시할 사업을 선택하세요.
+            </div>`;
+        }
 
-        // 데이터 행
-        let grandTotal = Array(MONTHS.length * CO.length).fill(0);
-        const dataRows = BIZ.map(biz => {
+        // 헤더 1행: 월 | 사업1(colspan=CO+1) | 사업2 | ... | 합계
+        const bizHeaders = visibleBiz.map(biz => {
+          const color = BIZ_COLORS[biz] || HTX;
+          return THM(BIZ_LABELS[biz], HBG,
+            `color:${color};border-bottom:2px solid ${color}`, CO.length + 1);
+        }).join('');
+
+        // 헤더 2행: (빈) | SG | HK | 소계 | SG | HK | 소계 | ... | (빈 합계)
+        const subHeaders = visibleBiz.map(() =>
+          CO.map(co => THM(CO_LABELS[co], HBG)).join('') + THM('소계', SBG, `background:${SBG}`)
+        ).join('');
+
+        // 데이터 행 — 월별
+        const colTotals = Array(visibleBiz.length * (CO.length + 1)).fill(0);
+        let grand = 0;
+
+        const dataRows = MONTHS.map(m => {
+          const isCur = m === curMonth;
+          const rowBg = isCur ? '#EAEAF2' : '#FFFFFF';
           let rowTotal = 0;
-          const cells = MONTHS.map((m, mi) =>
-            CO.map((co, ci) => {
+
+          const cells = visibleBiz.map((biz, bi) => {
+            let bizSubtotal = 0;
+            const coCells = CO.map((co, ci) => {
               const val = type === 'proc'
                 ? _procByBizCo(biz, co, curYear, m)
                 : _revByBizCo(biz, co, curYear, m);
-              grandTotal[mi * CO.length + ci] += val;
-              rowTotal += val;
-              const isCur  = m === curMonth;
-              const disp   = val > 0 ? (type==='proc' ? formatNumber(val) : '$'+formatNumber(Math.round(val))) : '—';
-              const color  = val > 0 ? VTX : ETX;
-              return TD(disp, isCur ? '#EAEAF2' : '#FFFFFF', color);
-            }).join('')
-          ).join('');
-          const rowDisp = rowTotal > 0 ? (type==='proc' ? formatNumber(rowTotal) : '$'+formatNumber(Math.round(rowTotal))) : '—';
-          return `<tr>${TDL(BIZ_LABELS[biz])}${cells}${TD(rowDisp, SBG, STX, '600')}</tr>`;
+              bizSubtotal += val;
+              colTotals[bi * (CO.length + 1) + ci] += val;
+              const disp  = val > 0 ? (type==='proc' ? formatNumber(val) : '$'+formatNumber(Math.round(val))) : '—';
+              const color = val > 0 ? VTX : ETX;
+              return TD(disp, rowBg, color);
+            }).join('');
+            rowTotal += bizSubtotal;
+            colTotals[bi * (CO.length + 1) + CO.length] += bizSubtotal;
+            const subDisp = bizSubtotal > 0
+              ? (type==='proc' ? formatNumber(bizSubtotal) : '$'+formatNumber(Math.round(bizSubtotal)))
+              : '—';
+            const subBg = isCur ? '#DCDCE6' : SBG;
+            return coCells + TD(subDisp, subBg, bizSubtotal>0?STX:ETX, '600');
+          }).join('');
+
+          grand += rowTotal;
+          const rowDisp = rowTotal > 0
+            ? (type==='proc' ? formatNumber(rowTotal) : '$'+formatNumber(Math.round(rowTotal)))
+            : '—';
+
+          const monthCellBg = isCur ? HBG2 : HBG;
+          const monthCellFw = isCur ? '700' : '600';
+          const monthCell = `<td style="padding:9px 10px;text-align:center;font-size:12px;font-weight:${monthCellFw};color:${BTX};background:${monthCellBg};border:1px solid ${BD};white-space:nowrap">${m}월</td>`;
+
+          return `<tr>${monthCell}${cells}${TD(rowDisp, isCur ? HBG2 : SBG, STX, '700')}</tr>`;
         }).join('');
 
-        // 합계 행
-        let colTotal = 0;
-        const totalCells = MONTHS.map((m, mi) =>
-          CO.map((co, ci) => {
-            const v = grandTotal[mi * CO.length + ci];
-            colTotal += v;
-            const isCur = m === curMonth;
-            const disp  = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
-            return TD(disp, isCur ? HBG2 : SBG, v>0?STX:ETX, '600');
-          }).join('')
-        ).join('');
-        const colDisp = colTotal > 0 ? (type==='proc' ? formatNumber(colTotal) : '$'+formatNumber(Math.round(colTotal))) : '—';
+        // 합계 행 — 사업별 컬럼 합계
+        const totalCells = visibleBiz.map((biz, bi) => {
+          return CO.map((co, ci) => {
+            const v = colTotals[bi * (CO.length + 1) + ci];
+            const disp = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
+            return TD(disp, SBG, v > 0 ? STX : ETX, '600');
+          }).join('') + (() => {
+            const v = colTotals[bi * (CO.length + 1) + CO.length];
+            const disp = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
+            return TD(disp, SBG, v > 0 ? STX : ETX, '700');
+          })();
+        }).join('');
+
+        const grandDisp = grand > 0
+          ? (type==='proc' ? formatNumber(grand) : '$'+formatNumber(Math.round(grand)))
+          : '—';
+
+        // colgroup
+        const cols = `
+          <col style="width:${W_MONTH}px">
+          ${visibleBiz.map(() =>
+            CO.map(() => `<col style="width:${W_DATA}px">`).join('') +
+            `<col style="width:${W_SUB}px">`
+          ).join('')}
+          <col style="width:${W_TOTAL}px">`;
 
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
             <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
           </div>
-          <table class="bw-monthly-table" style="border-collapse:collapse;table-layout:fixed;min-width:100%;margin-bottom:24px">
-            <colgroup>
-              <col style="width:88px">
-              ${MONTHS.map(() => CO.map(() => `<col style="width:60px">`).join('')).join('')}
-              <col style="width:78px">
-            </colgroup>
+          <table class="bw-monthly-table" style="border-collapse:collapse;table-layout:fixed;margin-bottom:24px">
+            <colgroup>${cols}</colgroup>
             <thead>
-              <tr>${TH('사업')}${monthHeaders}</tr>
-              <tr>${TH('')}${coHeaders}</tr>
+              <tr>${TH('월')}${bizHeaders}${THM('연간합계', SBG, `background:${SBG}`)}</tr>
+              <tr>${TH('')}${subHeaders}${THM('', SBG, `background:${SBG}`)}</tr>
             </thead>
             <tbody>${dataRows}</tbody>
             <tfoot>
-              <tr>${TDL('합계', SBG, '600')}${totalCells}${TD(colDisp, SBG, STX, '600')}</tr>
+              <tr>
+                <td style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700;color:${BTX};background:${SBG};border:1px solid ${BD};white-space:nowrap">합계</td>
+                ${totalCells}
+                ${TD(grandDisp, SBG, STX, '700')}
+              </tr>
             </tfoot>
           </table>`;
       }
@@ -262,16 +322,45 @@ Pages.Biweekly = (() => {
           </div>` : '<div style="font-size:11px;color:#C7C7CC;margin-top:8px">※ 진행중 현황은 이번달 카드에서 확인</div>'}`;
       }
 
+      // ── 사업 선택 토글 바 ────────────────────────────────
+      const toggleBar = `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:10px 14px;background:#F5F5F7;border:1px solid #D2D2D7;border-radius:10px">
+          <div style="font-size:11px;font-weight:600;color:#3A3A3C;margin-right:6px;letter-spacing:-.01em">사업 선택</div>
+          ${BIZ.map(biz => {
+            const active = _selectedBiz.has(biz);
+            const color  = BIZ_COLORS[biz] || '#1D1D1F';
+            return `<button class="bw-biz-toggle" data-biz="${biz}" type="button" style="
+              padding:5px 12px;
+              font-size:11px;
+              font-weight:600;
+              font-family:inherit;
+              border-radius:14px;
+              border:1px solid ${active ? color : '#D2D2D7'};
+              background:${active ? color : '#FFFFFF'};
+              color:${active ? '#FFFFFF' : '#86868B'};
+              cursor:pointer;
+              transition:all .12s ease;
+              letter-spacing:-.01em;
+              white-space:nowrap
+            ">${BIZ_LABELS[biz]}</button>`;
+          }).join('')}
+          <div style="flex:1;min-width:8px"></div>
+          <button class="bw-biz-all" type="button" style="padding:5px 10px;font-size:11px;color:#0066CC;background:transparent;border:none;cursor:pointer;font-weight:500">전체 선택</button>
+          <button class="bw-biz-none" type="button" style="padding:5px 10px;font-size:11px;color:#86868B;background:transparent;border:none;cursor:pointer;font-weight:500">전체 해제</button>
+        </div>`;
+
       // ── 최종 렌더 ────────────────────────────────────────
       el.innerHTML = `
         <div style="width:100%">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <div>
               <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;color:#1D1D1F">월별 처리량/매출액</div>
               <div style="font-size:12px;color:#86868B;margin-top:2px">${curYear}년 운영 현황</div>
             </div>
             <div style="font-size:12px;color:#86868B">${curYear}년 ${curMonth}월 기준</div>
           </div>
+
+          ${toggleBar}
 
           <div style="overflow-x:auto;margin-bottom:0">
             ${buildMonthlyTable('proc')}
@@ -289,6 +378,26 @@ Pages.Biweekly = (() => {
             </div>
           </div>
         </div>`;
+
+      // ── 토글 이벤트 ──────────────────────────────────────
+      el.querySelectorAll('.bw-biz-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const biz = btn.dataset.biz;
+          if (_selectedBiz.has(biz)) _selectedBiz.delete(biz);
+          else _selectedBiz.add(biz);
+          Pages.Biweekly.render();
+        });
+      });
+      const allBtn = el.querySelector('.bw-biz-all');
+      if (allBtn) allBtn.addEventListener('click', () => {
+        _selectedBiz = new Set(BIZ);
+        Pages.Biweekly.render();
+      });
+      const noneBtn = el.querySelector('.bw-biz-none');
+      if (noneBtn) noneBtn.addEventListener('click', () => {
+        _selectedBiz = new Set();
+        Pages.Biweekly.render();
+      });
     },
   };
 
