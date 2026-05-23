@@ -806,8 +806,8 @@ Pages.Dashboard = (() => {
     if (old) old.remove();
 
     const html = ''
-      + '<div id="dash-lot-detail" style="position:fixed;inset:0;z-index:9998;font-family:Pretendard,sans-serif" onclick="if(event.target===this)Pages.Dashboard.closeLotDetail()">'
-      +   '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.35)"></div>'
+      + '<div id="dash-lot-detail" style="position:fixed;inset:0;z-index:9998;font-family:Pretendard,sans-serif">'
+      +   '<div style="position:absolute;inset:0;background:rgba(0,0,0,0.35);cursor:pointer" onclick="Pages.Dashboard.closeLotDetail()"></div>'
       +   '<div style="position:absolute;top:0;right:0;bottom:0;width:480px;max-width:95vw;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,0.15);display:flex;flex-direction:column;animation:slideInRight 0.18s ease-out">'
       +     '<div style="padding:16px 20px;border-bottom:1px solid #E0E0E0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
       +       '<div style="min-width:0;flex:1">'
