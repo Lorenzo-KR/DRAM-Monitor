@@ -102,22 +102,22 @@ Pages.Biweekly = (() => {
       const VTX  = '#3A3A3C';   // 본문 값 텍스트
       const ETX  = '#C7C7CC';   // 빈값
 
-      // ── 셀 스타일 빌더 ──────────────────────────────────────
+      // ── 셀 스타일 빌더 (월별 표 — 촘촘) ──────────────────────
       // 헤더 셀 — 모든 방향 보더
       const TH = (t, extra='') =>
-        `<th style="padding:9px 10px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
+        `<th style="padding:4px 10px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${HBG};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</th>`;
 
       // 데이터 헤더 (월/지역) — colspan 지원
       const THM = (t, bg=HBG, extra='', colspan=1) =>
-        `<th colspan="${colspan}" style="padding:8px 6px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</th>`;
+        `<th colspan="${colspan}" style="padding:3px 6px;text-align:center;font-size:11px;font-weight:600;color:${HTX};background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</th>`;
 
       // 데이터 셀 — 모든 방향 보더
       const TD = (t, bg='#FFFFFF', color=VTX, fw='400', extra='') =>
-        `<td style="padding:9px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:${fw};color:${color};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</td>`;
+        `<td style="padding:4px 8px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:${fw};color:${color};background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</td>`;
 
       // 사업명 셀 (첫 컬럼, 좌측 정렬)
       const TDL = (t, bg=HBG, fw='600', extra='') =>
-        `<td style="padding:9px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;${extra}">${t}</td>`;
+        `<td style="padding:4px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</td>`;
 
       // ── 1. 월별 표 (피벗: 월=행, 사업=열) ────────────────
       function buildMonthlyTable(type) {
@@ -191,7 +191,7 @@ Pages.Biweekly = (() => {
 
           const monthCellBg = isCur ? HBG2 : HBG;
           const monthCellFw = isCur ? '700' : '600';
-          const monthCell = `<td style="padding:9px 10px;text-align:center;font-size:12px;font-weight:${monthCellFw};color:${BTX};background:${monthCellBg};border:1px solid ${BD};white-space:nowrap">${m}월</td>`;
+          const monthCell = `<td style="padding:4px 10px;text-align:center;font-size:12px;font-weight:${monthCellFw};color:${BTX};background:${monthCellBg};border:1px solid ${BD};white-space:nowrap;line-height:1.2">${m}월</td>`;
 
           return `<tr>${monthCell}${cells}${TD(rowDisp, isCur ? HBG2 : SBG, STX, '700')}</tr>`;
         }).join('');
@@ -236,7 +236,7 @@ Pages.Biweekly = (() => {
             <tbody>${dataRows}</tbody>
             <tfoot>
               <tr>
-                <td style="padding:9px 10px;text-align:center;font-size:12px;font-weight:700;color:${BTX};background:${SBG};border:1px solid ${BD};white-space:nowrap">합계</td>
+                <td style="padding:4px 10px;text-align:center;font-size:12px;font-weight:700;color:${BTX};background:${SBG};border:1px solid ${BD};white-space:nowrap;line-height:1.2">합계</td>
                 ${totalCells}
                 ${TD(grandDisp, SBG, STX, '700')}
               </tr>
