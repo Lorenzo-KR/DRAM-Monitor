@@ -119,101 +119,103 @@ Pages.Biweekly = (() => {
       const TDL = (t, bg=HBG, fw='600', extra='') =>
         `<td style="padding:4px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</td>`;
 
-      // ── 1. 월별 표 (피벗: 월=행, 사업=열) ────────────────
-      function buildMonthlyTable(type) {
-        const title = type === 'proc' ? '월별 처리량' : '월별 매출액';
-        const unit  = type === 'proc' ? 'ea'          : 'USD';
+      // ── 1. 월별 표 (피벗: 월=행, 사업=열, 처리량+매출액 합본) ──
+      function buildMonthlyTable() {
+        const title = '월별 처리량 / 매출액';
 
         // 일정한 칸 사이즈
-        const W_MONTH = 72;
-        const W_DATA  = 92;
-        const W_SUB   = 100;
-        const W_TOTAL = 116;
+        const W_MONTH = 64;
+        const W_DATA  = 96;
+        const W_SUB   = 108;
+        const W_TOTAL = 124;
 
         // 사업 선택이 비어있는 경우 안내
         if (visibleBiz.length === 0) {
           return `
             <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
               <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-              <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
+              <div style="font-size:12px;color:#86868B">ea / USD · 인보이스 발행 완료 기준</div>
             </div>
             <div style="padding:24px;background:#F5F5F7;border:1px dashed ${BD};border-radius:8px;text-align:center;font-size:12px;color:#86868B;margin-bottom:24px">
               상단의 사업 토글에서 표시할 사업을 선택하세요.
             </div>`;
         }
 
-        // 헤더 1행: 월 | 사업1(colspan=CO+1) | 사업2 | ... | 합계
+        // 처리량(위) + 매출액(아래) 2줄 셀
+        const DC = (proc, rev, bg='#FFFFFF', isTotal=false) => {
+          const procDisp  = proc > 0 ? formatNumber(proc) : '—';
+          const procColor = proc > 0 ? (isTotal ? STX : VTX) : ETX;
+          const revDisp   = rev  > 0 ? '$' + formatNumber(Math.round(rev)) : '—';
+          const revColor  = rev  > 0 ? (isTotal ? '#3A3A3C' : '#86868B')   : ETX;
+          const fwProc    = isTotal ? '700' : '500';
+          const fwRev     = isTotal ? '600' : '400';
+          return `<td style="padding:3px 8px;text-align:right;font-family:var(--font-mono);background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.25">
+            <div style="font-size:12px;font-weight:${fwProc};color:${procColor}">${procDisp}</div>
+            <div style="font-size:10.5px;font-weight:${fwRev};color:${revColor}">${revDisp}</div>
+          </td>`;
+        };
+
+        // 헤더 1행
         const bizHeaders = visibleBiz.map(biz => {
           const color = BIZ_COLORS[biz] || HTX;
           return THM(BIZ_LABELS[biz], HBG,
             `color:${color};border-bottom:2px solid ${color}`, CO.length + 1);
         }).join('');
 
-        // 헤더 2행: (빈) | SG | HK | 소계 | SG | HK | 소계 | ... | (빈 합계)
+        // 헤더 2행
         const subHeaders = visibleBiz.map(() =>
           CO.map(co => THM(CO_LABELS[co], HBG)).join('') + THM('소계', SBG, `background:${SBG}`)
         ).join('');
 
         // 데이터 행 — 월별
-        const colTotals = Array(visibleBiz.length * (CO.length + 1)).fill(0);
-        let grand = 0;
+        const N = visibleBiz.length * (CO.length + 1);
+        const colTotalsP = Array(N).fill(0);
+        const colTotalsR = Array(N).fill(0);
+        let grandP = 0, grandR = 0;
 
         const dataRows = MONTHS.map(m => {
           const isCur = m === curMonth;
           const rowBg = isCur ? '#EAEAF2' : '#FFFFFF';
-          let rowTotal = 0;
+          const subBg = isCur ? '#DCDCE6' : SBG;
+          let rowTotalP = 0, rowTotalR = 0;
 
           const cells = visibleBiz.map((biz, bi) => {
-            let bizSubtotal = 0;
+            let bizSubP = 0, bizSubR = 0;
             const coCells = CO.map((co, ci) => {
-              const val = type === 'proc'
-                ? _procByBizCo(biz, co, curYear, m)
-                : _revByBizCo(biz, co, curYear, m);
-              bizSubtotal += val;
-              colTotals[bi * (CO.length + 1) + ci] += val;
-              const disp  = val > 0 ? (type==='proc' ? formatNumber(val) : '$'+formatNumber(Math.round(val))) : '—';
-              const color = val > 0 ? VTX : ETX;
-              return TD(disp, rowBg, color);
+              const p = _procByBizCo(biz, co, curYear, m);
+              const r = _revByBizCo(biz, co, curYear, m);
+              bizSubP += p; bizSubR += r;
+              colTotalsP[bi * (CO.length + 1) + ci] += p;
+              colTotalsR[bi * (CO.length + 1) + ci] += r;
+              return DC(p, r, rowBg, false);
             }).join('');
-            rowTotal += bizSubtotal;
-            colTotals[bi * (CO.length + 1) + CO.length] += bizSubtotal;
-            const subDisp = bizSubtotal > 0
-              ? (type==='proc' ? formatNumber(bizSubtotal) : '$'+formatNumber(Math.round(bizSubtotal)))
-              : '—';
-            const subBg = isCur ? '#DCDCE6' : SBG;
-            return coCells + TD(subDisp, subBg, bizSubtotal>0?STX:ETX, '600');
+            rowTotalP += bizSubP; rowTotalR += bizSubR;
+            colTotalsP[bi * (CO.length + 1) + CO.length] += bizSubP;
+            colTotalsR[bi * (CO.length + 1) + CO.length] += bizSubR;
+            return coCells + DC(bizSubP, bizSubR, subBg, true);
           }).join('');
 
-          grand += rowTotal;
-          const rowDisp = rowTotal > 0
-            ? (type==='proc' ? formatNumber(rowTotal) : '$'+formatNumber(Math.round(rowTotal)))
-            : '—';
+          grandP += rowTotalP; grandR += rowTotalR;
 
           const monthCellBg = isCur ? HBG2 : HBG;
           const monthCellFw = isCur ? '700' : '600';
-          const monthCell = `<td style="padding:4px 10px;text-align:center;font-size:12px;font-weight:${monthCellFw};color:${BTX};background:${monthCellBg};border:1px solid ${BD};white-space:nowrap;line-height:1.2">${m}월</td>`;
+          const monthCell = `<td style="padding:3px 10px;text-align:center;font-size:12px;font-weight:${monthCellFw};color:${BTX};background:${monthCellBg};border:1px solid ${BD};white-space:nowrap;line-height:1.2">${m}월</td>`;
 
-          return `<tr>${monthCell}${cells}${TD(rowDisp, isCur ? HBG2 : SBG, STX, '700')}</tr>`;
+          return `<tr>${monthCell}${cells}${DC(rowTotalP, rowTotalR, isCur ? HBG2 : SBG, true)}</tr>`;
         }).join('');
 
         // 합계 행 — 사업별 컬럼 합계
         const totalCells = visibleBiz.map((biz, bi) => {
-          return CO.map((co, ci) => {
-            const v = colTotals[bi * (CO.length + 1) + ci];
-            const disp = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
-            return TD(disp, SBG, v > 0 ? STX : ETX, '600');
-          }).join('') + (() => {
-            const v = colTotals[bi * (CO.length + 1) + CO.length];
-            const disp = v > 0 ? (type==='proc' ? formatNumber(v) : '$'+formatNumber(Math.round(v))) : '—';
-            return TD(disp, SBG, v > 0 ? STX : ETX, '700');
-          })();
+          const coTotals = CO.map((co, ci) => {
+            const p = colTotalsP[bi * (CO.length + 1) + ci];
+            const r = colTotalsR[bi * (CO.length + 1) + ci];
+            return DC(p, r, SBG, true);
+          }).join('');
+          const sp = colTotalsP[bi * (CO.length + 1) + CO.length];
+          const sr = colTotalsR[bi * (CO.length + 1) + CO.length];
+          return coTotals + DC(sp, sr, SBG, true);
         }).join('');
 
-        const grandDisp = grand > 0
-          ? (type==='proc' ? formatNumber(grand) : '$'+formatNumber(Math.round(grand)))
-          : '—';
-
-        // colgroup
         const cols = `
           <col style="width:${W_MONTH}px">
           ${visibleBiz.map(() =>
@@ -225,7 +227,7 @@ Pages.Biweekly = (() => {
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-            <div style="font-size:12px;color:#86868B">${unit} · 인보이스 발행 완료 기준</div>
+            <div style="font-size:12px;color:#86868B">상단: 처리량(ea) · 하단: 매출액(USD) · 인보이스 발행 완료 기준</div>
           </div>
           <table class="bw-monthly-table" style="border-collapse:collapse;table-layout:fixed;margin-bottom:24px">
             <colgroup>${cols}</colgroup>
@@ -236,9 +238,9 @@ Pages.Biweekly = (() => {
             <tbody>${dataRows}</tbody>
             <tfoot>
               <tr>
-                <td style="padding:4px 10px;text-align:center;font-size:12px;font-weight:700;color:${BTX};background:${SBG};border:1px solid ${BD};white-space:nowrap;line-height:1.2">합계</td>
+                <td style="padding:3px 10px;text-align:center;font-size:12px;font-weight:700;color:${BTX};background:${SBG};border:1px solid ${BD};white-space:nowrap;line-height:1.2">합계</td>
                 ${totalCells}
-                ${TD(grandDisp, SBG, STX, '700')}
+                ${DC(grandP, grandR, SBG, true)}
               </tr>
             </tfoot>
           </table>`;
@@ -363,8 +365,7 @@ Pages.Biweekly = (() => {
           ${toggleBar}
 
           <div style="overflow-x:auto;margin-bottom:0">
-            ${buildMonthlyTable('proc')}
-            ${buildMonthlyTable('rev')}
+            ${buildMonthlyTable()}
           </div>
 
           <div style="height:1px;background:#D2D2D7;margin:4px 0 24px"></div>
