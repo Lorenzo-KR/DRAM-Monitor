@@ -109,8 +109,8 @@ Pages.Biweekly = (() => {
       const BIZ_COLORS = CONFIG.BIZ_COLORS || {};
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
-      // 사업 선택 상태 초기화 (최초 진입 시 전체 선택)
-      if (!_selectedBiz) _selectedBiz = new Set(BIZ);
+      // 사업 선택 상태 초기화 (최초 진입 시 DRAM / SSD / MID 만)
+      if (!_selectedBiz) _selectedBiz = new Set(['DRAM', 'SSD', 'MID'].filter(b => BIZ.includes(b)));
       const visibleBiz = BIZ.filter(b => _selectedBiz.has(b));
 
       // ── 공통 색상 상수 ──────────────────────────────────────
