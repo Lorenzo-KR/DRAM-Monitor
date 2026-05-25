@@ -169,7 +169,7 @@ Pages.Biweekly = (() => {
           const procDisp  = proc > 0 ? formatNumber(proc) : '—';
           const procColor = proc > 0 ? (isTotal ? STX : VTX) : ETX;
           const avg       = proc > 0 && rev > 0 ? (rev / proc) : 0;
-          const avgDisp   = avg > 0 ? ` <span style="color:#A1A1A6">($${avg.toFixed(1)})</span>` : '';
+          const avgDisp   = avg > 0 ? ` <span style="font-size:10.5px;font-weight:400;color:#A1A1A6">($${avg.toFixed(1)})</span>` : '';
           const revDisp   = rev  > 0 ? '$' + formatNumber(Math.round(rev)) + avgDisp : '—';
           const revColor  = rev  > 0 ? (isTotal ? '#3A3A3C' : '#86868B')   : ETX;
           const fwProc    = isTotal ? '700' : '500';
