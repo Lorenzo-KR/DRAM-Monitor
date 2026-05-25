@@ -5,8 +5,9 @@
 
 Pages.Biweekly = (() => {
 
-  // 사업 선택 상태 — 페이지 리렌더 사이에 유지
-  let _selectedBiz = null;
+  // 표 그룹 정의 (상단/하단)
+  const TOP_BIZ    = ['DRAM', 'SSD', 'MID'];
+  const BOTTOM_BIZ = ['SCR', 'RMA', 'MOD'];
 
   function _getMonthPrefix(year, month) {
     return `${year}-${String(month).padStart(2,'0')}`;
@@ -78,9 +79,9 @@ Pages.Biweekly = (() => {
       const BIZ_COLORS = CONFIG.BIZ_COLORS || {};
       const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
 
-      // 사업 선택 상태 초기화 (최초 진입 시 DRAM / SSD / MID 만)
-      if (!_selectedBiz) _selectedBiz = new Set(['DRAM', 'SSD', 'MID'].filter(b => BIZ.includes(b)));
-      const visibleBiz = BIZ.filter(b => _selectedBiz.has(b));
+      // 실제 BIZ_LIST에 존재하는 사업만 필터링
+      const topBiz    = TOP_BIZ.filter(b => BIZ.includes(b));
+      const bottomBiz = BOTTOM_BIZ.filter(b => BIZ.includes(b));
 
       // ── 공통 색상 상수 ──────────────────────────────────────
       // 표 선색: 헤더와 본문 모두 동일하게 #D2D2D7 사용
@@ -112,26 +113,14 @@ Pages.Biweekly = (() => {
         `<td style="padding:4px 12px;text-align:left;font-size:12px;font-weight:${fw};color:${BTX};background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.2;${extra}">${t}</td>`;
 
       // ── 1. 월별 표 (피벗: 월=행, 사업=열, 처리량+매출액 합본) ──
-      function buildMonthlyTable() {
-        const title = '월별 처리량 / 매출액';
-
+      function buildMonthlyTable(bizList, title, showLegend) {
         // 일정한 칸 사이즈
         const W_MONTH = 64;
         const W_DATA  = 116;
         const W_SUB   = 128;
         const W_TOTAL = 148;
 
-        // 사업 선택이 비어있는 경우 안내
-        if (visibleBiz.length === 0) {
-          return `
-            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
-              <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-              <div style="font-size:12px;color:#86868B">ea / USD · 인보이스 발행 완료 기준</div>
-            </div>
-            <div style="padding:24px;background:#F5F5F7;border:1px dashed ${BD};border-radius:8px;text-align:center;font-size:12px;color:#86868B;margin-bottom:24px">
-              상단의 사업 토글에서 표시할 사업을 선택하세요.
-            </div>`;
-        }
+        if (bizList.length === 0) return '';
 
         // 처리량(위) + 매출액·평균단가(중) + 미청구(아래) 3줄 셀
         const DC = (proc, rev, unbilled, bg='#FFFFFF', isTotal=false) => {
@@ -154,19 +143,19 @@ Pages.Biweekly = (() => {
         };
 
         // 헤더 1행
-        const bizHeaders = visibleBiz.map(biz => {
+        const bizHeaders = bizList.map(biz => {
           const color = BIZ_COLORS[biz] || HTX;
           return THM(BIZ_LABELS[biz], HBG,
             `color:${color};border-bottom:2px solid ${color}`, CO.length + 1);
         }).join('');
 
         // 헤더 2행
-        const subHeaders = visibleBiz.map(() =>
+        const subHeaders = bizList.map(() =>
           CO.map(co => THM(CO_LABELS[co], HBG)).join('') + THM('소계', SBG, `background:${SBG}`)
         ).join('');
 
         // 데이터 행 — 월별
-        const N = visibleBiz.length * (CO.length + 1);
+        const N = bizList.length * (CO.length + 1);
         const colTotalsP = Array(N).fill(0);
         const colTotalsR = Array(N).fill(0);
         const colTotalsU = Array(N).fill(0);
@@ -178,7 +167,7 @@ Pages.Biweekly = (() => {
           const subBg = isCur ? '#DCDCE6' : SBG;
           let rowTotalP = 0, rowTotalR = 0, rowTotalU = 0;
 
-          const cells = visibleBiz.map((biz, bi) => {
+          const cells = bizList.map((biz, bi) => {
             let bizSubP = 0, bizSubR = 0, bizSubU = 0;
             const coCells = CO.map((co, ci) => {
               const p = _procByBizCo(biz, co, curYear, m);
@@ -207,7 +196,7 @@ Pages.Biweekly = (() => {
         }).join('');
 
         // 합계 행 — 사업별 컬럼 합계
-        const totalCells = visibleBiz.map((biz, bi) => {
+        const totalCells = bizList.map((biz, bi) => {
           const coTotals = CO.map((co, ci) => {
             const p = colTotalsP[bi * (CO.length + 1) + ci];
             const r = colTotalsR[bi * (CO.length + 1) + ci];
@@ -222,16 +211,19 @@ Pages.Biweekly = (() => {
 
         const cols = `
           <col style="width:${W_MONTH}px">
-          ${visibleBiz.map(() =>
+          ${bizList.map(() =>
             CO.map(() => `<col style="width:${W_DATA}px">`).join('') +
             `<col style="width:${W_SUB}px">`
           ).join('')}
           <col style="width:${W_TOTAL}px">`;
 
+        const legend = showLegend
+          ? `<div style="font-size:12px;color:#86868B">상단: 처리량(ea) · 중단: 매출액 USD (괄호: 평균단가 $/ea) · 하단: <span style="color:#D70015">미청구 수량</span> (완료월 기준 현시점 미청구)</div>`
+          : '';
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
             <div style="font-size:14px;font-weight:600;color:#1D1D1F">${title}</div>
-            <div style="font-size:12px;color:#86868B">상단: 처리량(ea) · 중단: 매출액 USD (괄호: 평균단가 $/ea) · 하단: <span style="color:#D70015">미청구 수량</span> (완료월 기준 현시점 미청구)</div>
+            ${legend}
           </div>
           <table class="bw-monthly-table" style="border-collapse:collapse;table-layout:fixed;margin-bottom:24px">
             <colgroup>${cols}</colgroup>
@@ -250,33 +242,6 @@ Pages.Biweekly = (() => {
           </table>`;
       }
 
-      // ── 사업 선택 토글 바 ────────────────────────────────
-      const toggleBar = `
-        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px;padding:10px 14px;background:#F5F5F7;border:1px solid #D2D2D7;border-radius:10px">
-          <div style="font-size:11px;font-weight:600;color:#3A3A3C;margin-right:6px;letter-spacing:-.01em">사업 선택</div>
-          ${BIZ.map(biz => {
-            const active = _selectedBiz.has(biz);
-            const color  = BIZ_COLORS[biz] || '#1D1D1F';
-            return `<button class="bw-biz-toggle" data-biz="${biz}" type="button" style="
-              padding:5px 12px;
-              font-size:11px;
-              font-weight:600;
-              font-family:inherit;
-              border-radius:14px;
-              border:1px solid ${active ? color : '#D2D2D7'};
-              background:${active ? color : '#FFFFFF'};
-              color:${active ? '#FFFFFF' : '#86868B'};
-              cursor:pointer;
-              transition:all .12s ease;
-              letter-spacing:-.01em;
-              white-space:nowrap
-            ">${BIZ_LABELS[biz]}</button>`;
-          }).join('')}
-          <div style="flex:1;min-width:8px"></div>
-          <button class="bw-biz-all" type="button" style="padding:5px 10px;font-size:11px;color:#0066CC;background:transparent;border:none;cursor:pointer;font-weight:500">전체 선택</button>
-          <button class="bw-biz-none" type="button" style="padding:5px 10px;font-size:11px;color:#86868B;background:transparent;border:none;cursor:pointer;font-weight:500">전체 해제</button>
-        </div>`;
-
       // ── 최종 렌더 ────────────────────────────────────────
       el.innerHTML = `
         <div style="width:100%">
@@ -288,32 +253,13 @@ Pages.Biweekly = (() => {
             <div style="font-size:12px;color:#86868B">${curYear}년 ${curMonth}월 기준</div>
           </div>
 
-          ${toggleBar}
-
           <div style="overflow-x:auto;margin-bottom:0">
-            ${buildMonthlyTable()}
+            ${buildMonthlyTable(topBiz, '월별 처리량 / 매출액 — Test 사업', true)}
+          </div>
+          <div style="overflow-x:auto;margin-bottom:0">
+            ${buildMonthlyTable(bottomBiz, '월별 처리량 / 매출액 — 기타 사업', false)}
           </div>
         </div>`;
-
-      // ── 토글 이벤트 ──────────────────────────────────────
-      el.querySelectorAll('.bw-biz-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const biz = btn.dataset.biz;
-          if (_selectedBiz.has(biz)) _selectedBiz.delete(biz);
-          else _selectedBiz.add(biz);
-          Pages.Biweekly.render();
-        });
-      });
-      const allBtn = el.querySelector('.bw-biz-all');
-      if (allBtn) allBtn.addEventListener('click', () => {
-        _selectedBiz = new Set(BIZ);
-        Pages.Biweekly.render();
-      });
-      const noneBtn = el.querySelector('.bw-biz-none');
-      if (noneBtn) noneBtn.addEventListener('click', () => {
-        _selectedBiz = new Set();
-        Pages.Biweekly.render();
-      });
     },
   };
 
