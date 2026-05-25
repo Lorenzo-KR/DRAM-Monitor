@@ -166,7 +166,7 @@ Pages.Biweekly = (() => {
 
         // 처리량(위) + 매출액·평균단가(중) + 미청구(아래) 3줄 셀
         const DC = (proc, rev, unbilled, bg='#FFFFFF', isTotal=false) => {
-          const procDisp  = proc > 0 ? formatNumber(proc) : '—';
+          const procDisp  = proc > 0 ? formatNumber(proc) + '<span style="font-size:10px;color:#A1A1A6;font-weight:400"> 개</span>' : '—';
           const procColor = proc > 0 ? (isTotal ? STX : VTX) : ETX;
           const avg       = proc > 0 && rev > 0 ? (rev / proc) : 0;
           const avgDisp   = avg > 0 ? ` <span style="font-size:10.5px;font-weight:400;color:#A1A1A6">($${avg.toFixed(1)})</span>` : '';
@@ -175,7 +175,7 @@ Pages.Biweekly = (() => {
           const fwProc    = isTotal ? '700' : '500';
           const fwRev     = isTotal ? '600' : '400';
           const unbDisp   = unbilled > 0
-            ? `<div style="font-size:10.5px;font-weight:${isTotal?'600':'500'};color:#D70015">미청구 ${formatNumber(unbilled)}</div>`
+            ? `<div style="font-size:10.5px;font-weight:${isTotal?'600':'500'};color:#D70015">미청구 ${formatNumber(unbilled)}<span style="font-size:10px;font-weight:400;color:#E08080"> 개</span></div>`
             : '';
           return `<td style="padding:3px 8px;text-align:right;font-family:var(--font-mono);background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.25">
             <div style="font-size:12px;font-weight:${fwProc};color:${procColor}">${procDisp}</div>
