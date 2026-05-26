@@ -359,7 +359,13 @@ Pages.Dashboard = (() => {
     return count;
   }
 
-  function _renderOpsFollowUp(lots, dailies) {
+  function _getWindowDays() {
+    const raw = parseInt(Store.getSetting('dash_window_days') || '14');
+    if (isNaN(raw)) return 14;
+    return Math.max(7, Math.min(30, raw));
+  }
+
+  function _renderOpsBody(N_DAYS, lots, dailies) {
     // 출고완료(shipDate 입력됨) LOT 은 제외. 그 외 입고된 LOT 표시 (출고준비 포함)
     const inProgressLots = lots.filter(function(l){
       if (l.shipDate) return false;
@@ -367,7 +373,6 @@ Pages.Dashboard = (() => {
     });
     if (!inProgressLots.length) return '';
 
-    const N_DAYS   = 14;
     const todayStr = today();
     const windowD  = _calendarDaysWindow(todayStr, N_DAYS);
     // 직전 영업일 = 누락 평가 기준 (오늘은 아직 입력 진행 중이라 누락 아님)
@@ -592,14 +597,42 @@ Pages.Dashboard = (() => {
     const byCountry = { HK: [], SG: [] };
     inProgressLots.forEach(function(l){ if (byCountry[l.country]) byCountry[l.country].push(l); });
 
-    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
-      + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 사업장 휴무 (날짜 클릭 또는 LOT 셀 우클릭으로 토글) · 노랑 행 = 출고준비</div>'
-      + '</div>'
-      + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
+    return '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
       + buildRegion('SG', byCountry.SG)
       + '</div>';
+  }
+
+  function _renderOpsHeader(N_DAYS) {
+    return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">'
+      + '<div style="font-size:14px;font-weight:600;color:var(--tx);white-space:nowrap">일별 처리 현황</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:6px">'
+      +   '<span style="font-size:11px;color:var(--tx2);font-weight:500;white-space:nowrap">비교 윈도우</span>'
+      +   '<input type="range" min="7" max="30" step="1" value="' + N_DAYS + '" '
+      +     'oninput="Pages.Dashboard.setWindowDays(this.value)" '
+      +     'title="7~30일 · 드래그하여 변경" '
+      +     'style="width:140px;cursor:pointer;accent-color:#1B4F8A">'
+      +   '<span id="dash-window-label" style="font-size:12px;font-weight:600;color:var(--tx);font-family:var(--font-mono);min-width:32px;text-align:right">' + N_DAYS + '일</span>'
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--tx3);flex:1;min-width:200px">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 사업장 휴무 (날짜 클릭 또는 LOT 셀 우클릭으로 토글) · 노랑 행 = 출고준비</div>'
+      + '</div>';
+  }
+
+  function _renderOpsFollowUp(lots, dailies) {
+    const has = lots.some(function(l){ return !l.shipDate && l.inDate && l.inDate <= today(); });
+    if (!has) return '';
+    const N_DAYS = _getWindowDays();
+    return _renderOpsHeader(N_DAYS)
+      + '<div id="dash-ops-body">' + _renderOpsBody(N_DAYS, lots, dailies) + '</div>';
+  }
+
+  function _setWindowDays(v) {
+    const n = Math.max(7, Math.min(30, parseInt(v) || 14));
+    Store.setSetting('dash_window_days', String(n));
+    const lbl = document.getElementById('dash-window-label');
+    if (lbl) lbl.textContent = n + '일';
+    const body = document.getElementById('dash-ops-body');
+    if (body) body.innerHTML = _renderOpsBody(n, Store.getLots(), Store.getDailies());
   }
 
   function _renderShipments(shipments) {
@@ -951,6 +984,7 @@ Pages.Dashboard = (() => {
     saveQuickInput: _saveQuickInput,
     toggleHoliday: _toggleHoliday,
     markHolidayFromModal: _markHolidayFromModal,
+    setWindowDays: _setWindowDays,
     openLotDetail: _openLotDetail,
     closeLotDetail: _closeLotDetail,
     render: function() {
