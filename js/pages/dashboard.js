@@ -450,24 +450,26 @@ Pages.Dashboard = (() => {
         const clickJs  = v > 0
           ? ''
           : 'onclick="event.stopPropagation();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + d + '\')"';
+        // 우클릭 → 해당 사업장 휴무 토글 (모든 셀 공통)
+        const ctxJs = 'oncontextmenu="event.preventDefault();event.stopPropagation();Pages.Dashboard.toggleHoliday(\'' + lot.country + '\',\'' + d + '\');return false;"';
 
         // 휴무 셀 (처리량 없을 때) — 회색 대각선 패턴
         if (isHoli && v <= 0) {
-          return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default">'
+          return '<div ' + hoverJs + ' ' + ctxJs + ' title="우클릭 → ' + lot.country + ' 휴무 해제" style="' + wrapBase + ';cursor:context-menu">'
             + '<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#F3F4F6,#F3F4F6 3px,#E5E7EB 3px,#E5E7EB 6px);border:1px solid #D1D5DB;border-radius:2px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9px;color:#6B7280;font-weight:600">휴</div>'
             + tipHtml + '</div>';
         }
         if (v > 0) {
           const h = Math.max(8, Math.round(v / maxV * 100));
           const col = isToday ? '#1A7F37' : bizColor;
-          return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
+          return '<div ' + hoverJs + ' ' + ctxJs + ' title="우클릭 → ' + lot.country + ' 휴무 토글" style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
         // 누락 셀 — 휴무가 아니고 직전 영업일일 때 빨강 박스
         let bg = 'transparent', bd = '#D0D0D0';
         if (isWknd)             { bg = 'transparent';  bd = '#E5E5E5'; }
         else if (isToday)       { bg = 'transparent';  bd = '#9CA3AF'; }
         else if (isRef && !isDone && !refIsHoliday) { bg = '#FEF2F2';   bd = '#dc2626'; }
-        return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
+        return '<div ' + hoverJs + ' ' + clickJs + ' ' + ctxJs + ' title="좌클릭 입력 · 우클릭 → ' + lot.country + ' 휴무 토글" style="' + wrapBase + ';cursor:pointer">'
           + '<div style="position:absolute;inset:0;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px;box-sizing:border-box"></div>'
           + tipHtml + '</div>';
       }).join('');
@@ -592,7 +594,7 @@ Pages.Dashboard = (() => {
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
       + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 사업장 휴무 (날짜 클릭으로 토글) · 노랑 행 = 출고준비</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 사업장 휴무 (날짜 클릭 또는 LOT 셀 우클릭으로 토글) · 노랑 행 = 출고준비</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
@@ -649,6 +651,7 @@ Pages.Dashboard = (() => {
     const dObj   = new Date(dParts[0], dParts[1]-1, dParts[2]);
     const dowKr  = ['일','월','화','수','목','금','토'][dObj.getDay()];
     const dispDate = (dParts[1]) + '월 ' + dParts[2] + '일 (' + dowKr + ')';
+    const isHolidayNow = _getHolidaySet(lot.country).has(dateStr);
 
     // 기존 모달이 있으면 제거
     const old = document.getElementById('dash-quick-modal');
@@ -703,7 +706,12 @@ Pages.Dashboard = (() => {
       +     inputHtml
       +     '<div id="dash-quick-after" style="font-size:11px;color:#86868B;margin-top:6px;text-align:right">&nbsp;</div>'
       +   '</div>'
-      +   '<div style="padding:12px 18px;background:#F7F7F7;display:flex;gap:8px;justify-content:flex-end">'
+      +   '<div style="padding:12px 18px;background:#F7F7F7;display:flex;gap:8px;align-items:center">'
+      +     '<button onclick="Pages.Dashboard.markHolidayFromModal(\'' + lot.country + '\',\'' + dateStr + '\')" '
+      +       'title="' + lot.country + ' 사업장 전체에 ' + dispDate + ' 휴무로 ' + (isHolidayNow ? '해제' : '등록') + '" '
+      +       'style="padding:7px 12px;border:1px solid ' + (isHolidayNow ? '#9CA3AF' : '#D1D5DB') + ';background:' + (isHolidayNow ? '#F3F4F6' : '#fff') + ';color:#374151;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;font-family:Pretendard,sans-serif;margin-right:auto">'
+      +       (isHolidayNow ? '휴무 해제 (' + lot.country + ')' : '이 날 휴무 처리 (' + lot.country + ')')
+      +     '</button>'
       +     '<button onclick="Pages.Dashboard.closeQuickInput()" style="padding:7px 14px;border:1px solid #D2D2D7;background:#fff;color:#1D1D1F;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;font-family:Pretendard,sans-serif">취소</button>'
       +     '<button id="dash-quick-save" onclick="Pages.Dashboard.saveQuickInput(' + lotId + ',\'' + dateStr + '\')" style="padding:7px 14px;border:none;background:#1B4F8A;color:#fff;font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;font-family:Pretendard,sans-serif">저장</button>'
       +   '</div>'
@@ -746,6 +754,11 @@ Pages.Dashboard = (() => {
   function _closeQuickInput() {
     const m = document.getElementById('dash-quick-modal');
     if (m) m.remove();
+  }
+
+  function _markHolidayFromModal(country, dateStr) {
+    _toggleHoliday(country, dateStr);
+    _closeQuickInput();
   }
 
   async function _saveQuickInput(lotId, dateStr) {
@@ -937,6 +950,7 @@ Pages.Dashboard = (() => {
     closeQuickInput: _closeQuickInput,
     saveQuickInput: _saveQuickInput,
     toggleHoliday: _toggleHoliday,
+    markHolidayFromModal: _markHolidayFromModal,
     openLotDetail: _openLotDetail,
     closeLotDetail: _closeLotDetail,
     render: function() {
