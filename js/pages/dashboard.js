@@ -34,6 +34,27 @@ Pages.Dashboard = (() => {
     return `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:3px;white-space:nowrap;${style}">${text}</span>`;
   }
 
+  // ── 사업장별 휴무 (HK / SG) — Store.setting에 CSV로 저장 ───
+  function _holidayKey(country) { return 'holidays_' + country; }
+  function _getHolidaySet(country) {
+    const raw = Store.getSetting(_holidayKey(country)) || '';
+    const s = new Set();
+    String(raw).split(',').forEach(function(d){ d = d.trim(); if (d) s.add(d); });
+    return s;
+  }
+  function _saveHolidaySet(country, set) {
+    const arr = Array.from(set).filter(Boolean).sort();
+    Store.setSetting(_holidayKey(country), arr.join(','));
+  }
+  function _toggleHoliday(country, dateStr) {
+    if (!country || !dateStr) return;
+    const set = _getHolidaySet(country);
+    if (set.has(dateStr)) { set.delete(dateStr); UI.toast(country + ' ' + dateStr.slice(5) + ' 휴무 해제'); }
+    else                  { set.add(dateStr);    UI.toast(country + ' ' + dateStr.slice(5) + ' 휴무 등록'); }
+    _saveHolidaySet(country, set);
+    Pages.Dashboard.render();
+  }
+
   function _calcKpi() {
     const lots      = Store.getLots();
     const dailies   = Store.getDailies();
@@ -356,37 +377,52 @@ Pages.Dashboard = (() => {
     while (!_isBusinessDay(_ref)) _ref.setDate(_ref.getDate() - 1);
     const refStr  = _dStr(_ref);
 
+    // 사업장 휴무 집합 (HK/SG) 미리 계산
+    const holidaySets = { HK: _getHolidaySet('HK'), SG: _getHolidaySet('SG') };
+
     function procMap(lotId) {
       const m = {};
       dailies.filter(function(d){ return String(d.lotId) === String(lotId) && d.date; })
              .forEach(function(d){ m[d.date] = (m[d.date] || 0) + parseNumber(d.proc); });
       return m;
     }
-    function closedMap(lotId) {
-      const m = {};
-      dailies.filter(function(d){ return String(d.lotId) === String(lotId) && d.date && String(d.closed) === '1'; })
-             .forEach(function(d){ m[d.date] = true; });
-      return m;
-    }
     function lastEntryDate(lotId) {
-      // 처리량 입력일 OR 휴무 처리일 모두 "기록 있음"으로 인정
       const dates = dailies.filter(function(d){
-        return String(d.lotId) === String(lotId) && d.date
-          && (parseNumber(d.proc) > 0 || String(d.closed) === '1');
+        return String(d.lotId) === String(lotId) && d.date && parseNumber(d.proc) > 0;
       }).map(function(d){ return d.date; }).sort();
       return dates.length ? dates[dates.length-1] : null;
+    }
+    // refForMiss(=마지막 입력일 또는 입고일) 다음 영업일부터 refStr까지의 미입력 영업일 수
+    // (사업장 휴무는 제외)
+    function _missBizDays(fromStr, toStr, country) {
+      if (!fromStr || !toStr || fromStr >= toStr) return 0;
+      const a = fromStr.split('-').map(Number);
+      const b = toStr.split('-').map(Number);
+      let cur = new Date(a[0], a[1]-1, a[2]);
+      const end = new Date(b[0], b[1]-1, b[2]);
+      cur.setDate(cur.getDate() + 1);
+      const hols = holidaySets[country] || new Set();
+      let count = 0;
+      while (cur <= end) {
+        const ds = _dStr(cur);
+        if (_isBusinessDay(cur) && !hols.has(ds)) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return count;
     }
 
     function buildLotRow(lot) {
       const pmap     = procMap(lot.id);
-      const cmap     = closedMap(lot.id);
+      const hols     = holidaySets[lot.country] || new Set();
       const cum      = getLotCumulative(lot.id, dailies);
       const qty      = parseNumber(lot.qty);
       const pct      = qty > 0 ? Math.round(cum / qty * 100) : 0;
       const last     = lastEntryDate(lot.id);
-      // 누락일수: 직전 영업일(refStr) 기준 — 휴무 처리일이 있으면 그날까지는 누락 아님
+      // 누락일수: refForMiss 다음 영업일~refStr 중 휴무 제외
       const refForMiss = last || lot.inDate || refStr;
-      const missDays   = _bizDaysBetween(refForMiss, refStr);
+      const missDays   = _missBizDays(refForMiss, refStr, lot.country);
+      // refStr 자체가 휴무면 누락 아님
+      const refIsHoliday = hols.has(refStr);
       const bizColor   = CONFIG.BIZ_COLORS[lot.biz] || '#666';
       const isDone     = getLotStatus(lot) === 'done'; // 작업완료 → 출고준비
 
@@ -395,15 +431,15 @@ Pages.Dashboard = (() => {
 
       const bars = windowD.map(function(d){
         const v       = pmap[d] || 0;
-        const isClosed= !!cmap[d];
+        const isHoli  = hols.has(d);
         const isToday = (d === todayStr);
         const isRef   = (d === refStr);
         const isWknd  = _isWeekendStr(d);
         const dispMD  = d.slice(5).replace('-', '/');
-        const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD) + (isWknd ? ' · 주말' : '');
+        const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD) + (isWknd ? ' · 주말' : '') + (isHoli ? ' · ' + lot.country + ' 휴무' : '');
         const tip     = tipBase + (
-          isClosed ? ' · 휴무'
-          : v > 0  ? ' · ' + formatNumber(v) + '개'
+          v > 0    ? ' · ' + formatNumber(v) + '개'
+          : isHoli ? ''
           : isToday ? ' · 입력 전 (클릭 입력)'
           : isWknd  ? ' · (클릭 입력)'
           : ' · 누락 (클릭 입력)'
@@ -411,14 +447,13 @@ Pages.Dashboard = (() => {
         const tipHtml = '<div class="dash-bar-tip" style="position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:3px 7px;background:#1D1D1F;color:#fff;font-size:11px;border-radius:4px;white-space:nowrap;pointer-events:none;font-family:Pretendard,sans-serif;opacity:0;transition:opacity 0.1s;z-index:10">' + tip + '<div style="position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:#1D1D1F"></div></div>';
         const wrapBase = 'position:relative;flex:1;min-width:6px;height:32px;display:flex;align-items:flex-end;justify-content:center' + (isWknd ? ';background:#F7F7FA' : '');
         const hoverJs  = 'onmouseover="this.querySelector(\'.dash-bar-tip\').style.opacity=\'1\'" onmouseout="this.querySelector(\'.dash-bar-tip\').style.opacity=\'0\'"';
-        // 비어있는 칸 = 클릭하면 빠른 입력 모달 (휴무·실적 모두 클릭 가능)
-        const clickJs  = (v > 0 && !isClosed)
+        const clickJs  = v > 0
           ? ''
           : 'onclick="event.stopPropagation();Pages.Dashboard.openQuickInput(' + lot.id + ',\'' + d + '\')"';
 
-        // 휴무 셀 — 회색 대각선 패턴으로 표시
-        if (isClosed && v <= 0) {
-          return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
+        // 휴무 셀 (처리량 없을 때) — 회색 대각선 패턴
+        if (isHoli && v <= 0) {
+          return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default">'
             + '<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#F3F4F6,#F3F4F6 3px,#E5E7EB 3px,#E5E7EB 6px);border:1px solid #D1D5DB;border-radius:2px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:9px;color:#6B7280;font-weight:600">휴</div>'
             + tipHtml + '</div>';
         }
@@ -427,12 +462,11 @@ Pages.Dashboard = (() => {
           const col = isToday ? '#1A7F37' : bizColor;
           return '<div ' + hoverJs + ' style="' + wrapBase + ';cursor:default"><div style="width:100%;height:' + h + '%;background:' + col + ';border-radius:1px"></div>' + tipHtml + '</div>';
         }
-        // 누락 셀 — position:absolute로 부모(wrap)를 완전히 채워 풀높이 네모 박스 보장
-        // 주말은 누락 평가 대상이 아님 (영업일만 빨강 박스)
+        // 누락 셀 — 휴무가 아니고 직전 영업일일 때 빨강 박스
         let bg = 'transparent', bd = '#D0D0D0';
         if (isWknd)             { bg = 'transparent';  bd = '#E5E5E5'; }
         else if (isToday)       { bg = 'transparent';  bd = '#9CA3AF'; }
-        else if (isRef && !isDone) { bg = '#FEF2F2';   bd = '#dc2626'; }
+        else if (isRef && !isDone && !refIsHoliday) { bg = '#FEF2F2';   bd = '#dc2626'; }
         return '<div ' + hoverJs + ' ' + clickJs + ' style="' + wrapBase + ';cursor:pointer">'
           + '<div style="position:absolute;inset:0;background:' + bg + ';border:1px dashed ' + bd + ';border-radius:2px;box-sizing:border-box"></div>'
           + tipHtml + '</div>';
@@ -488,12 +522,14 @@ Pages.Dashboard = (() => {
         return String(b.inDate || '').localeCompare(String(a.inDate || ''));
       });
 
-      // 누락 카운트 = 직전 영업일(refStr)에 처리량 입력도 휴무 처리도 없는 LOT 수 (출고준비 제외)
-      const missCount = sorted.filter(function(l){
+      const hols = holidaySets[country] || new Set();
+      const refIsHoliday = hols.has(refStr);
+
+      // 누락 카운트 = 직전 영업일(refStr)에 입력 없는 LOT 수 (휴무·출고준비 제외)
+      const missCount = refIsHoliday ? 0 : sorted.filter(function(l){
         if (getLotStatus(l) === 'done') return false;
         const pm = procMap(l.id);
-        const cm = closedMap(l.id);
-        return !pm[refStr] && !cm[refStr];
+        return !pm[refStr];
       }).length;
 
       const doneCnt   = lots.filter(function(l){ return getLotStatus(l) === 'done'; }).length;
@@ -501,27 +537,35 @@ Pages.Dashboard = (() => {
       const countLabel = '진행중 ' + activeCnt + '건' + (doneCnt ? ' · 출고준비 ' + doneCnt + '건' : '');
 
       const refMD = refStr.slice(5).replace('-', '/');
-      const headerTag = missCount > 0
-        ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">' + refMD + ' 누락 ' + missCount + '건</span>'
-        : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
+      const headerTag = refIsHoliday
+        ? '<span style="margin-left:10px;font-size:11px;color:#6B7280;font-weight:500">' + refMD + ' 휴무</span>'
+        : missCount > 0
+          ? '<span style="margin-left:10px;font-size:11px;color:#dc2626;font-weight:600">' + refMD + ' 누락 ' + missCount + '건</span>'
+          : '<span style="margin-left:10px;font-size:11px;color:#1A7F37;font-weight:500">' + refMD + ' 입력 모두 OK</span>';
 
-      // 날짜 라벨 (주말 포함)
+      // 날짜 라벨 — 클릭 시 해당 사업장 휴무 토글
       const dateLabels = '<div style="display:grid;grid-template-columns:300px 1fr 124px;gap:12px;padding:4px 12px 6px;font-size:12px;color:var(--tx3);font-family:var(--font-mono)">'
-        + '<div></div>'
+        + '<div style="font-family:Pretendard,sans-serif;font-size:10px;color:var(--tx3);align-self:end;text-align:right;padding-right:4px">날짜 클릭 → ' + country + ' 휴무 토글</div>'
         + '<div style="display:flex;gap:2px">'
         +   windowD.map(function(d){
               const isToday = d === todayStr;
               const isRef   = d === refStr;
               const isWknd  = _isWeekendStr(d);
-              let style = 'flex:1;min-width:6px;text-align:center';
-              if (isToday)         style += ';color:#0C447C;font-weight:600';
+              const isHoli  = hols.has(d);
+              let style = 'flex:1;min-width:6px;text-align:center;cursor:pointer;border-radius:3px;padding:2px 0';
+              if (isHoli)          style += ';background:#F3F4F6;color:#6B7280;font-weight:600';
+              else if (isToday)    style += ';color:#0C447C;font-weight:600';
               else if (isRef)      style += ';color:#dc2626;font-weight:600';
               else if (isWknd)     style += ';color:#B0B0B5';
               const dp  = d.split('-').map(Number);
               const md  = dp[1] + '/' + dp[2];
               const dow = ['일','월','화','수','목','금','토'][new Date(dp[0], dp[1]-1, dp[2]).getDay()];
-              return '<div style="' + style + '">'
-                + md
+              const title = isHoli ? country + ' 휴무 (클릭 해제)' : '클릭하면 ' + country + ' 휴무로 등록';
+              return '<div title="' + title + '" '
+                + 'onclick="event.stopPropagation();Pages.Dashboard.toggleHoliday(\'' + country + '\',\'' + d + '\')" '
+                + 'onmouseover="this.style.outline=\'1px solid #9CA3AF\'" onmouseout="this.style.outline=\'none\'" '
+                + 'style="' + style + '">'
+                + md + (isHoli ? ' <span style="font-size:10px">휴</span>' : '')
                 + '<div style="font-size:12px;opacity:0.65;margin-top:1px">' + dow + (isToday ? ' · 오늘' : '') + '</div>'
                 + '</div>';
             }).join('')
@@ -548,7 +592,7 @@ Pages.Dashboard = (() => {
 
     return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">'
       + '<div style="font-size:14px;font-weight:600;color:var(--tx)">일별 처리 현황</div>'
-      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 휴무 · 노랑 행 = 출고준비 · 출고완료 시 목록 제외</div>'
+      + '<div style="font-size:12px;color:var(--tx3)">막대 = 일 처리량 · 빨강 박스 = 직전 영업일 누락 · 회색 빗금(휴) = 사업장 휴무 (날짜 클릭으로 토글) · 노랑 행 = 출고준비</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">'
       + buildRegion('HK', byCountry.HK)
@@ -656,11 +700,7 @@ Pages.Dashboard = (() => {
       +       '<span>총 ' + formatNumber(qty) + '개</span>'
       +       '<span>누적 처리 ' + formatNumber(cum) + ' · 잔량 ' + formatNumber(rem) + '</span>'
       +     '</div>'
-      +     '<label style="display:flex;align-items:center;gap:7px;padding:7px 10px;margin-bottom:10px;background:#F7F7F7;border:1px solid #E0E0E0;border-radius:5px;cursor:pointer;font-size:12px;color:#3A3A3C">'
-      +       '<input type="checkbox" id="dash-quick-off" onchange="Pages.Dashboard.toggleQuickOff()" style="margin:0;cursor:pointer">'
-      +       '<span>휴무 (이 LOT의 ' + dispDate + ' 작업 없음 — 누락에서 제외)</span>'
-      +     '</label>'
-      +     '<div id="dash-quick-proc-wrap">' + inputHtml + '</div>'
+      +     inputHtml
       +     '<div id="dash-quick-after" style="font-size:11px;color:#86868B;margin-top:6px;text-align:right">&nbsp;</div>'
       +   '</div>'
       +   '<div style="padding:12px 18px;background:#F7F7F7;display:flex;gap:8px;justify-content:flex-end">'
@@ -703,20 +743,6 @@ Pages.Dashboard = (() => {
     }
   }
 
-  function _toggleQuickOff() {
-    const cb   = document.getElementById('dash-quick-off');
-    const wrap = document.getElementById('dash-quick-proc-wrap');
-    const btn  = document.getElementById('dash-quick-save');
-    const after= document.getElementById('dash-quick-after');
-    if (!cb || !wrap) return;
-    const off = cb.checked;
-    wrap.style.opacity = off ? '0.4' : '1';
-    wrap.style.pointerEvents = off ? 'none' : '';
-    wrap.querySelectorAll('input').forEach(function(el){ el.disabled = off; });
-    if (btn) btn.textContent = off ? '휴무로 저장' : '저장';
-    if (after) after.innerHTML = off ? '<span style="color:#92400E">휴무 처리 — 누락에서 제외됨</span>' : '&nbsp;';
-  }
-
   function _closeQuickInput() {
     const m = document.getElementById('dash-quick-modal');
     if (m) m.remove();
@@ -726,13 +752,9 @@ Pages.Dashboard = (() => {
     const lot = Store.getLotById(lotId);
     if (!lot) { UI.toast('LOT를 찾을 수 없습니다', true); return; }
     const useDetail = (lot.biz === 'DRAM' || lot.biz === 'SSD');
-    const offCb = document.getElementById('dash-quick-off');
-    const isOff = !!(offCb && offCb.checked);
     let normal = 0, noBoot = 0, abnormal = 0, proc = 0;
 
-    if (isOff) {
-      proc = 0; normal = 0; noBoot = 0; abnormal = 0;
-    } else if (useDetail) {
+    if (useDetail) {
       const inNm = document.getElementById('dash-quick-normal');
       const inNb = document.getElementById('dash-quick-noboot');
       const inAb = document.getElementById('dash-quick-abnormal');
@@ -751,15 +773,13 @@ Pages.Dashboard = (() => {
 
     const cumNew = getLotCumulative(lot.id, Store.getDailies()) + proc;
     const remNew = Math.max(0, parseNumber(lot.qty) - cumNew);
-    const isDone = !isOff && remNew === 0;
+    const isDone = remNew === 0;
 
     const record = {
       id: Date.now(), date: dateStr, lotId: lot.id, lotNo: lot.lotNo || lot.id,
       biz: lot.biz, country: lot.country, customerName: lot.customerName || '',
       proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew,
-      note: isOff ? '휴무' : '대시보드 빠른 입력',
-      closed: isOff ? '1' : '',
-      done: isDone ? '1' : '0'
+      note: '대시보드 빠른 입력', done: isDone ? '1' : '0'
     };
 
     const saveBtn = document.getElementById('dash-quick-save');
@@ -767,7 +787,7 @@ Pages.Dashboard = (() => {
 
     const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
     if (!result || !result.success) {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = isOff ? '휴무로 저장' : '저장'; }
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
       UI.toast('저장 실패', true);
       return;
     }
@@ -778,13 +798,8 @@ Pages.Dashboard = (() => {
       Store.upsertLot(updated);
       Api.update(CONFIG.SHEETS.LOTS, lot.id, updated);
     }
-    if (isOff) {
-      Api.log('일별처리', '등록(휴무)', lot.lotNo || String(lot.id), dateStr + ' 휴무 처리');
-      UI.toast('휴무 저장됨 (' + dateStr.slice(5) + ')');
-    } else {
-      Api.log('일별처리', '등록(빠른입력)', lot.lotNo || String(lot.id), dateStr + ' 처리 ' + formatNumber(proc) + '개 (N:' + formatNumber(normal) + ' / NB:' + formatNumber(noBoot) + ' / AB:' + formatNumber(abnormal) + ') | 누적 ' + formatNumber(cumNew) + ' / 잔량 ' + formatNumber(remNew));
-      UI.toast(isDone ? lot.lotNo + ' 완료!' : '저장됨 (' + dateStr.slice(5) + ' · ' + formatNumber(proc) + '개)');
-    }
+    Api.log('일별처리', '등록(빠른입력)', lot.lotNo || String(lot.id), dateStr + ' 처리 ' + formatNumber(proc) + '개 (N:' + formatNumber(normal) + ' / NB:' + formatNumber(noBoot) + ' / AB:' + formatNumber(abnormal) + ') | 누적 ' + formatNumber(cumNew) + ' / 잔량 ' + formatNumber(remNew));
+    UI.toast(isDone ? lot.lotNo + ' 완료!' : '저장됨 (' + dateStr.slice(5) + ' · ' + formatNumber(proc) + '개)');
     _closeQuickInput();
     Pages.Dashboard.render();
   }
@@ -826,22 +841,15 @@ Pages.Dashboard = (() => {
       const rows = dailies.map(function(d){
         const dt = (d.date || '').slice(5);
         const dow = d.date ? ['일','월','화','수','목','금','토'][new Date(d.date).getDay()] : '';
-        const isClosed = String(d.closed) === '1';
-        const cls = isClosed
-          ? '<span style="color:#6B7280;font-weight:600">휴무</span>'
-          : useDetail
-            ? '<span style="color:#166534">' + formatNumber(parseNumber(d.normal)) + '</span> / '
-              + '<span style="color:#92400e">' + formatNumber(parseNumber(d.noBoot)) + '</span> / '
-              + '<span style="color:#991b1b">' + formatNumber(parseNumber(d.abnormal)) + '</span>'
-            : '<span style="color:var(--tx3)">—</span>';
-        const note = (!isClosed && d.note) ? '<div style="font-size:10px;color:var(--tx3);margin-top:2px">' + d.note + '</div>' : '';
-        const procCell = isClosed
-          ? '<span style="color:#6B7280">—</span>'
-          : formatNumber(parseNumber(d.proc));
-        const rowBg = isClosed ? 'background:repeating-linear-gradient(45deg,#FAFAFA,#FAFAFA 4px,#F3F4F6 4px,#F3F4F6 8px)' : '';
-        return '<tr style="' + rowBg + '">'
+        const cls = useDetail
+          ? '<span style="color:#166534">' + formatNumber(parseNumber(d.normal)) + '</span> / '
+            + '<span style="color:#92400e">' + formatNumber(parseNumber(d.noBoot)) + '</span> / '
+            + '<span style="color:#991b1b">' + formatNumber(parseNumber(d.abnormal)) + '</span>'
+          : '<span style="color:var(--tx3)">—</span>';
+        const note = d.note ? '<div style="font-size:10px;color:var(--tx3);margin-top:2px">' + d.note + '</div>' : '';
+        return '<tr>'
           + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;font-family:var(--font-mono);font-size:11px;white-space:nowrap">' + dt + ' (' + dow + ')</td>'
-          + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">' + procCell + '</td>'
+          + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;text-align:right;font-family:var(--font-mono);font-size:12px;font-weight:600">' + formatNumber(parseNumber(d.proc)) + '</td>'
           + '<td style="padding:6px 8px;border-bottom:1px solid #EEE;text-align:center;font-family:var(--font-mono);font-size:11px">' + cls + note + '</td>'
           + '</tr>';
       }).join('');
@@ -928,7 +936,7 @@ Pages.Dashboard = (() => {
     openQuickInput: _openQuickInput,
     closeQuickInput: _closeQuickInput,
     saveQuickInput: _saveQuickInput,
-    toggleQuickOff: _toggleQuickOff,
+    toggleHoliday: _toggleHoliday,
     openLotDetail: _openLotDetail,
     closeLotDetail: _closeLotDetail,
     render: function() {
