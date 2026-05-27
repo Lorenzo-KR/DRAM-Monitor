@@ -64,20 +64,17 @@ Pages.Dashboard = (() => {
     const doneLots   = lots.filter(l => getLotStatus(l) === 'done');
     const totalUnits = lots.reduce((s, l) => s + parseNumber(l.qty), 0);
     const totalProc  = lots.reduce((s, l) => s + getLotCumulative(l.id, dailies), 0);
-    const invTotal = invoices.reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
-    const useInv   = invTotal > 0;
-    function revByBiz(biz) {
-      if (useInv) return invoices.filter(r => r.biz === biz).reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
-      return doneLots.filter(l => l.biz === biz).reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0);
-    }
-    function revByCo(co) {
-      if (useInv) return invoices.filter(r => r.country === co).reduce((s, r) => s + parseNumber(r.total || r.amount), 0);
-      return doneLots.filter(l => l.country === co).reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0);
-    }
+
+    // 매출 = 올해 인보이스 합 (USD). fallback 없음 — 매출은 인보이스 발행 기준
+    const curYear = String(new Date().getFullYear());
+    const yearInv = invoices.filter(r => String(r.date || '').startsWith(curYear));
     const revenue = {
-      total: useInv ? invTotal : doneLots.reduce((s, l) => s + parseNumber(l.price) * parseNumber(l.qty), 0),
-      SSD: revByBiz('SSD'), DRAM: revByBiz('DRAM'), MID: revByBiz('MID'),
-      HK: revByCo('HK'), SG: revByCo('SG'),
+      total: yearInv.reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
+      SSD:   yearInv.filter(r => r.biz === 'SSD').reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
+      DRAM:  yearInv.filter(r => r.biz === 'DRAM').reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
+      MID:   yearInv.filter(r => r.biz === 'MID').reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
+      HK:    yearInv.filter(r => r.country === 'HK').reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
+      SG:    yearInv.filter(r => r.country === 'SG').reduce((s, r) => s + parseNumber(r.total || r.amount), 0),
     };
     const overdueLots = activeLots.filter(l => getLotStatus(l) === 'overdue');
     const nearDueLots = activeLots.filter(l =>
@@ -128,10 +125,14 @@ Pages.Dashboard = (() => {
       + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">완료 ' + kpi.doneLots.length + '</div>'
       + '</div>';
 
-    // ── KPI 달성률: 103억 기준 + ahead/behind ─────────────────
-    const KPI_TARGET_KRW = 10_300_000_000;
+    // ── KPI 달성률: KPI103 매출 목표 기준 (롤링 입력값) ──────────
+    const tgtKrw = Pages.KpiTarget?.getTotalRevenueTarget
+      ? Pages.KpiTarget.getTotalRevenueTarget(year, 'kpi103')
+      : 0;
     const actKrw = kpi.revenue.total * fxRate;
-    const pct    = KPI_TARGET_KRW > 0 ? (actKrw / KPI_TARGET_KRW * 100) : 0;
+    const tgtEok = tgtKrw / 100000000;
+    const actEok = actKrw / 100000000;
+    const pct    = tgtKrw > 0 ? (actKrw / tgtKrw * 100) : 0;
     // 연간 기준 pace
     const yStart = new Date(year, 0, 1);
     const yEnd   = new Date(year + 1, 0, 1);
@@ -144,20 +145,35 @@ Pages.Dashboard = (() => {
     const trackColor  = isAhead ? '#1A7F37' : '#dc2626';
     const trackLabel  = isAhead ? 'ahead' : 'behind';
     const pctColor    = pct >= 100 ? '#1A7F37' : isAhead ? 'var(--tx)' : 'var(--tx2)';
-    const kpiValueHtml = pct.toFixed(1) + '%';
-    const kpiSubHtml   = '목표 ' + (KPI_TARGET_KRW / 100000000).toFixed(0) + '억 · 실적 ' + (actKrw / 100000000).toFixed(2) + '억';
-    const kpiExtraHtml = '<span style="color:' + trackColor + ';font-weight:600">' + trackLabel + ' ' + Math.abs(diffPct).toFixed(1) + '%</span>'
-      + ' <span style="color:var(--tx3)">(pace ' + pacePct.toFixed(1) + '%)</span>';
-    const kpiCardHtml = '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
-      + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
-      + '<div style="font-size:22px;font-weight:600;line-height:1;color:' + pctColor + '">' + kpiValueHtml + '</div>'
-      + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">' + kpiSubHtml + '</div>'
-      + '<div style="font-size:11px;margin-top:2px">' + kpiExtraHtml + '</div>'
-      + '</div>';
+    const barColor    = pct >= 100 ? '#1A7F37' : isAhead ? '#1B4F8A' : '#dc2626';
+    const barFill     = Math.max(0, Math.min(100, pct));
+    const paceMark    = Math.max(0, Math.min(100, pacePct));
+
+    const kpiCardHtml = tgtKrw <= 0
+      ? '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
+        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률 <span style="font-weight:400;text-transform:none;letter-spacing:0">매출 / 103억</span></div>'
+        + '<div style="font-size:13px;color:var(--tx3);margin-top:8px">KPI 목표 페이지에서 ' + year + '년 매출(rev)을 먼저 입력하세요.</div>'
+        + '</div>'
+      : '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
+        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률 <span style="font-weight:400;text-transform:none;letter-spacing:0">매출 / 103억</span></div>'
+        + '<div style="display:flex;align-items:baseline;gap:6px;line-height:1">'
+        + '<span style="font-size:22px;font-weight:600;color:' + pctColor + '">' + pct.toFixed(1) + '%</span>'
+        + '<span style="font-size:11px;color:' + trackColor + ';font-weight:600">' + trackLabel + ' ' + Math.abs(diffPct).toFixed(1) + '%</span>'
+        + '</div>'
+        + '<div style="position:relative;height:6px;background:var(--bd);border-radius:3px;margin-top:7px;overflow:hidden">'
+          + '<div style="position:absolute;left:0;top:0;height:100%;width:' + barFill + '%;background:' + barColor + ';border-radius:3px;transition:width .3s"></div>'
+          + '<div style="position:absolute;left:' + paceMark + '%;top:-2px;width:1px;height:10px;background:var(--tx2)" title="pace ' + pacePct.toFixed(1) + '%"></div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--tx2);margin-top:6px">'
+          + '실적 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + actEok.toFixed(2) + '</span>'
+          + ' / 목표 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + tgtEok.toFixed(2) + '</span> 억원'
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--tx3);margin-top:2px">pace ' + pacePct.toFixed(1) + '% · ' + year + '년</div>'
+        + '</div>';
 
     return '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">'
       + joCardHtml
-      + kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', '완료 기준', 'var(--tx)', krwSub, fxInputHtml)
+      + kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', year + '년 인보이스', 'var(--tx)', krwSub, fxInputHtml)
       + kpiCardHtml
       + '</div>';
   }
