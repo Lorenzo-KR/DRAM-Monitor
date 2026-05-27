@@ -119,6 +119,15 @@ Pages.KpiTarget = (() => {
     return _getRollingMonths(year, biz, mode)[month-1] || 0;
   }
 
+  // 매출 목표 (전 사업 × 12개월 합) — KPI 모드: 원, EC 모드: USD
+  function _getTotalRevenueTarget(year, mode) {
+    const store = _getRollingStore(mode);
+    const sum = CONFIG.BIZ_LIST.reduce((s, b) => {
+      return s + _getRollingRevRaw(store, year, b).reduce((a,v)=>a+v, 0);
+    }, 0);
+    return mode === 'ec' ? sum * 1000000 : sum * 100000000;
+  }
+
   function _getActual(year, biz) {
     return Store.getInvoices()
       .filter(r => r.biz === biz && String(r.date||'').startsWith(String(year)))
@@ -1068,6 +1077,7 @@ Pages.KpiTarget = (() => {
 
     getTarget:        (year,biz,mode='kpi67')        => _getTarget(year,biz,mode),
     getTotalTarget:   (year,mode='kpi67')            => _getTotalTarget(year,mode),
+    getTotalRevenueTarget: (year,mode='kpi103')      => _getTotalRevenueTarget(year,mode),
     getMonthlyTarget: (year,biz,month,mode='kpi67')  => _getMonthlyTarget(year,biz,month,mode),
     getExchangeRate:  ()                             => _exchangeRate,
     getFactor:        (biz)                          => _getFactor(biz),
