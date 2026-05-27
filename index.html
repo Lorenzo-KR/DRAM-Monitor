@@ -221,6 +221,13 @@
         <button class="pill"  data-k="st" data-v="ready" onclick="Pages.Progress.setFilter(this,'st')">출고준비</button>
         <button class="pill"  data-k="st" data-v="shipped" onclick="Pages.Progress.setFilter(this,'st')">출고완료</button>
         <span style="margin-left:auto;font-size:13px;color:var(--tx3)" id="pr-cnt"></span>
+        <!-- 보기 모드 전환 (테이블 / 간트) -->
+        <div style="display:inline-flex;border:1px solid var(--bd2);border-radius:var(--rs);overflow:hidden;margin-left:12px">
+          <button id="pr-view-table" onclick="Pages.Progress.setViewMode('table')"
+            style="padding:5px 14px;font-size:12px;font-weight:600;border:none;background:#1B3A6B;color:#fff;cursor:pointer;font-family:'Pretendard',sans-serif">테이블</button>
+          <button id="pr-view-gantt" onclick="Pages.Progress.setViewMode('gantt')"
+            style="padding:5px 14px;font-size:12px;font-weight:600;border:none;background:#fff;color:var(--tx2);cursor:pointer;font-family:'Pretendard',sans-serif;border-left:1px solid var(--bd2)">간트버전</button>
+        </div>
       </div>
       <div id="pr-cards"></div>
       </div><!-- /page-wrap -->

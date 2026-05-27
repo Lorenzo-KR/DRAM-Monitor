@@ -11,6 +11,8 @@ Pages.Progress = (() => {
 
   let _chart     = null;
   let _openLotId = null;
+  let _viewMode  = 'table';            // 'table' | 'gantt'
+  const _collapsedGroups = new Set();  // 간트 그룹 접힘 상태 (key: country_biz)
 
   // ── 상태 헬퍼 (입고예정 추가) ──────────────────────────────
   function _status(lot) {
@@ -362,9 +364,32 @@ Pages.Progress = (() => {
     el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${cards}</div>`;
   }
 
+  // ── 보기 모드 전환 ────────────────────────────────────────
+  function setViewMode(mode) {
+    if (mode !== 'table' && mode !== 'gantt') return;
+    _viewMode = mode;
+    _updateViewToggle();
+    render();
+  }
+
+  function _updateViewToggle() {
+    const tBtn = document.getElementById('pr-view-table');
+    const gBtn = document.getElementById('pr-view-gantt');
+    if (!tBtn || !gBtn) return;
+    const on  = b => { b.style.background = '#1B3A6B'; b.style.color = '#fff'; };
+    const off = b => { b.style.background = '#fff';    b.style.color = 'var(--tx2)'; };
+    if (_viewMode === 'gantt') { on(gBtn); off(tBtn); } else { on(tBtn); off(gBtn); }
+  }
+
+  function toggleGanttGroup(key) {
+    if (_collapsedGroups.has(key)) _collapsedGroups.delete(key); else _collapsedGroups.add(key);
+    render();
+  }
+
   // ── 메인 렌더 ──────────────────────────────────────────────
   function render() {
     _renderActiveSummary();
+    _updateViewToggle();
     const filter  = Store.getLotFilter();
     const dailies = Store.getDailies();
     let lots      = Store.getLots();
@@ -374,12 +399,18 @@ Pages.Progress = (() => {
     if (filter.status) {
       lots = lots.filter(l => _status(l) === filter.status);
     }
-    lots.sort((a, b) => String(b.inDate||'').localeCompare(String(a.inDate||'')));
 
     const cntEl = document.getElementById('pr-cnt');
     if (cntEl) cntEl.textContent = lots.length + '건';
 
     const el = document.getElementById('pr-cards'); if (!el) return;
+
+    if (_viewMode === 'gantt') {
+      el.innerHTML = _renderGantt(lots, dailies);
+      return;
+    }
+
+    lots.sort((a, b) => String(b.inDate||'').localeCompare(String(a.inDate||'')));
 
     const TH = (label, align='center', extra='') =>
       `<th style="${extra}">${label}</th>`;
@@ -488,6 +519,224 @@ Pages.Progress = (() => {
           </tbody>
         </table>
       </div></div>`;
+  }
+
+  // ── 간트 차트 렌더 ─────────────────────────────────────────
+  function _renderGantt(lotsArg, dailies) {
+    const lots = [...lotsArg]
+      .filter(l => l && l.inDate)
+      .sort((a, b) => String(a.inDate||'').localeCompare(String(b.inDate||'')));
+
+    if (!lots.length) {
+      return `<div class="page-wrap"><div style="background:#fff;border:1px solid var(--bd);border-radius:14px;padding:64px;text-align:center;color:var(--tx3);font-size:13px">표시할 LOT가 없습니다</div></div>`;
+    }
+
+    // ── 시간 범위 ──
+    const all = [];
+    lots.forEach(l => {
+      if (l.inDate)     all.push(l.inDate);
+      if (l.targetDate) all.push(l.targetDate);
+      if (l.actualDone) all.push(l.actualDone);
+      if (l.shipDate)   all.push(l.shipDate);
+    });
+    all.push(today());
+    all.sort();
+    const minDate   = addDays(all[0], -3);
+    const maxDate   = addDays(all[all.length - 1], 14);
+    const totalDays = Math.max(1, diffDays(minDate, maxDate) + 1);
+
+    const DAY_W   = 22;
+    const LEFT_W  = 320;
+    const ROW_H   = 38;
+    const HEAD_H  = 46;
+    const timelineW = totalDays * DAY_W;
+
+    // ── 그룹화 (국가 → 사업) ──
+    const groups = {};
+    lots.forEach(l => {
+      const c = l.country || '-';
+      const b = l.biz     || '-';
+      (groups[c] = groups[c] || {});
+      (groups[c][b] = groups[c][b] || []).push(l);
+    });
+
+    // ── 헤더: 월 + 일 ──
+    const monthSegs = [];
+    let curM = minDate.slice(0,7);
+    let curStart = 0;
+    for (let i = 1; i < totalDays; i++) {
+      const m = addDays(minDate, i).slice(0,7);
+      if (m !== curM) {
+        monthSegs.push({ month: curM, x: curStart * DAY_W, w: (i - curStart) * DAY_W });
+        curM = m; curStart = i;
+      }
+    }
+    monthSegs.push({ month: curM, x: curStart * DAY_W, w: (totalDays - curStart) * DAY_W });
+
+    const monthsHtml = monthSegs.map(s => `
+      <div style="position:absolute;left:${s.x}px;width:${s.w}px;top:0;height:22px;font-size:11px;font-weight:600;letter-spacing:.02em;color:#1B3A6B;display:flex;align-items:center;padding-left:8px;border-right:1px solid #E2E0DB;background:#FAFBFD">
+        ${s.month}
+      </div>`).join('');
+
+    const todayStr = today();
+    let daysHtml = '';
+    for (let i = 0; i < totalDays; i++) {
+      const d  = addDays(minDate, i);
+      const wd = new Date(d.slice(0,4), Number(d.slice(5,7))-1, Number(d.slice(8,10))).getDay();
+      const isWeekend = wd === 0 || wd === 6;
+      const isToday   = d === todayStr;
+      const num = d.slice(8,10);
+      daysHtml += `<div style="position:absolute;left:${i*DAY_W}px;top:22px;width:${DAY_W}px;height:24px;font-size:10px;font-family:var(--font-mono);color:${isToday?'#fff':isWeekend?'#A8A49E':'#6B6762'};background:${isToday?'#1B3A6B':isWeekend?'#F7F7FA':'transparent'};display:flex;align-items:center;justify-content:center;border-right:1px solid #F2F2F7;${isToday?'border-radius:3px':''}">${num}</div>`;
+    }
+
+    const todayX = diffDays(minDate, todayStr) * DAY_W + DAY_W/2;
+
+    // ── 행 ──
+    let rowsHtml = '';
+    let rowIdx = 0;
+    const coKeys = Object.keys(groups).sort();
+    coKeys.forEach(co => {
+      const bizKeys = Object.keys(groups[co]).sort();
+      bizKeys.forEach(biz => {
+        const groupKey   = `${co}_${biz}`;
+        const isCollapsed = _collapsedGroups.has(groupKey);
+        const items = groups[co][biz];
+        const bizColor = (CONFIG.BIZ_COLORS && CONFIG.BIZ_COLORS[biz]) || '#888';
+        const coLabel  = (CONFIG.COUNTRY_LABELS && CONFIG.COUNTRY_LABELS[co]) || co;
+
+        rowsHtml += `
+          <div style="display:grid;grid-template-columns:${LEFT_W}px ${timelineW}px;background:#F5F7FB;border-bottom:1px solid #E2E0DB;cursor:pointer"
+               onclick="Pages.Progress.toggleGanttGroup('${groupKey}')">
+            <div style="position:sticky;left:0;background:#F5F7FB;padding:7px 14px;display:flex;align-items:center;gap:9px;z-index:2;border-right:1px solid #E2E0DB">
+              <svg width="9" height="9" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:rotate(${isCollapsed?'-90deg':'0'})">
+                <path d="M3 6l5 5 5-5" stroke="#1B3A6B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span style="font-size:11px;font-weight:700;color:#1B3A6B;letter-spacing:.04em">${coLabel}</span>
+              <span style="width:1px;height:10px;background:#D0CEC9"></span>
+              <span style="font-size:11px;font-weight:700;color:${bizColor};letter-spacing:.04em">${biz}</span>
+              <span style="margin-left:auto;font-size:10px;color:#A8A49E;font-family:var(--font-mono)">${items.length}</span>
+            </div>
+            <div></div>
+          </div>`;
+
+        if (isCollapsed) return;
+
+        items.forEach(lot => {
+          rowsHtml += _renderGanttRow(lot, dailies, minDate, DAY_W, LEFT_W, ROW_H, timelineW, rowIdx++);
+        });
+      });
+    });
+
+    // ── 오늘 라인 (바디 전체에 오버레이) ──
+    const todayLineHtml = `
+      <div style="position:absolute;left:${LEFT_W + todayX}px;top:0;bottom:0;width:0;border-left:1.5px dashed #F09595;pointer-events:none;z-index:1"></div>
+      <div style="position:absolute;left:${LEFT_W + todayX - 14}px;top:-3px;width:28px;height:6px;background:#F09595;border-radius:3px;pointer-events:none;z-index:1"></div>`;
+
+    // ── 범례 ──
+    const legendHtml = `
+      <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 18px;border-top:1px solid #E2E0DB;background:#FAFBFD;font-size:11px;color:#6B6762">
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:8px;background:#8DCFBC;border-radius:4px"></span>진행중</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:8px;background:#F09595;border-radius:4px"></span>지연</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:8px;background:#F0C36D;border-radius:4px"></span>출고준비</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:8px;background:#8E8E93;border-radius:4px"></span>출고완료</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:8px;background:#C7C7CC;border-radius:4px"></span>입고예정</div>
+        <span style="width:1px;height:14px;background:#D0CEC9"></span>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#1B3A6B;transform:rotate(45deg)"></span>입고</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#1A6B3A;transform:rotate(45deg)"></span>완료</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#6B6762;transform:rotate(45deg)"></span>출고</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:2px;height:12px;background:repeating-linear-gradient(to bottom,#6B6762 0 3px,transparent 3px 6px)"></span>완료예정</div>
+        <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:2px;border-top:1.5px dashed #F09595"></span>오늘</div>
+      </div>`;
+
+    return `
+      <div class="page-wrap">
+        <div style="background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(27,58,107,0.04)">
+          <div style="overflow-x:auto;overflow-y:visible">
+            <div style="min-width:${LEFT_W + timelineW}px;position:relative">
+              <!-- 헤더 -->
+              <div style="display:grid;grid-template-columns:${LEFT_W}px ${timelineW}px;background:#fff;border-bottom:1px solid #D2D2D7;position:sticky;top:0;z-index:4">
+                <div style="position:sticky;left:0;background:#fff;padding:0 14px;font-size:11px;font-weight:700;color:#1B3A6B;text-transform:uppercase;letter-spacing:.06em;z-index:3;border-right:1px solid #E2E0DB;display:flex;align-items:center;height:${HEAD_H}px">LOT 작업</div>
+                <div style="position:relative;height:${HEAD_H}px;background:#FAFBFD">
+                  ${monthsHtml}
+                  ${daysHtml}
+                </div>
+              </div>
+              <!-- 본문 -->
+              <div style="position:relative">
+                ${rowsHtml}
+                ${todayLineHtml}
+              </div>
+            </div>
+          </div>
+          ${legendHtml}
+        </div>
+      </div>`;
+  }
+
+  function _renderGanttRow(lot, dailies, minDate, DAY_W, LEFT_W, ROW_H, timelineW, rowIdx) {
+    const st  = _status(lot);
+    const cum = st === 'upcoming' ? 0 : getLotCumulative(lot.id, dailies);
+    const qty = parseNumber(lot.qty);
+    const pct = (qty > 0 && st !== 'upcoming') ? Math.min(100, Math.round(cum/qty*100)) : 0;
+
+    // 세련된 팔레트: 네이비/슬레이트/민트/코랄
+    const PAL = {
+      upcoming: { bg: '#EFEFF4', fg: '#C7C7CC', tx: '#8E8E93' },
+      inprog:   { bg: '#E8F5F0', fg: '#8DCFBC', tx: '#0F6E56' },
+      overdue:  { bg: '#FCEBEB', fg: '#F09595', tx: '#A32D2D' },
+      ready:    { bg: '#FEF6E6', fg: '#F0C36D', tx: '#92400E' },
+      shipped:  { bg: '#EFEFF4', fg: '#8E8E93', tx: '#6E6E73' },
+    };
+    const c = PAL[st] || PAL.upcoming;
+
+    const startDate = lot.inDate;
+    const endDate   = lot.shipDate || lot.actualDone || lot.targetDate || addDays(lot.inDate, 14);
+    const startX    = diffDays(minDate, startDate) * DAY_W;
+    const endX      = (diffDays(minDate, endDate) + 1) * DAY_W;
+    const barW      = Math.max(DAY_W, endX - startX);
+    const progressW = barW * pct / 100;
+
+    // 마일스톤 (다이아몬드)
+    const ms = [];
+    if (lot.inDate)     ms.push({ x: diffDays(minDate, lot.inDate)     * DAY_W + DAY_W/2, color: '#1B3A6B', label: '입고', d: lot.inDate });
+    if (lot.actualDone) ms.push({ x: diffDays(minDate, lot.actualDone) * DAY_W + DAY_W/2, color: '#1A6B3A', label: '완료', d: lot.actualDone });
+    if (lot.shipDate)   ms.push({ x: diffDays(minDate, lot.shipDate)   * DAY_W + DAY_W/2, color: '#6B6762', label: '출고', d: lot.shipDate });
+    const msHtml = ms.map(m => `
+      <div title="${m.label} · ${m.d}" style="position:absolute;left:${m.x - 6}px;top:${ROW_H/2 - 6}px;width:12px;height:12px;background:${m.color};transform:rotate(45deg);box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px ${m.color};z-index:3"></div>`).join('');
+
+    const targetX = lot.targetDate ? diffDays(minDate, lot.targetDate) * DAY_W + DAY_W/2 : null;
+    const targetHtml = targetX !== null ? `
+      <div title="완료예정 · ${lot.targetDate}" style="position:absolute;left:${targetX - 1}px;top:8px;bottom:8px;width:2px;background:repeating-linear-gradient(to bottom,#6B6762 0 3px,transparent 3px 6px);z-index:2"></div>` : '';
+
+    const bizColor = (CONFIG.BIZ_COLORS && CONFIG.BIZ_COLORS[lot.biz]) || '#888';
+    const evenBg = rowIdx % 2 === 1 ? '#FBFBFC' : '#fff';
+    const custLabel = lot.customerName || '—';
+    const qtyLabel  = formatNumber(qty);
+
+    // 바 위 라벨 (LOT번호 · 진행률) — 바가 충분히 넓을 때만
+    const onBarLabel = barW > 80
+      ? `<div style="position:absolute;left:${startX + 10}px;top:${ROW_H/2 - 7}px;font-size:10px;font-weight:700;font-family:var(--font-mono);color:${pct >= 50 ? '#fff' : c.tx};pointer-events:none;mix-blend-mode:${pct >= 50 ? 'normal' : 'normal'};white-space:nowrap">${pct}%</div>`
+      : '';
+
+    return `
+      <div style="display:grid;grid-template-columns:${LEFT_W}px ${timelineW}px;background:${evenBg};border-bottom:1px solid #F2F2F7;transition:background .12s"
+           onmouseover="this.style.background='#F7F9FC'" onmouseout="this.style.background='${evenBg}'"
+           onclick="Pages.Progress.toggleCard(${lot.id})">
+        <div style="position:sticky;left:0;background:inherit;padding:6px 12px 6px 30px;display:flex;flex-direction:column;justify-content:center;gap:2px;z-index:2;border-right:1px solid #E2E0DB;cursor:pointer;border-left:3px solid ${bizColor}">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;font-weight:600;font-family:var(--font-mono);color:#111110;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px">${lot.lotNo || lot.id}</span>
+            <span style="font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;background:${c.bg};color:${c.tx};border:1px solid ${c.fg}66">${ST_LABEL[st]}</span>
+          </div>
+          <div style="font-size:11px;color:#6B6762;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${custLabel} · ${qtyLabel}개</div>
+        </div>
+        <div style="position:relative;height:${ROW_H}px">
+          <div style="position:absolute;left:${startX}px;top:${ROW_H/2 - 8}px;width:${barW}px;height:16px;background:${c.bg};border:1px solid ${c.fg}99;border-radius:8px"></div>
+          ${pct > 0 ? `<div style="position:absolute;left:${startX}px;top:${ROW_H/2 - 8}px;width:${progressW}px;height:16px;background:${c.fg};border-radius:8px"></div>` : ''}
+          ${onBarLabel}
+          ${targetHtml}
+          ${msHtml}
+        </div>
+      </div>`;
   }
 
   // ── 펼침 영역 (처리 이력 + 입력) ───────────────────────────
@@ -1054,6 +1303,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete };
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
 
 })();
