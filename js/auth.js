@@ -12,7 +12,7 @@ const Auth = {
 
   /** 저장된 토큰 반환 */
   getToken() {
-    return sessionStorage.getItem(this._TOKEN_KEY);
+    return localStorage.getItem(this._TOKEN_KEY);
   },
 
   /** 현재 로그인 상태 확인 */
@@ -35,7 +35,7 @@ const Auth = {
       const data = await res.json();
 
       if (data.token) {
-        sessionStorage.setItem(this._TOKEN_KEY, data.token);
+        localStorage.setItem(this._TOKEN_KEY, data.token);
         document.getElementById('login-screen').style.display = 'none';
         const loadEl = document.getElementById('loading-overlay');
         if (loadEl) loadEl.style.display = 'flex';
@@ -64,7 +64,7 @@ const Auth = {
 
   /** 로그아웃 */
   logout() {
-    sessionStorage.removeItem(this._TOKEN_KEY);
+    localStorage.removeItem(this._TOKEN_KEY);
     location.reload();
   },
 };
