@@ -151,11 +151,11 @@ Pages.Dashboard = (() => {
 
     const kpiCardHtml = tgtKrw <= 0
       ? '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
-        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률 <span style="font-weight:400;text-transform:none;letter-spacing:0">매출 / 103억</span></div>'
+        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
         + '<div style="font-size:13px;color:var(--tx3);margin-top:8px">KPI 목표 페이지에서 ' + year + '년 매출(rev)을 먼저 입력하세요.</div>'
         + '</div>'
       : '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
-        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률 <span style="font-weight:400;text-transform:none;letter-spacing:0">매출 / 103억</span></div>'
+        + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
         + '<div style="display:flex;align-items:baseline;gap:6px;line-height:1">'
         + '<span style="font-size:22px;font-weight:600;color:' + pctColor + '">' + pct.toFixed(1) + '%</span>'
         + '<span style="font-size:11px;color:' + trackColor + ';font-weight:600">' + trackLabel + ' ' + Math.abs(diffPct).toFixed(1) + '%</span>'
