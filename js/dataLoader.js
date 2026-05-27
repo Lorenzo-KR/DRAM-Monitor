@@ -112,7 +112,7 @@ const DataLoader = (() => {
         }
 
         if (data?.error === 'UNAUTHORIZED') {
-          sessionStorage.removeItem(Auth._TOKEN_KEY);
+          localStorage.removeItem(Auth._TOKEN_KEY);
           location.reload();
           return;
         }

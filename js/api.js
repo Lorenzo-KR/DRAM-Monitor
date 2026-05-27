@@ -129,7 +129,7 @@ const Api = (() => {
         const res  = await fetch(`${CONFIG.API_URL}?action=getAll&sheet=${sheet}&token=${token}`);
         const data = await res.json();
         if (data?.error === 'UNAUTHORIZED') {
-          sessionStorage.removeItem(Auth._TOKEN_KEY);
+          localStorage.removeItem(Auth._TOKEN_KEY);
           location.reload();
           return [];
         }
