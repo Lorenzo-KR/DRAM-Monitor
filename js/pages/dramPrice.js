@@ -75,6 +75,13 @@ Pages.DramPrice = (() => {
     s && s.includes('▲') ? '#1A6B3A' :
     s && s.includes('▼') ? '#A32D2D' : '#555';
 
+  // ── x축 날짜 포맷: "2026-04-01" → "Apr.1" ──────────────────
+  const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const _fmtAxisDate = s => {
+    const m = String(s || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    return m ? `${_MONTHS[+m[2] - 1]}.${+m[3]}` : s;
+  };
+
   // ── 차트 렌더 ──────────────────────────────────────────────
   function _renderChart(cfg) {
     const state  = _state[cfg.key];
@@ -128,7 +135,7 @@ Pages.DramPrice = (() => {
           },
         },
         scales: {
-          x: { ticks: { font: { family: 'Pretendard', size: 11 }, maxTicksLimit: 12 }, grid: { color: '#F0F0F0' } },
+          x: { ticks: { font: { family: 'Pretendard', size: 11 }, maxTicksLimit: 12, callback(v) { return _fmtAxisDate(this.getLabelForValue(v)); } }, grid: { color: '#F0F0F0' } },
           y: { ticks: { font: { family: 'Pretendard', size: 11 }, callback: v => '$' + v.toFixed(2) }, grid: { color: '#F0F0F0' } },
         },
       },
