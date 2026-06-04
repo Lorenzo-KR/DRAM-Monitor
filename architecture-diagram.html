@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Ops Monitor — 아키텍처 다이어그램</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#F5F5F7; --card:#fff; --bd:#E2E0DB;
+    --tx:#1D1D1F; --tx2:#3A3A3C; --tx3:#6E6E73; --tx4:#86868B;
+    --c-fe:#1B4F8A; --c-be:#0F6E56; --c-db:#6A3D7C; --c-job:#B45309;
+    --c-read:#185FA5; --c-write:#dc2626; --c-deploy:#6E6E73;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: Pretendard, -apple-system, sans-serif;
+    margin: 0; background: var(--bg); color: var(--tx);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 30px 22px 60px; }
+  header { margin-bottom: 18px; }
+  h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .sub { font-size: 12.5px; color: var(--tx3); margin: 0; }
+
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    margin: 16px 0 22px; font-size: 11px; color: var(--tx2);
+  }
+  .legend .it { display: flex; align-items: center; gap: 6px; }
+  .legend .ln { width: 22px; height: 0; border-top: 2.5px solid var(--tx2); }
+  .legend .ln.read { border-color: var(--c-read); }
+  .legend .ln.write { border-color: var(--c-write); }
+  .legend .ln.deploy { border-color: var(--c-deploy); border-style: dashed; }
+  .legend .ln.crawl { border-color: var(--c-job); }
+
+  .canvas {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 14px;
+    padding: 20px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  svg { display: block; width: 100%; height: auto; }
+
+  /* SVG text helpers */
+  .t-l { font-size: 14px; font-weight: 700; }
+  .t-m { font-size: 12px; font-weight: 600; }
+  .t-s { font-size: 11px; }
+  .t-x { font-size: 10px; }
+  .mono { font-family: 'DM Mono', monospace; }
+  .muted { fill: var(--tx3); }
+  .white { fill: #fff; }
+
+  .arr { fill: none; stroke-width: 2; }
+  .arr.read { stroke: var(--c-read); }
+  .arr.write { stroke: var(--c-write); }
+  .arr.deploy { stroke: var(--c-deploy); stroke-dasharray: 5 3; }
+  .arr.crawl { stroke: var(--c-job); }
+  .arr.data { stroke: var(--tx2); }
+
+  .arr-lbl { font-size: 10px; font-family: 'DM Mono', monospace; fill: var(--tx3); }
+  .role-lbl { font-size: 10px; fill: var(--tx4); font-style: italic; }
+
+  /* 레이어 라벨 (왼쪽 사이드) */
+  .layer-lbl-n { font-size: 11px; font-weight: 700; fill: #C0BCB7; font-family: 'DM Mono', monospace; }
+  .layer-lbl-t { font-size: 11px; font-weight: 500; fill: var(--tx3); }
+
+  footer {
+    margin-top: 18px; font-size: 11px; color: var(--tx4); text-align: center;
+  }
+  footer code {
+    background: #F5F5F7; padding: 1px 5px; border-radius: 3px;
+    font-family: 'DM Mono', monospace; color: var(--tx2);
+    border: 1px solid var(--bd);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Test Ops Monitor — 시스템 아키텍처 다이어그램</h1>
+  <p class="sub">레이어 · 데이터 흐름 방향 · 한 그림</p>
+</header>
+
+<div class="legend">
+  <div class="it"><span class="ln read"></span>읽기 (GET / 데이터 조회)</div>
+  <div class="it"><span class="ln write"></span>쓰기 (POST / 데이터 저장)</div>
+  <div class="it"><span class="ln deploy"></span>배포 (CD)</div>
+  <div class="it"><span class="ln crawl"></span>크롤러 (자동 수집)</div>
+  <div class="it"><span class="ln" style="border-color:var(--tx2)"></span>요청·전송</div>
+</div>
+
+<div class="canvas">
+<svg viewBox="0 0 1200 1500" preserveAspectRatio="xMidYMin meet" role="img" aria-label="Test Ops Monitor 아키텍처 다이어그램">
+  <defs>
+    <marker id="ah-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#185FA5"/>
+    </marker>
+    <marker id="ah-write" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#dc2626"/>
+    </marker>
+    <marker id="ah-deploy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#6E6E73"/>
+    </marker>
+    <marker id="ah-crawl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#B45309"/>
+    </marker>
+    <marker id="ah-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#3A3A3C"/>
+    </marker>
+  </defs>
+
+  <!-- ============================================================
+       좌측 레이어 라벨 가이드
+       ============================================================ -->
+  <g>
+    <text class="layer-lbl-n" x="40" y="62">L1</text>
+    <text class="layer-lbl-t" x="40" y="78">사용자</text>
+
+    <text class="layer-lbl-n" x="40" y="175">L2</text>
+    <text class="layer-lbl-t" x="40" y="191">정적 호스팅</text>
+
+    <text class="layer-lbl-n" x="40" y="420">L3</text>
+    <text class="layer-lbl-t" x="40" y="436">클라이언트</text>
+    <text class="layer-lbl-t" x="40" y="450">애플리케이션</text>
+
+    <text class="layer-lbl-n" x="40" y="688">L4</text>
+    <text class="layer-lbl-t" x="40" y="704">API 게이트웨이</text>
+    <text class="layer-lbl-t" x="40" y="718">+ 인증</text>
+
+    <text class="layer-lbl-n" x="40" y="943">L5</text>
+    <text class="layer-lbl-t" x="40" y="959">데이터 저장소</text>
+
+    <text class="layer-lbl-n" x="40" y="1218">JOBS</text>
+    <text class="layer-lbl-t" x="40" y="1234">자동화 트랙</text>
+  </g>
+
+  <!-- ============================================================
+       L1. USER (브라우저)
+       ============================================================ -->
+  <g>
+    <rect x="480" y="30" width="240" height="60" rx="10" fill="#1D1D1F"/>
+    <text class="t-l white" x="600" y="58" text-anchor="middle">사용자</text>
+    <text class="t-s white" x="600" y="76" text-anchor="middle" opacity="0.65">웹 브라우저</text>
+  </g>
+
+  <!-- arrow: User → GH Pages -->
+  <line class="arr data" x1="600" y1="92" x2="600" y2="137" marker-end="url(#ah-data)"/>
+  <text class="arr-lbl" x="612" y="118">HTTPS 요청</text>
+
+  <!-- ============================================================
+       L2. GitHub Pages (정적 호스팅)  +  Deploy 잡
+       ============================================================ -->
+  <g>
+    <rect x="380" y="140" width="440" height="70" rx="10"
+          fill="#FAFAFA" stroke="#86868B" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <text class="t-m" x="600" y="168" text-anchor="middle">GitHub Pages · 정적 호스팅</text>
+    <text class="t-s muted" x="600" y="187" text-anchor="middle">index.html · CSS · JS · 빌드 단계 없음</text>
+  </g>
+
+  <g>
+    <rect x="880" y="140" width="280" height="70" rx="10"
+          fill="#FCF1E6" stroke="#B45309" stroke-width="1.2"/>
+    <text class="t-m" x="1020" y="166" text-anchor="middle" fill="#B45309">GitHub Actions</text>
+    <text class="t-s muted" x="1020" y="184" text-anchor="middle" class="mono">deploy.yml</text>
+    <text class="t-x muted" x="1020" y="200" text-anchor="middle">main push 시 자동</text>
+  </g>
+
+  <!-- arrow: Deploy → GH Pages -->
+  <line class="arr deploy" x1="878" y1="175" x2="822" y2="175" marker-end="url(#ah-deploy)"/>
+  <text class="arr-lbl" x="850" y="167" text-anchor="middle">deploy</text>
+
+  <!-- arrow: GH Pages → Browser (정적 자산 전송) -->
+  <line class="arr data" x1="600" y1="212" x2="600" y2="277" marker-end="url(#ah-data)"/>
+  <text class="arr-lbl" x="612" y="248">정적 자산 전송</text>
+
+  <!-- ============================================================
+       L3. FRONTEND SPA (브라우저에서 실행)
+       ============================================================ -->
+  <g>
+    <rect x="200" y="280" width="800" height="305" rx="14"
+          fill="#EBF2FA" stroke="#1B4F8A" stroke-width="1.5"/>
+    <text class="t-m" x="220" y="306" fill="#1B4F8A">FRONTEND SPA</text>
+    <text class="t-s muted" x="220" y="324">브라우저에서 실행 · 정적 JS 모듈 (서버 코드 없음)</text>
+
+    <!-- Pages 박스 -->
+    <rect x="240" y="345" width="220" height="180" rx="8"
+          fill="#fff" stroke="#1B4F8A" stroke-width="1.2"/>
+    <text class="t-m" x="350" y="370" text-anchor="middle">Pages.*</text>
+    <text class="t-x muted" x="350" y="386" text-anchor="middle">16개 화면 모듈</text>
+    <line x1="268" y1="395" x2="432" y2="395" stroke="#E2E0DB"/>
+    <text class="t-x mono" x="350" y="416" text-anchor="middle" fill="#3A3A3C">dashboard · progress</text>
+    <text class="t-x mono" x="350" y="432" text-anchor="middle" fill="#3A3A3C">kpiTarget · revenue</text>
+    <text class="t-x mono" x="350" y="448" text-anchor="middle" fill="#3A3A3C">biweekly · bizHistory</text>
+    <text class="t-x mono" x="350" y="464" text-anchor="middle" fill="#3A3A3C">dramPrice · report ...</text>
+    <text class="role-lbl" x="350" y="495" text-anchor="middle">화면 렌더 + 사용자 입력</text>
+
+    <!-- Store 박스 -->
+    <rect x="490" y="345" width="220" height="180" rx="8"
+          fill="#fff" stroke="#1B4F8A" stroke-width="1.2"/>
+    <text class="t-m" x="600" y="370" text-anchor="middle">Store</text>
+    <text class="t-x muted" x="600" y="386" text-anchor="middle">전역 상태 (메모리)</text>
+    <line x1="518" y1="395" x2="682" y2="395" stroke="#E2E0DB"/>
+    <text class="t-x mono" x="600" y="416" text-anchor="middle" fill="#3A3A3C">_lots · _daily</text>
+    <text class="t-x mono" x="600" y="432" text-anchor="middle" fill="#3A3A3C">_invoices · _customers</text>
+    <text class="t-x mono" x="600" y="448" text-anchor="middle" fill="#3A3A3C">_targets · _shipments</text>
+    <text class="t-x mono" x="600" y="464" text-anchor="middle" fill="#3A3A3C">_settings</text>
+    <text class="role-lbl" x="600" y="495" text-anchor="middle">Single Source of Truth</text>
+
+    <!-- Api 박스 -->
+    <rect x="740" y="345" width="220" height="180" rx="8"
+          fill="#fff" stroke="#1B4F8A" stroke-width="1.2"/>
+    <text class="t-m" x="850" y="370" text-anchor="middle">Api + DataLoader</text>
+    <text class="t-x muted" x="850" y="386" text-anchor="middle">Apps Script 통신</text>
+    <line x1="768" y1="395" x2="932" y2="395" stroke="#E2E0DB"/>
+    <text class="t-x mono" x="850" y="416" text-anchor="middle" fill="#3A3A3C">getAll · append</text>
+    <text class="t-x mono" x="850" y="432" text-anchor="middle" fill="#3A3A3C">update · delete · log</text>
+    <text class="t-x mono" x="850" y="448" text-anchor="middle" fill="#3A3A3C">+ token (Auth)</text>
+    <text class="t-x muted" x="850" y="464" text-anchor="middle">300ms 디바운스 큐</text>
+    <text class="role-lbl" x="850" y="495" text-anchor="middle">낙관적 업데이트</text>
+
+    <!-- 내부 화살표: Pages ↔ Store -->
+    <line class="arr read"  x1="462" y1="378" x2="488" y2="378" marker-end="url(#ah-read)"/>
+    <text class="arr-lbl" x="475" y="372" text-anchor="middle" font-size="9">read</text>
+
+    <line class="arr write" x1="488" y1="412" x2="462" y2="412" marker-end="url(#ah-write)"/>
+    <text class="arr-lbl" x="475" y="426" text-anchor="middle" font-size="9">upsert</text>
+
+    <!-- 내부 화살표: Store ↔ Api -->
+    <line class="arr read"  x1="738" y1="378" x2="712" y2="378" marker-end="url(#ah-read)"/>
+    <text class="arr-lbl" x="725" y="372" text-anchor="middle" font-size="9">load</text>
+
+    <line class="arr write" x1="712" y1="412" x2="738" y2="412" marker-end="url(#ah-write)"/>
+    <text class="arr-lbl" x="725" y="426" text-anchor="middle" font-size="9">queue</text>
+
+    <!-- SPA 박스 하단 보조 라벨 -->
+    <text class="t-x muted" x="600" y="560" text-anchor="middle">
+      + Auth (토큰 관리) · Nav (라우팅) · config (상수) · utils (헬퍼)
+    </text>
+  </g>
+
+  <!-- ============================================================
+       arrow: SPA → Apps Script (read, write)
+       ============================================================ -->
+  <path class="arr read"  d="M 380 585 Q 360 605 410 625" marker-end="url(#ah-read)"/>
+  <text class="arr-lbl" x="270" y="605">GET ?action=getAllData</text>
+
+  <path class="arr write" d="M 820 585 Q 840 605 790 625" marker-end="url(#ah-write)"/>
+  <text class="arr-lbl" x="850" y="605">POST append/update/delete</text>
+
+  <!-- ============================================================
+       L4. GOOGLE APPS SCRIPT (Code.gs)
+       ============================================================ -->
+  <g>
+    <rect x="325" y="625" width="550" height="130" rx="12"
+          fill="#E8F5EF" stroke="#0F6E56" stroke-width="1.5"/>
+    <text class="t-m" x="600" y="652" text-anchor="middle" fill="#0F6E56">GOOGLE APPS SCRIPT · Code.gs</text>
+    <text class="t-s muted" x="600" y="670" text-anchor="middle">단일 HTTPS 엔드포인트 · 서버 인프라 없음 (Google 인프라가 호스팅)</text>
+
+    <rect x="350" y="690" width="160" height="50" rx="6"
+          fill="#fff" stroke="#0F6E56" stroke-width="1"/>
+    <text class="t-s" x="430" y="710" text-anchor="middle">doGet / doPost</text>
+    <text class="t-x muted" x="430" y="727" text-anchor="middle">action 라우팅</text>
+
+    <rect x="520" y="690" width="160" height="50" rx="6"
+          fill="#fff" stroke="#0F6E56" stroke-width="1"/>
+    <text class="t-s" x="600" y="710" text-anchor="middle">토큰 인증</text>
+    <text class="t-x muted" x="600" y="727" text-anchor="middle">isValidToken + Lock</text>
+
+    <rect x="690" y="690" width="160" height="50" rx="6"
+          fill="#fff" stroke="#0F6E56" stroke-width="1"/>
+    <text class="t-s" x="770" y="710" text-anchor="middle">날짜 정규화</text>
+    <text class="t-x muted" x="770" y="727" text-anchor="middle">serial → ISO</text>
+  </g>
+
+  <!-- ============================================================
+       arrow: Apps Script → Sheets (read, write)
+       ============================================================ -->
+  <path class="arr read"  d="M 400 758 Q 370 790 360 828" marker-end="url(#ah-read)"/>
+  <text class="arr-lbl" x="275" y="795">SpreadsheetApp.getValues</text>
+
+  <path class="arr write" d="M 800 758 Q 830 790 840 828" marker-end="url(#ah-write)"/>
+  <text class="arr-lbl" x="855" y="795">appendRow / setValues</text>
+
+  <!-- ============================================================
+       L5. GOOGLE SHEETS (데이터 저장소)
+       ============================================================ -->
+  <g>
+    <rect x="180" y="830" width="840" height="230" rx="14"
+          fill="#F2EBF7" stroke="#6A3D7C" stroke-width="1.5"/>
+    <text class="t-m" x="600" y="858" text-anchor="middle" fill="#6A3D7C">GOOGLE SHEETS · 데이터 저장소</text>
+    <text class="t-s muted" x="600" y="876" text-anchor="middle">스프레드시트 = DB · 시트 = 테이블 · 행 = 레코드 · id = PK · 별도 DB 인프라 없음</text>
+
+    <!-- 메인 시트북 -->
+    <rect x="220" y="900" width="370" height="140" rx="8"
+          fill="#fff" stroke="#6A3D7C" stroke-width="1.2"/>
+    <text class="t-m" x="405" y="924" text-anchor="middle">메인 시트북</text>
+    <text class="t-x muted" x="405" y="938" text-anchor="middle">운영 데이터 — 사용자 R/W</text>
+
+    <g class="t-x mono" fill="#3A3A3C">
+      <rect x="240" y="950" width="58" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="269" y="965" text-anchor="middle">lots</text>
+      <rect x="304" y="950" width="58" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="333" y="965" text-anchor="middle">daily</text>
+      <rect x="368" y="950" width="72" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="404" y="965" text-anchor="middle">invoices</text>
+      <rect x="446" y="950" width="80" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="486" y="965" text-anchor="middle">customers</text>
+
+      <rect x="240" y="976" width="68" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="274" y="991" text-anchor="middle">targets</text>
+      <rect x="314" y="976" width="84" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="356" y="991" text-anchor="middle">shipments</text>
+      <rect x="404" y="976" width="50" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="429" y="991" text-anchor="middle">logs</text>
+      <rect x="460" y="976" width="72" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="496" y="991" text-anchor="middle">settings</text>
+    </g>
+    <text class="t-x muted" x="405" y="1020" text-anchor="middle">8개 시트 · LOT/일별처리/인보이스/KPI 설정</text>
+
+    <!-- DRAM Price 시트북 -->
+    <rect x="620" y="900" width="370" height="140" rx="8"
+          fill="#fff" stroke="#6A3D7C" stroke-width="1.2"/>
+    <text class="t-m" x="805" y="924" text-anchor="middle">DRAM Price 시트북</text>
+    <text class="t-x muted" x="805" y="938" text-anchor="middle">시세 데이터 — 사용자는 읽기만</text>
+
+    <g class="t-x mono" fill="#3A3A3C">
+      <rect x="640" y="950" width="92" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="686" y="965" text-anchor="middle">spot_prices</text>
+      <rect x="738" y="950" width="120" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="798" y="965" text-anchor="middle">contract_prices</text>
+      <rect x="864" y="950" width="108" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="918" y="965" text-anchor="middle">module_prices</text>
+
+      <rect x="640" y="976" width="96" height="20" rx="3" fill="#F2EBF7"/>
+      <text x="688" y="991" text-anchor="middle">gddr_prices</text>
+    </g>
+    <text class="t-x muted" x="805" y="1020" text-anchor="middle">4개 시트 · 크롤러가 매일 append</text>
+  </g>
+
+  <!-- ============================================================
+       arrow: Crawler → DRAM Price 시트북 (write, 위 방향)
+       ============================================================ -->
+  <line class="arr crawl" x1="805" y1="1180" x2="805" y2="1045" marker-end="url(#ah-crawl)"/>
+  <text class="arr-lbl" x="815" y="1125">append (gspread)</text>
+
+  <!-- ============================================================
+       JOB. PYTHON CRAWLER (GitHub Actions)
+       ============================================================ -->
+  <g>
+    <rect x="600" y="1180" width="410" height="100" rx="10"
+          fill="#FCF1E6" stroke="#B45309" stroke-width="1.5"/>
+    <text class="t-m" x="805" y="1207" text-anchor="middle" fill="#B45309">GitHub Actions · Python Crawler</text>
+    <text class="t-s muted" x="805" y="1225" text-anchor="middle" class="mono">crawler/crawl_dram_price.py</text>
+    <text class="t-x muted" x="805" y="1244" text-anchor="middle">cron · 매일 02:00 UTC (KST 11:00)</text>
+    <text class="t-x muted" x="805" y="1260" text-anchor="middle">Playwright Chromium · 4개 테이블 파싱</text>
+  </g>
+
+  <!-- arrow: TrendForce → Crawler -->
+  <line class="arr crawl" x1="805" y1="1380" x2="805" y2="1283" marker-end="url(#ah-crawl)"/>
+  <text class="arr-lbl" x="815" y="1335">scrape (HTML)</text>
+
+  <!-- ============================================================
+       EXT. TrendForce
+       ============================================================ -->
+  <g>
+    <rect x="660" y="1380" width="290" height="60" rx="10"
+          fill="#fff" stroke="#86868B" stroke-width="1.2"/>
+    <text class="t-m" x="805" y="1407" text-anchor="middle">TrendForce.com</text>
+    <text class="t-x muted" x="805" y="1424" text-anchor="middle">외부 가격 정보 페이지</text>
+  </g>
+
+  <!-- ============================================================
+       오른쪽 사이드: 역할 설명 가이드
+       ============================================================ -->
+  <g>
+    <!-- L1 역할 -->
+    <text class="t-x muted" x="1170" y="62" text-anchor="end">PW 입력 → 토큰 받기</text>
+    <text class="t-x muted" x="1170" y="78" text-anchor="end">화면 보기 / 데이터 입력</text>
+
+    <!-- L2 역할 -->
+    <text class="t-x muted" x="1170" y="275" text-anchor="end">정적 자산 전달만 담당</text>
+
+    <!-- L3 역할 -->
+    <text class="t-x muted" x="1170" y="345" text-anchor="end">UI · 상태 관리 · 통신</text>
+    <text class="t-x muted" x="1170" y="361" text-anchor="end">사용자가 보는 모든 것</text>
+
+    <!-- L4 역할 -->
+    <text class="t-x muted" x="1170" y="675" text-anchor="end">PW 보관 · 토큰 발급/검증</text>
+    <text class="t-x muted" x="1170" y="691" text-anchor="end">시트 R/W 대행 · 데이터 형식 정규화</text>
+
+    <!-- L5 역할 -->
+    <text class="t-x muted" x="1170" y="855" text-anchor="end">사실상의 DB</text>
+    <text class="t-x muted" x="1170" y="871" text-anchor="end">스프레드시트 2개 = 운영 + 시세</text>
+  </g>
+</svg>
+</div>
+
+<footer>
+  단일 그림으로 정리 · 박스 색 = 레이어 · 화살표 색 = 흐름 종류 · 자세한 설명은 <code>architecture.html</code>
+</footer>
+
+</div>
+</body>
+</html>
