@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Ops Monitor — 아키텍처</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+<style>
+  :root {
+    --bg:#F5F5F7; --card:#fff; --bd:#E2E0DB; --bd2:#D2D2D7;
+    --tx:#1D1D1F; --tx2:#3A3A3C; --tx3:#6E6E73; --tx4:#86868B;
+    --navy:#1B3A6B; --accent:#1D1D1F;
+    --c-fe:#1B4F8A; --c-be:#0F6E56; --c-db:#6A3D7C; --c-job:#B45309;
+    --mono: 'DM Mono', 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--tx);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 36px 28px 80px; }
+
+  /* ── Header ── */
+  header { margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--bd); }
+  h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+  .subtitle { font-size: 13px; color: var(--tx3); margin: 0; }
+  .meta { display: flex; gap: 18px; margin-top: 14px; font-size: 11px; color: var(--tx4); font-family: var(--mono); }
+  .meta b { color: var(--tx2); font-weight: 600; }
+
+  /* ── Section ── */
+  section { margin-bottom: 36px; }
+  h2 {
+    font-size: 11px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--tx3);
+    margin: 0 0 14px; padding-bottom: 8px; border-bottom: 1px solid var(--bd);
+  }
+  h2 .num {
+    display: inline-block; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--tx); color: #fff; font-size: 10px; text-align: center; line-height: 18px;
+    margin-right: 8px; font-family: var(--mono);
+  }
+
+  /* ── Tier diagram (Section 1) ── */
+  .tiers { display: flex; flex-direction: column; gap: 14px; }
+  .tier {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .tier-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .tier-h .badge {
+    padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700;
+    background: var(--tx); color: #fff; font-family: var(--mono); letter-spacing: .04em;
+  }
+  .tier-h .label { font-size: 14px; font-weight: 600; }
+  .tier-h .desc { font-size: 11.5px; color: var(--tx3); margin-left: auto; }
+  .tier-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; }
+  .node {
+    border: 1px solid var(--bd2); border-radius: 8px; padding: 10px 12px;
+    background: #FAFAFA; min-height: 64px;
+  }
+  .node .nm { font-size: 12px; font-weight: 600; color: var(--tx); }
+  .node .sub { font-size: 10.5px; color: var(--tx3); margin-top: 3px; line-height: 1.4; }
+  .node.fe { border-left: 3px solid var(--c-fe); }
+  .node.be { border-left: 3px solid var(--c-be); }
+  .node.db { border-left: 3px solid var(--c-db); }
+  .node.job { border-left: 3px solid var(--c-job); }
+
+  .arrow {
+    text-align: center; color: var(--tx4); font-size: 14px;
+    margin: -2px 0; font-family: var(--mono);
+  }
+
+  /* ── Sheet cards (Section 2) ── */
+  .sheets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
+  .sheet {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 10px;
+    padding: 13px 15px;
+  }
+  .sheet-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .sheet-h .name { font-size: 12px; font-weight: 700; font-family: var(--mono); color: var(--tx); }
+  .sheet-h .kind {
+    padding: 1px 7px; border-radius: 3px; font-size: 9.5px; font-weight: 600;
+    background: #F0FBF3; color: #1A7F37; border: 1px solid #34C759;
+  }
+  .sheet-h .kind.write { background: #FEF2F2; color: #dc2626; border-color: #FECACA; }
+  .sheet-h .kind.system { background: #EFF6FF; color: #185FA5; border-color: #93C5FD; }
+  .sheet .desc { font-size: 11px; color: var(--tx3); margin-bottom: 8px; line-height: 1.5; }
+  .sheet .cols { display: flex; flex-wrap: wrap; gap: 3px; }
+  .sheet .col {
+    padding: 1.5px 6px; border-radius: 3px; font-size: 9.5px; font-family: var(--mono);
+    background: #F5F5F7; color: var(--tx2); border: 1px solid var(--bd);
+  }
+  .sheet .col.date { background: #FFFBEB; color: #92400E; border-color: #FCD34D; }
+  .sheet .col.pk { background: #F5F3FF; color: #5B21B6; border-color: #C4B5FD; }
+
+  .sheet-group { margin-bottom: 14px; }
+  .sheet-group .gh {
+    font-size: 10.5px; color: var(--tx4); margin-bottom: 6px;
+    font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  }
+
+  /* ── Module tree (Section 3) ── */
+  .modules { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .modules { grid-template-columns: 1fr; } }
+  .mod-card {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .mod-card h3 { font-size: 12px; font-weight: 700; margin: 0 0 4px; }
+  .mod-card .lead { font-size: 11px; color: var(--tx3); margin-bottom: 12px; }
+  .mod-card ul { list-style: none; padding: 0; margin: 0; }
+  .mod-card li {
+    display: grid; grid-template-columns: 130px 1fr; gap: 10px;
+    padding: 6px 0; border-top: 1px solid #F2F2F7; font-size: 11.5px;
+  }
+  .mod-card li:first-child { border-top: none; }
+  .mod-card .fn { font-family: var(--mono); color: var(--tx); font-weight: 500; }
+  .mod-card .role { color: var(--tx3); line-height: 1.5; }
+
+  /* ── Page route table (Section 4) ── */
+  .route-tbl {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    background: var(--card); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden;
+  }
+  .route-tbl th {
+    text-align: left; padding: 9px 12px; background: #E8E8ED;
+    font-size: 10.5px; font-weight: 700; color: var(--tx2); letter-spacing: .04em;
+    border-bottom: 1px solid var(--bd2);
+  }
+  .route-tbl td {
+    padding: 8px 12px; border-top: 1px solid #F2F2F7; vertical-align: top;
+  }
+  .route-tbl tr:nth-child(even) td { background: #FAFAFA; }
+  .route-tbl .key { font-family: var(--mono); color: var(--tx); font-weight: 600; font-size: 11px; }
+  .route-tbl .file { font-family: var(--mono); color: var(--tx3); font-size: 10.5px; }
+  .route-tbl .reads { font-size: 10.5px; color: var(--tx3); }
+  .route-tbl .reads .chip {
+    display: inline-block; padding: 1px 5px; margin-right: 3px;
+    border-radius: 3px; background: #F5F5F7; border: 1px solid var(--bd);
+    font-family: var(--mono); color: var(--tx2);
+  }
+  .route-tbl .sec {
+    font-size: 10px; color: var(--tx4); text-transform: uppercase; letter-spacing: .06em;
+    padding: 12px 12px 4px;
+  }
+
+  /* ── Flow (Section 5) ── */
+  .flow {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 10px;
+    padding: 18px 22px;
+  }
+  .flow-step {
+    display: grid; grid-template-columns: 28px 1fr; gap: 14px; padding: 10px 0;
+    border-top: 1px dashed #E8E8ED;
+  }
+  .flow-step:first-child { border-top: none; }
+  .flow-step .n {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--tx); color: #fff;
+    font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
+    font-family: var(--mono);
+  }
+  .flow-step .body .t { font-size: 12.5px; font-weight: 600; color: var(--tx); }
+  .flow-step .body .d { font-size: 11.5px; color: var(--tx3); margin-top: 3px; line-height: 1.6; }
+  .flow-step .body code {
+    background: #F5F5F7; padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--tx2);
+    border: 1px solid var(--bd);
+  }
+
+  /* ── Two-col grid (Section 6) ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+  .info {
+    background: var(--card); border: 1px solid var(--bd); border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .info h3 {
+    font-size: 12px; font-weight: 700; margin: 0 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .info h3 .ic {
+    width: 16px; height: 16px; border-radius: 4px; background: var(--tx); color: #fff;
+    text-align: center; font-size: 9px; line-height: 16px; font-family: var(--mono);
+  }
+  .info ul { list-style: none; padding: 0; margin: 0; }
+  .info li {
+    font-size: 11.5px; color: var(--tx2); padding: 5px 0;
+    border-top: 1px solid #F2F2F7; line-height: 1.6;
+  }
+  .info li:first-child { border-top: none; }
+  .info li b { color: var(--tx); font-weight: 600; }
+  .info li code {
+    background: #F5F5F7; padding: 1px 5px; border-radius: 3px;
+    font-family: var(--mono); font-size: 10.5px; color: var(--tx2);
+    border: 1px solid var(--bd);
+  }
+
+  /* ── Legend ── */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 10.5px; color: var(--tx3); }
+  .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+  footer {
+    margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--bd);
+    font-size: 10.5px; color: var(--tx4); text-align: center;
+  }
+  footer code {
+    font-family: var(--mono); background: #F5F5F7; padding: 1px 5px; border-radius: 3px;
+    color: var(--tx2); border: 1px solid var(--bd);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Test Ops Monitor — 시스템 아키텍처</h1>
+  <p class="subtitle">DRAM · SSD · Mobile Ink Die 테스트 운영 모니터링 — 정적 SPA + Google Sheets 백엔드</p>
+  <div class="meta">
+    <span><b>Repo</b> Lorenzo-KR/DRAM-Monitor</span>
+    <span><b>호스팅</b> GitHub Pages</span>
+    <span><b>백엔드</b> Google Apps Script</span>
+    <span><b>저장소</b> Google Sheets ×2</span>
+    <span><b>코드</b> ~11.7k LOC · JS·정적</span>
+  </div>
+</header>
+
+<!-- ─────────────────────────────────────────────────────────────
+     1. 시스템 티어 다이어그램
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">1</span>시스템 구성 (한눈에)</h2>
+
+  <div class="tiers">
+
+    <!-- Client tier -->
+    <div class="tier">
+      <div class="tier-h">
+        <span class="badge">CLIENT</span>
+        <span class="label">사용자 브라우저 (정적 SPA)</span>
+        <span class="desc">GitHub Pages 호스팅 · 빌드 단계 없음 · 즉시 배포</span>
+      </div>
+      <div class="tier-body">
+        <div class="node fe">
+          <div class="nm">index.html</div>
+          <div class="sub">SPA 셸 · 사이드바 · 페이지 컨테이너 (845줄)</div>
+        </div>
+        <div class="node fe">
+          <div class="nm">js/ · 핵심 8개</div>
+          <div class="sub">config · store · api · dataLoader · auth · nav · utils · app</div>
+        </div>
+        <div class="node fe">
+          <div class="nm">js/pages/ · 16개</div>
+          <div class="sub">대시보드, 진행현황, KPI목표, 매출, 사업별히스토리 등</div>
+        </div>
+        <div class="node fe">
+          <div class="nm">외부 라이브러리 (CDN)</div>
+          <div class="sub">Chart.js · xlsx-js-style · Pretendard 폰트</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">▲  HTTPS / JSON (fetch GET·POST)  ▼</div>
+
+    <!-- API tier -->
+    <div class="tier">
+      <div class="tier-h">
+        <span class="badge" style="background:var(--c-be)">API</span>
+        <span class="label">Google Apps Script — Code.gs (단일 엔드포인트)</span>
+        <span class="desc">doGet/doPost · 인증 토큰 · CRUD 라우팅 · 404줄</span>
+      </div>
+      <div class="tier-body">
+        <div class="node be">
+          <div class="nm">인증</div>
+          <div class="sub">PW(서버 보관) → 48자 토큰 발급 · 8h 만료 · 슬라이딩 갱신 · 최대 50개</div>
+        </div>
+        <div class="node be">
+          <div class="nm">읽기 액션</div>
+          <div class="sub"><code style="font-family:var(--mono);font-size:10px">getAllData</code> 1회로 전체 로드 · <code style="font-family:var(--mono);font-size:10px">getAll</code> · <code style="font-family:var(--mono);font-size:10px">getLogs</code> · <code style="font-family:var(--mono);font-size:10px">getSetting</code></div>
+        </div>
+        <div class="node be">
+          <div class="nm">쓰기 액션</div>
+          <div class="sub"><code style="font-family:var(--mono);font-size:10px">append</code> · <code style="font-family:var(--mono);font-size:10px">update</code> · <code style="font-family:var(--mono);font-size:10px">delete</code> · <code style="font-family:var(--mono);font-size:10px">setSetting</code> · <code style="font-family:var(--mono);font-size:10px">setupAll</code></div>
+        </div>
+        <div class="node be">
+          <div class="nm">날짜 정규화</div>
+          <div class="sub">Sheets serial → 'YYYY-MM-DD' 통일 · DATE_COLS 매핑</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">▲  SpreadsheetApp (시트 직접 R/W)  ▼</div>
+
+    <!-- Data tier -->
+    <div class="tier">
+      <div class="tier-h">
+        <span class="badge" style="background:var(--c-db)">DATA</span>
+        <span class="label">Google Sheets — 2개 스프레드시트가 사실상 DB</span>
+        <span class="desc">테이블 = 시트 · 각 행 = 레코드 · id 컬럼이 PK</span>
+      </div>
+      <div class="tier-body">
+        <div class="node db">
+          <div class="nm">메인 시트북</div>
+          <div class="sub">lots · daily · invoices · customers · targets · shipments · logs · settings</div>
+        </div>
+        <div class="node db">
+          <div class="nm">DRAM Price 시트북</div>
+          <div class="sub">spot_prices · contract_prices · module_prices · gddr_prices</div>
+        </div>
+        <div class="node job">
+          <div class="nm">크롤러 (GitHub Actions)</div>
+          <div class="sub">매일 KST 11:00 · Playwright → TrendForce → DRAM Price 시트북</div>
+        </div>
+        <div class="node job">
+          <div class="nm">Pages 배포 (GitHub Actions)</div>
+          <div class="sub">main 푸시 시 자동 배포 · 빌드 없음</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--c-fe)"></span>프론트엔드</span>
+    <span><span class="dot" style="background:var(--c-be)"></span>백엔드 (Apps Script)</span>
+    <span><span class="dot" style="background:var(--c-db)"></span>데이터 (Sheets)</span>
+    <span><span class="dot" style="background:var(--c-job)"></span>자동화 잡</span>
+  </div>
+</section>
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     2. 데이터가 어디 있는가 — 시트 카드
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">2</span>데이터는 어디에 있나 — Google Sheets 시트 12개</h2>
+
+  <div class="sheet-group">
+    <div class="gh">메인 시트북 · 비즈니스 데이터</div>
+    <div class="sheets-grid">
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">lots</span><span class="kind write">R/W</span></div>
+        <div class="desc">LOT 단위 작업 — 입고·진행·완료 마스터 테이블</div>
+        <div class="cols">
+          <span class="col pk">id</span>
+          <span class="col">biz</span><span class="col">country</span>
+          <span class="col">customerName</span><span class="col">lotNo</span>
+          <span class="col date">inDate</span><span class="col date">targetDate</span>
+          <span class="col">qty</span><span class="col">unit</span>
+          <span class="col">price</span><span class="col">currency</span>
+          <span class="col">product</span><span class="col">note</span>
+          <span class="col">done</span><span class="col date">actualDone</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">daily</span><span class="kind write">R/W</span></div>
+        <div class="desc">LOT × 일자 처리 이력 — Normal/NoBoot/Abnormal 분류</div>
+        <div class="cols">
+          <span class="col pk">id</span><span class="col date">date</span>
+          <span class="col">lotId</span><span class="col">lotNo</span>
+          <span class="col">biz</span><span class="col">country</span>
+          <span class="col">customerName</span><span class="col">proc</span>
+          <span class="col">normal</span><span class="col">noBoot</span><span class="col">abnormal</span>
+          <span class="col">cumul</span><span class="col">remain</span>
+          <span class="col">note</span><span class="col">done</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">invoices</span><span class="kind write">R/W</span></div>
+        <div class="desc">인보이스 발행·청구·수금</div>
+        <div class="cols">
+          <span class="col pk">id</span><span class="col">no</span>
+          <span class="col date">date</span><span class="col date">due</span>
+          <span class="col">lotId</span><span class="col">lotNo</span>
+          <span class="col">biz</span><span class="col">country</span>
+          <span class="col">customerName</span>
+          <span class="col">amount</span><span class="col">vat</span><span class="col">total</span>
+          <span class="col">currency</span><span class="col">status</span>
+          <span class="col date">paidDate</span><span class="col">paidAmt</span><span class="col">note</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">customers</span><span class="kind write">R/W</span></div>
+        <div class="desc">고객사 마스터</div>
+        <div class="cols">
+          <span class="col pk">id</span><span class="col">name</span>
+          <span class="col">country</span><span class="col">biz</span>
+          <span class="col">contact</span><span class="col">currency</span><span class="col">note</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">targets</span><span class="kind write">R/W</span></div>
+        <div class="desc">KPI 연간 목표 (사업 × 연도)</div>
+        <div class="cols">
+          <span class="col pk">id</span><span class="col">year</span>
+          <span class="col">biz</span><span class="col">target</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">shipments</span><span class="kind write">R/W</span></div>
+        <div class="desc">출고 예정/완료 (LOT 출고 프로세스)</div>
+        <div class="cols">
+          <span class="col pk">id</span>
+          <span class="col">biz</span><span class="col">country</span>
+          <span class="col">customerName</span><span class="col">lotNo</span>
+          <span class="col">qty</span><span class="col">unit</span>
+          <span class="col date">expectedDate</span><span class="col">status</span><span class="col">note</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">logs</span><span class="kind system">SYS</span></div>
+        <div class="desc">데이터 변경 로그 (등록·수정·삭제 자동 기록)</div>
+        <div class="cols">
+          <span class="col pk">id</span><span class="col">ts</span>
+          <span class="col">category</span><span class="col">action</span>
+          <span class="col">lotNo</span><span class="col">summary</span>
+        </div>
+      </div>
+
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">settings</span><span class="kind system">SYS</span></div>
+        <div class="desc">설정값 K/V 저장 (KPI 롤링, 환율 등)</div>
+        <div class="cols">
+          <span class="col pk">key</span><span class="col">value</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-group">
+    <div class="gh">DRAM Price 시트북 · 크롤러가 매일 채워넣음 (Sheet ID <span style="font-family:var(--mono);color:var(--tx2)">1B46Hj-…M0BA</span>)</div>
+    <div class="sheets-grid">
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">spot_prices</span><span class="kind">READ</span></div>
+        <div class="desc">DRAM Spot — Daily High/Low + Session</div>
+        <div class="cols">
+          <span class="col date">Date</span><span class="col">Last Update</span>
+          <span class="col">Category</span><span class="col">Item</span>
+          <span class="col">Daily High</span><span class="col">Daily Low</span>
+          <span class="col">Session High</span><span class="col">Session Low</span>
+          <span class="col">Session Average</span><span class="col">Session Change</span>
+          <span class="col">Source</span>
+        </div>
+      </div>
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">contract_prices</span><span class="kind">READ</span></div>
+        <div class="desc">DRAM Contract — Session + Average/Low Change</div>
+      </div>
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">module_prices</span><span class="kind">READ</span></div>
+        <div class="desc">Module Spot — Weekly High/Low + Session</div>
+      </div>
+      <div class="sheet">
+        <div class="sheet-h"><span class="name">gddr_prices</span><span class="kind">READ</span></div>
+        <div class="desc">GDDR Spot — Weekly High/Low + Session</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#F5F3FF;border:1px solid #C4B5FD"></span>Primary key</span>
+    <span><span class="dot" style="background:#FFFBEB;border:1px solid #FCD34D"></span>날짜 컬럼 (서버에서 YYYY-MM-DD로 정규화)</span>
+    <span><span class="dot" style="background:#F0FBF3;border:1px solid #34C759"></span>R/W (사용자가 입력)</span>
+    <span><span class="dot" style="background:#FEF2F2;border:1px solid #FECACA"></span>READ (외부 채움)</span>
+    <span><span class="dot" style="background:#EFF6FF;border:1px solid #93C5FD"></span>SYS (시스템 자동)</span>
+  </div>
+</section>
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     3. 프론트엔드 모듈 트리
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">3</span>프론트엔드 모듈 — js/</h2>
+
+  <div class="modules">
+    <div class="mod-card">
+      <h3>핵심 레이어 (8 파일 · 약 1,200 LOC)</h3>
+      <p class="lead">앱 부팅·통신·상태를 책임지는 싱글톤들. 로드 순서가 중요.</p>
+      <ul>
+        <li><span class="fn">config.js</span><span class="role">API URL, 시트명, 사업·국가 코드/색상, 라벨 등 모든 상수</span></li>
+        <li><span class="fn">store.js</span><span class="role">메모리 내 전역 상태 — getCustomers/getLots/... + upsert/delete</span></li>
+        <li><span class="fn">utils.js</span><span class="role">parseNumber, normalizeDate, fmtMoney 등 공용 헬퍼</span></li>
+        <li><span class="fn">api.js</span><span class="role">Apps Script 통신 + 300ms 디바운스 큐 + 토스트(UI.toast)</span></li>
+        <li><span class="fn">dataLoader.js</span><span class="role">getAllData 1회 호출로 모든 시트 로드 + 행별 정규화</span></li>
+        <li><span class="fn">auth.js</span><span class="role">로그인/로그아웃 · localStorage 토큰 관리</span></li>
+        <li><span class="fn">nav.js</span><span class="role">사이드바 라우팅 — Nav.go(key) → 해당 페이지 render() 호출</span></li>
+        <li><span class="fn">app.js</span><span class="role">진입점 — 로그인 확인 → DataLoader.loadAll() → Nav.go('dash')</span></li>
+      </ul>
+    </div>
+
+    <div class="mod-card">
+      <h3>페이지 모듈 (16 파일 · 약 9,700 LOC)</h3>
+      <p class="lead">각 페이지는 <code style="background:#F5F5F7;padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:10px">Pages.X = IIFE</code> 패턴. render()를 노출.</p>
+      <ul>
+        <li><span class="fn">dashboard.js</span><span class="role">메인 — Job Orders/주간 보고/일별 처리 follow-up (1,025줄)</span></li>
+        <li><span class="fn">progress.js</span><span class="role">LOT 진행현황 + 월별 차트 + 간트차트 (1,308줄)</span></li>
+        <li><span class="fn">kpiTarget.js</span><span class="role">KPI 목표설정 · 실적표 · ③ 진척률 + 엑셀 (2,266줄)</span></li>
+        <li><span class="fn">bizHistory.js</span><span class="role">사업별 타임라인 히스토리 (636줄)</span></li>
+        <li><span class="fn">revenue.js</span><span class="role">매출현황 · 인보이스 청구 단계 관리 (557줄)</span></li>
+        <li><span class="fn">report.js</span><span class="role">기준월별 국가별 LOT 요약 보고서 (372줄)</span></li>
+        <li><span class="fn">dailyInput.js</span><span class="role">일별 처리 입력 모달 (378줄)</span></li>
+        <li><span class="fn">dramPrice.js</span><span class="role">TrendForce 4개 가격 시트 시각화 (343줄)</span></li>
+        <li><span class="fn">verify.js</span><span class="role">데이터 검증 도구 (322줄)</span></li>
+        <li><span class="fn">invoice.js</span><span class="role">인보이스 등록·수정 모달 (288줄)</span></li>
+        <li><span class="fn">biweekly.js</span><span class="role">월별 처리량/매출액 피벗 표 (266줄)</span></li>
+        <li><span class="fn">lotRegister.js</span><span class="role">LOT 등록 모달 (242줄)</span></li>
+        <li><span class="fn">opsDashboard.js</span><span class="role">Ops 대시보드 보조 (225줄)</span></li>
+        <li><span class="fn">shipment.js</span><span class="role">출고 관리 (113줄)</span></li>
+        <li><span class="fn">changelog.js</span><span class="role">업데이트 현황 — 개발이력 + 데이터 로그 (646줄)</span></li>
+        <li><span class="fn">customers.js</span><span class="role">고객사 관리 (55줄)</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     4. 페이지 라우트 표
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">4</span>사이드바 라우트 — 페이지 → 모듈 → 사용 데이터</h2>
+
+  <table class="route-tbl">
+    <thead>
+      <tr>
+        <th style="width:14%">키</th>
+        <th style="width:22%">사이드바 라벨</th>
+        <th style="width:22%">파일</th>
+        <th>주요 사용 데이터</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="4" class="sec">Overview</td></tr>
+      <tr><td><span class="key">dash</span></td><td>대시보드</td><td class="file">pages/dashboard.js</td>
+        <td class="reads"><span class="chip">lots</span><span class="chip">daily</span><span class="chip">invoices</span><span class="chip">shipments</span><span class="chip">targets</span></td></tr>
+      <tr><td><span class="key">biweekly</span></td><td>월별 처리량/매출액</td><td class="file">pages/biweekly.js</td>
+        <td class="reads"><span class="chip">daily</span><span class="chip">invoices</span></td></tr>
+      <tr><td><span class="key">progress</span></td><td>LOT 진행현황</td><td class="file">pages/progress.js</td>
+        <td class="reads"><span class="chip">lots</span><span class="chip">daily</span><span class="chip">shipments</span></td></tr>
+      <tr><td><span class="key">bizhistory</span></td><td>사업별 히스토리</td><td class="file">pages/bizHistory.js</td>
+        <td class="reads"><span class="chip">lots</span><span class="chip">daily</span><span class="chip">invoices</span><span class="chip">targets</span></td></tr>
+
+      <tr><td colspan="4" class="sec">재무</td></tr>
+      <tr><td><span class="key">revenue</span></td><td>매출현황</td><td class="file">pages/revenue.js</td>
+        <td class="reads"><span class="chip">invoices</span><span class="chip">lots</span></td></tr>
+
+      <tr><td colspan="4" class="sec">관리</td></tr>
+      <tr><td><span class="key">kpitarget</span></td><td>KPI 목표설정</td><td class="file">pages/kpiTarget.js</td>
+        <td class="reads"><span class="chip">targets</span><span class="chip">invoices</span><span class="chip">settings</span><span class="chip">daily</span></td></tr>
+      <tr><td><span class="key">verify</span></td><td>데이터검증</td><td class="file">pages/verify.js</td>
+        <td class="reads"><span class="chip">lots</span><span class="chip">daily</span><span class="chip">invoices</span></td></tr>
+      <tr><td><span class="key">customers</span></td><td>고객사관리</td><td class="file">pages/customers.js</td>
+        <td class="reads"><span class="chip">customers</span></td></tr>
+
+      <tr><td colspan="4" class="sec">리포트</td></tr>
+      <tr><td><span class="key">report</span></td><td>보고서 (테스트)</td><td class="file">pages/report.js</td>
+        <td class="reads"><span class="chip">lots</span><span class="chip">daily</span><span class="chip">invoices</span></td></tr>
+      <tr><td><span class="key">changelog</span></td><td>업데이트 현황</td><td class="file">pages/changelog.js</td>
+        <td class="reads"><span class="chip">logs</span></td></tr>
+      <tr><td><span class="key">dramprice</span></td><td>DRAM Price</td><td class="file">pages/dramPrice.js</td>
+        <td class="reads"><span class="chip">spot_prices</span><span class="chip">contract_prices</span><span class="chip">module_prices</span><span class="chip">gddr_prices</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     5. 데이터 흐름
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">5</span>데이터 흐름 — 부팅부터 저장까지</h2>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="n">1</div>
+      <div class="body">
+        <div class="t">로그인</div>
+        <div class="d"><code>Auth.login()</code> → Apps Script <code>?action=auth</code> → 48자 토큰 발급 → <code>localStorage[tom_token]</code> 저장. 비밀번호는 서버(Apps Script) 코드 안에만 존재.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">2</div>
+      <div class="body">
+        <div class="t">초기 데이터 일괄 로드</div>
+        <div class="d"><code>DataLoader.loadAll()</code> → <code>?action=getAllData</code> 1회 호출로 lots·daily·invoices·customers·targets·shipments·settings 모두 수신 → 각각 normalize 함수로 타입/날짜 정리 → <code>Store.set*()</code> 저장.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">3</div>
+      <div class="body">
+        <div class="t">페이지 진입</div>
+        <div class="d"><code>Nav.go('dash')</code> → 모든 <code>.pg</code> 숨기고 대상만 표시 → <code>Pages.X.render()</code>가 <code>Store.get*()</code>로 메모리에서 데이터를 읽어 DOM 렌더.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">4</div>
+      <div class="body">
+        <div class="t">사용자 입력 (낙관적 업데이트)</div>
+        <div class="d">페이지가 <code>Store.upsertLot/Daily/...</code>로 메모리 즉시 갱신 → <code>Api.append/update/delete</code>가 큐에 push → 300ms 디바운스 후 순차 flush. UI는 서버 응답을 기다리지 않음. 실패 시 1회 재시도, 그래도 실패하면 토스트로 알림.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">5</div>
+      <div class="body">
+        <div class="t">자동 변경 로그</div>
+        <div class="d"><code>Api.log(category, action, lotNo, summary)</code> 호출로 <code>logs</code> 시트에 한 행 기록. 업데이트 현황 → 데이터 변경 로그 탭에서 조회.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">6</div>
+      <div class="body">
+        <div class="t">크롤러 (별도 트랙)</div>
+        <div class="d">GitHub Actions cron(매일 KST 11:00) → <code>crawler/crawl_dram_price.py</code>가 Playwright로 TrendForce 페이지 4개 테이블 파싱 → gspread로 DRAM Price 시트북에 누적 append. 마지막에 <code>.last_crawl</code> 커밋해 스케줄 자동 중지를 방지.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="n">7</div>
+      <div class="body">
+        <div class="t">배포</div>
+        <div class="d"><code>main</code> 브랜치에 푸시되면 <code>.github/workflows/deploy.yml</code>이 GitHub Pages로 정적 자산 그대로 업로드. 별도 빌드 단계 없음.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─────────────────────────────────────────────────────────────
+     6. 보안 · 자동화 · 외부 의존
+     ───────────────────────────────────────────────────────────── -->
+<section>
+  <h2><span class="num">6</span>운영 — 보안 · 자동화 · 외부 의존</h2>
+
+  <div class="two-col">
+    <div class="info">
+      <h3><span class="ic">🔒</span>보안 모델</h3>
+      <ul>
+        <li><b>비밀번호</b> Apps Script <code>PASSWORD</code> 상수에만 존재 — 프론트 코드와 GitHub에는 노출 안 됨</li>
+        <li><b>토큰</b> 48자 랜덤, <code>PropertiesService</code>에 JSON 배열로 저장, 8시간 만료, 슬라이딩 갱신(잔여 50%↓ 시)</li>
+        <li><b>다중 기기</b> 최대 50개 토큰 동시 보유 (기기/탭별 독립), 초과 시 가장 오래된 것부터 제거</li>
+        <li><b>잠금</b> 5회 실패 시 3분간 로그인 차단</li>
+        <li><b>동시성</b> 토큰 저장은 <code>LockService</code>로 보호</li>
+        <li><b>전송</b> 로그인은 POST(비밀번호) / 데이터는 토큰을 URL 또는 body에 포함</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      <h3><span class="ic">⚙</span>자동화 (GitHub Actions)</h3>
+      <ul>
+        <li><b>deploy.yml</b> main 푸시 트리거 → GitHub Pages 배포 (configure-pages → upload-pages-artifact → deploy-pages)</li>
+        <li><b>crawl_dram_price.yml</b> 매일 02:00 UTC (KST 11:00) → Python 3.11 + Playwright Chromium → 시트 append → <code>.last_crawl</code> 자동 커밋(스케줄 비활성화 방지)</li>
+        <li><b>시크릿</b> <code>DRAM_PRICE_SHEET_ID</code>, <code>GCP_CREDENTIALS</code> (서비스 계정 JSON)</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      <h3><span class="ic">⬡</span>외부 라이브러리</h3>
+      <ul>
+        <li><b>Chart.js 4.4.1</b> + datalabels 플러그인 — 모든 차트</li>
+        <li><b>xlsx-js-style 1.2.0</b> — 엑셀 다운로드 (셀 스타일 포함)</li>
+        <li><b>Pretendard</b> + DM Mono — 폰트 (jsDelivr/Google Fonts CDN)</li>
+        <li><b>Playwright + gspread</b> — 크롤러용 (런타임에만 GitHub Actions에서 사용)</li>
+      </ul>
+    </div>
+
+    <div class="info">
+      <h3><span class="ic">↻</span>저장 큐 동작</h3>
+      <ul>
+        <li><b>일반 저장</b> <code>Api.append/update/delete</code> → 300ms 디바운스 → 순차 flush, 실패 1회 재시도, 즉시 <code>{success:true, optimistic:true}</code> 반환</li>
+        <li><b>중요 저장</b> <code>Api.appendNow</code>는 큐 없이 즉시 전송하고 응답 대기 (일별 처리 등 정합성 중요한 경로)</li>
+        <li><b>상태 표시</b> 사이드바 좌하단 점 + 상단 <code>#ss-bar</code>에 ok/saving/err 시각화</li>
+        <li><b>설정값</b> <code>Store.setSetting</code>은 메모리·localStorage 폴백·서버 3중 저장</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<footer>
+  생성: 2026-06-04 · 원본 코드: <code>js/</code> · <code>apps-script/Code.gs</code> · <code>crawler/</code> · <code>.github/workflows/</code>
+</footer>
+
+</div>
+</body>
+</html>
