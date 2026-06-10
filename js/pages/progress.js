@@ -744,15 +744,49 @@ Pages.Progress = (() => {
     const isDram = lot.biz === 'DRAM';
     const cum    = getLotCumulative(lot.id, dailies);
     const hist   = dailies.filter(r => String(r.lotId)===String(lot.id)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+    const mos    = Store.getMosByLot(lot.id);
 
     const colGrid = isDram ? '90px 60px 60px 60px 70px 70px 70px 1fr 30px' : '90px 70px 70px 70px 1fr 30px';
+
+    // ── MO 목록 ─────────────────────────────────────────────
+    const moHeader = mos.length ? `
+      <div style="display:grid;grid-template-columns:1fr 80px 80px 80px 60px 30px;gap:8px;padding:5px 0;border-bottom:1.5px solid var(--bd);font-size:12px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em">
+        <span>MO 번호</span><span style="text-align:right">수량</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span style="text-align:center">진행</span><span></span>
+      </div>` : '';
+
+    const moRows = mos.length === 0
+      ? '<div style="font-size:13px;color:var(--tx3);padding:8px 0;text-align:center">등록된 MO 없음 — DO 직접 입력만 가능</div>'
+      : mos.map(m => {
+          const mq  = parseNumber(m.qty);
+          const mc  = getMoCumulative(m.id, dailies);
+          const mr  = Math.max(0, mq - mc);
+          const mp  = mq > 0 ? Math.min(100, Math.round(mc / mq * 100)) : 0;
+          const pbC = mr === 0 && mq > 0 ? '#1A7F37' : CONFIG.BIZ_COLORS[lot.biz];
+          return `
+            <div style="display:grid;grid-template-columns:1fr 80px 80px 80px 60px 30px;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px;align-items:center">
+              <span style="font-family:var(--font-mono);font-weight:500">${m.moNo}</span>
+              <span style="font-family:var(--font-mono);text-align:right">${mq > 0 ? formatNumber(mq) : '-'}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:${CONFIG.BIZ_COLORS[lot.biz]}">${formatNumber(mc)}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:${mr > 0 ? 'var(--tx3)' : 'var(--tx)'}">${mq > 0 ? formatNumber(mr) : '-'}</span>
+              <span style="text-align:center;font-size:12px;color:${pbC};font-weight:500">${mq > 0 ? mp + '%' : '-'}</span>
+              <button class="btn del sm" style="padding:2px 5px;font-size:13px" onclick="Pages.Progress.deleteMo(${m.id},${lot.id})" title="MO 삭제">✕</button>
+            </div>`;
+        }).join('');
+
+    const moOptions = mos.map(m => {
+      const mc = getMoCumulative(m.id, dailies);
+      const mq = parseNumber(m.qty);
+      const mr = mq > 0 ? Math.max(0, mq - mc) : null;
+      return `<option value="${m.id}">${m.moNo}${mr !== null ? ` (잔 ${formatNumber(mr)})` : ''}</option>`;
+    }).join('');
 
     const histRows = hist.length === 0
       ? `<div style="font-size:13px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal)+parseNumber(r.noBoot)+parseNumber(r.abnormal))||parseNumber(r.proc) : parseNumber(r.proc);
+          const moTag = r.moNo ? `<span style="display:inline-block;font-size:10px;padding:1px 5px;background:#EEF4FF;color:#1e40af;border-radius:3px;font-family:var(--font-mono);margin-left:4px">${r.moNo}</span>` : '';
           return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
-            <span style="font-family:var(--font-mono)">${r.date}</span>
+            <span style="font-family:var(--font-mono)">${r.date}${moTag}</span>
             ${isDram?`<span style="font-family:var(--font-mono);color:var(--tx);text-align:right">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.abnormal))}</span>`:''}
             <span style="font-family:var(--font-mono);font-weight:500;text-align:right">${formatNumber(tot)}</span>
             <span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.cumul))}</span>
@@ -772,6 +806,21 @@ Pages.Progress = (() => {
 
     return `
       <div style="padding:14px 16px;background:var(--bg)">
+        <!-- MO 관리 ──────────────────────────────────────────── -->
+        <div style="margin-bottom:14px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)">MO 목록 <span style="font-weight:400;font-size:12px;text-transform:none;letter-spacing:0">— 이 DO에 속한 Material Order</span></div>
+            <span style="font-size:12px;color:var(--tx3)">${mos.length}개</span>
+          </div>
+          ${moHeader}
+          ${moRows}
+          <div style="display:flex;gap:6px;margin-top:10px;align-items:flex-end">
+            <div class="fld" style="margin:0;flex:1"><label style="font-size:11px">MO 번호</label><input type="text" id="mo-no-${lot.id}" placeholder="예: MO-001" style="width:100%;padding:5px 8px"></div>
+            <div class="fld" style="margin:0;width:100px"><label style="font-size:11px">수량 (선택)</label><input type="number" id="mo-qty-${lot.id}" placeholder="0" min="0" style="width:100%;padding:5px 8px;text-align:right"></div>
+            <button class="btn pri sm" onclick="Pages.Progress.addMo(${lot.id})" style="height:30px;white-space:nowrap">+ MO 추가</button>
+          </div>
+        </div>
+
         <div style="font-size:13px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:8px">처리 이력 (${hist.length}건)</div>
         ${histHeader}${histRows}
 
@@ -790,6 +839,17 @@ Pages.Progress = (() => {
 
           <!-- 직접 입력 탭 -->
           <div id="dp-panel-manual-${lot.id}" style="padding:14px">
+
+            <!-- MO 선택 (MO 있을 때만) -->
+            ${mos.length ? `
+            <div style="margin-bottom:12px">
+              <div class="fld" style="margin:0"><label style="font-size:11px">입력 대상 <span style="font-weight:400;color:var(--tx3)">— MO 선택 시 해당 MO에 귀속, 미선택은 DO 직접 입력</span></label>
+                <select id="dp-mo-${lot.id}" style="width:100%;padding:5px 8px">
+                  <option value="">▣ DO 직접 입력 (${lot.lotNo})</option>
+                  ${moOptions}
+                </select>
+              </div>
+            </div>` : ''}
 
             <!-- 1행: 날짜 · 처리량 · 잔량 · 완료여부 -->
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
@@ -915,7 +975,13 @@ Pages.Progress = (() => {
     const remNew   = Math.max(0, parseNumber(lot.qty)-cumNew);
     const isDone   = document.getElementById('dp-done-'+lotId)?.value==='1' || remNew===0;
 
-    const record = { id:Date.now(), date, lotId:lot.id, lotNo:lot.lotNo||lot.id, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc, normal, noBoot, abnormal, cumul:cumNew, remain:remNew, note:document.getElementById('dp-note-'+lotId)?.value||'', done:isDone?'1':'0' };
+    // MO 선택 여부 (선택 시 해당 MO에 귀속)
+    const moSelEl = document.getElementById('dp-mo-'+lotId);
+    const moId    = moSelEl?.value || '';
+    const mo      = moId ? Store.getMoById(moId) : null;
+    const moNo    = mo ? mo.moNo : '';
+
+    const record = { id:Date.now(), date, lotId:lot.id, lotNo:lot.lotNo||lot.id, moId, moNo, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc, normal, noBoot, abnormal, cumul:cumNew, remain:remNew, note:document.getElementById('dp-note-'+lotId)?.value||'', done:isDone?'1':'0' };
 
     // 저장 중 버튼 비활성화
     const saveBtn = document.querySelector(`[onclick="Pages.Progress.saveDaily(${lotId})"]`);
@@ -938,6 +1004,49 @@ Pages.Progress = (() => {
     if (ok) { ok.style.display='inline'; setTimeout(()=>ok.style.display='none',1500); }
     UI.toast('저장됨');
     render();
+  }
+
+  // ── MO 추가 / 삭제 ─────────────────────────────────────────
+  async function addMo(lotId) {
+    const lot   = Store.getLotById(lotId); if (!lot) return;
+    const noEl  = document.getElementById('mo-no-'+lotId);
+    const qtyEl = document.getElementById('mo-qty-'+lotId);
+    const moNo  = (noEl?.value || '').trim();
+    const qty   = parseNumber(qtyEl?.value);
+    if (!moNo) { UI.toast('MO 번호는 필수입니다', true); noEl?.focus(); return; }
+
+    const dup = Store.getMosByLot(lot.id).some(m => m.moNo.toLowerCase() === moNo.toLowerCase());
+    if (dup) { UI.toast('이미 등록된 MO 번호입니다', true); return; }
+
+    const record = { id: Date.now(), lotId: lot.id, lotNo: lot.lotNo || String(lot.id), moNo, qty, note: '' };
+    Store.upsertMo(record);
+    if (noEl)  noEl.value  = '';
+    if (qtyEl) qtyEl.value = '';
+    render();
+    UI.toast('MO 추가됨');
+    Api.append(CONFIG.SHEETS.MOS, record);
+    Api.log('MO', '등록', lot.lotNo || String(lot.id), `MO ${moNo}${qty ? ` (수량 ${formatNumber(qty)})` : ''} 추가`);
+  }
+
+  async function deleteMo(moId, lotId) {
+    const mo = Store.getMoById(moId); if (!mo) return;
+    const linked = Store.getDailies().filter(d => String(d.moId) === String(moId));
+    const msg = linked.length
+      ? `MO ${mo.moNo} 삭제 시 연결된 처리 기록 ${linked.length}건은 DO 직접 입력으로 전환됩니다. 계속하시겠습니까?`
+      : `MO ${mo.moNo} 를 삭제하시겠습니까?`;
+    if (!confirm(msg)) return;
+
+    for (const d of linked) {
+      const upd = { ...d, moId: '', moNo: '' };
+      Store.upsertDaily(upd);
+      Api.update(CONFIG.SHEETS.DAILY, d.id, upd);
+    }
+    Store.deleteMo(moId);
+    Api.delete(CONFIG.SHEETS.MOS, moId);
+    const lot = Store.getLotById(lotId);
+    Api.log('MO', '삭제', lot?.lotNo || String(lotId), `MO ${mo.moNo} 삭제${linked.length ? ` (연결 처리 ${linked.length}건은 DO 직접 입력으로 전환)` : ''}`);
+    render();
+    UI.toast('MO 삭제됨');
   }
 
   // ── 삭제 ───────────────────────────────────────────────────
@@ -1303,6 +1412,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
+  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, addMo, deleteMo, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
 
 })();
