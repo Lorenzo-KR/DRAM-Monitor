@@ -80,39 +80,44 @@ Pages.Forecast = (() => {
 
     const num = (v) => formatNumber(Math.round(v));
     const usd = (v) => '$' + num(v);
+    const prc = (v) => v > 0 ? '$' + v.toFixed(2) : '—';
 
-    const monthRows = monthly.map(x => `
+    // 고정 열폭 — 실적/예측 표가 동일 너비를 공유해 자릿수가 정렬됨
+    const cols = `<colgroup><col style="width:14%"><col style="width:24%"><col style="width:26%"><col style="width:36%"></colgroup>`;
+
+    // 월 오름차순 정렬
+    const sorted = monthly.slice().sort((a, b) => a.m - b.m);
+
+    const monthRows = sorted.map(x => `
       <tr>
-        <td style="padding:6px 10px;font-family:var(--font-mono);font-size:13px;color:var(--tx2)">${String(x.m).padStart(2,'0')}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx2)">${x.qty > 0 ? num(x.qty) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx2)">${x.monthAvgPrice > 0 ? '$' + x.monthAvgPrice.toFixed(2) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx)">${x.rev > 0 ? usd(x.rev) : '—'}</td>
+        <td class="l">${String(x.m).padStart(2,'0')}</td>
+        <td class="r">${x.qty > 0 ? num(x.qty) : '—'}</td>
+        <td class="r">${prc(x.monthAvgPrice)}</td>
+        <td class="r rev">${x.rev > 0 ? usd(x.rev) : '—'}</td>
       </tr>`).join('');
 
-    const actualSumQty = nonZero.reduce((s, x) => s + x.qty, 0);
-    const actualSumRev = nonZero.reduce((s, x) => s + x.rev, 0);
     const sumRow = monthly.length ? `
-      <tr style="border-top:1px solid var(--bd2)">
-        <td style="padding:6px 10px;font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em">평균</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">${num(avgMonthlyQty)}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">${avgPrice > 0 ? '$' + avgPrice.toFixed(2) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">${usd(avgActualRev)}</td>
+      <tr class="sum">
+        <td class="l lbl">평균</td>
+        <td class="r">${num(avgMonthlyQty)}</td>
+        <td class="r">${prc(avgPrice)}</td>
+        <td class="r">${usd(avgActualRev)}</td>
       </tr>` : '';
 
     const fcRows = forecast.length ? forecast.map(f => `
-      <tr>
-        <td style="padding:6px 10px;font-family:var(--font-mono);font-size:13px;color:var(--tx2);font-style:italic">${String(f.m).padStart(2,'0')}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx2);font-style:italic">${num(avgMonthlyQty)}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx2);font-style:italic">${avgPrice > 0 ? '$' + avgPrice.toFixed(2) : '—'}</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;color:var(--tx);font-weight:600">${usd(f.rev)}</td>
+      <tr class="fc">
+        <td class="l">${String(f.m).padStart(2,'0')}</td>
+        <td class="r">${num(avgMonthlyQty)}</td>
+        <td class="r">${prc(avgPrice)}</td>
+        <td class="r rev">${usd(f.rev)}</td>
       </tr>`).join('') : '<tr><td colspan="4" style="padding:10px;text-align:center;color:var(--tx3);font-size:12px">예측 구간 없음</td></tr>';
 
     const fcSumRow = forecast.length ? `
-      <tr style="border-top:1px solid var(--bd2)">
-        <td style="padding:6px 10px;font-size:10px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em">합계</td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">${num(avgMonthlyQty * forecast.length)}</td>
-        <td style="padding:6px 10px"></td>
-        <td style="padding:6px 10px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--tx)">${usd(forecastPerMonth * forecast.length)}</td>
+      <tr class="sum">
+        <td class="l lbl">합계</td>
+        <td class="r">${num(avgMonthlyQty * forecast.length)}</td>
+        <td class="r">—</td>
+        <td class="r">${usd(forecastPerMonth * forecast.length)}</td>
       </tr>` : '';
 
     return `
@@ -143,24 +148,26 @@ Pages.Forecast = (() => {
 
           <!-- 실적 표 -->
           <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">실적</div>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
-            <thead><tr style="border-bottom:1px solid var(--bd)">
-              <th style="padding:5px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">월</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">입고량</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">LOT 평균단가</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">매출 실적 (USD)</th>
+          <table class="fc-tbl" style="margin-bottom:14px">
+            ${cols}
+            <thead><tr>
+              <th class="l">월</th>
+              <th class="r">입고량</th>
+              <th class="r">LOT 단가</th>
+              <th class="r">매출 (USD)</th>
             </tr></thead>
             <tbody>${monthRows || '<tr><td colspan="4" style="padding:10px;text-align:center;color:var(--tx3);font-size:12px">데이터 없음</td></tr>'}${sumRow}</tbody>
           </table>
 
           <!-- 예측 표 -->
           <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">예측 — 월평균 입고량 × 평균 단가</div>
-          <table style="width:100%;border-collapse:collapse">
-            <thead><tr style="border-bottom:1px solid var(--bd)">
-              <th style="padding:5px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">월</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">예상 입고량</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">단가</th>
-              <th style="padding:5px 10px;text-align:right;font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">예측 매출</th>
+          <table class="fc-tbl">
+            ${cols}
+            <thead><tr>
+              <th class="l">월</th>
+              <th class="r">예상 입고량</th>
+              <th class="r">단가</th>
+              <th class="r">예측 매출</th>
             </tr></thead>
             <tbody>${fcRows}${fcSumRow}</tbody>
           </table>
