@@ -13,6 +13,7 @@ const Store = (() => {
   // ── Private state ──────────────────────────────────────────
   let _customers = [];
   let _lots      = [];
+  let _mos       = [];
   let _dailies   = [];
   let _settings  = {};
   let _invoices  = [];
@@ -28,6 +29,7 @@ const Store = (() => {
     // Data
     getCustomers:  () => [..._customers],
     getLots:       () => [..._lots],
+    getMos:        () => [..._mos],
     getDailies:    () => [..._dailies],
     getInvoices:   () => [..._invoices],
     getShipments:  () => [..._shipments],
@@ -35,6 +37,8 @@ const Store = (() => {
 
     // Single record lookups
     getLotById:      (id) => _lots.find(l => String(l.id) === String(id)) || null,
+    getMoById:       (id) => _mos.find(m => String(m.id) === String(id)) || null,
+    getMosByLot:     (lotId) => _mos.filter(m => String(m.lotId) === String(lotId)),
     getInvoiceById:  (id) => _invoices.find(i => String(i.id) === String(id)) || null,
     getShipmentById: (id) => _shipments.find(s => String(s.id) === String(id)) || null,
     getTargetFor:    (year, biz) => _targets.find(t => String(t.year) === String(year) && t.biz === biz) || null,
@@ -42,6 +46,7 @@ const Store = (() => {
     // ── Setters ──────────────────────────────────────────────
     setCustomers:  (data) => { _customers = data; },
     setLots:       (data) => { _lots      = data; },
+    setMos:        (data) => { _mos       = data; },
     setDailies:    (data) => { _dailies   = data; },
     setInvoices:   (data) => { _invoices  = data; },
     setShipments:  (data) => { _shipments = data; },
@@ -52,6 +57,11 @@ const Store = (() => {
       const idx = _lots.findIndex(l => String(l.id) === String(lot.id));
       if (idx >= 0) _lots[idx] = lot;
       else _lots.push(lot);
+    },
+    upsertMo: (mo) => {
+      const idx = _mos.findIndex(m => String(m.id) === String(mo.id));
+      if (idx >= 0) _mos[idx] = mo;
+      else _mos.push(mo);
     },
     upsertDaily: (daily) => {
       const idx = _dailies.findIndex(d => String(d.id) === String(daily.id));
@@ -76,6 +86,7 @@ const Store = (() => {
 
     // Delete by id
     deleteLot:      (id) => { _lots      = _lots.filter(l => String(l.id) !== String(id)); },
+    deleteMo:       (id) => { _mos       = _mos.filter(m => String(m.id) !== String(id)); },
     deleteDaily:    (id) => { _dailies   = _dailies.filter(d => String(d.id) !== String(id)); },
     deleteInvoice:  (id) => { _invoices  = _invoices.filter(i => String(i.id) !== String(id)); },
     deleteShipment: (id) => { _shipments = _shipments.filter(s => String(s.id) !== String(id)); },

@@ -19,6 +19,7 @@ const CONFIG = {
     CUSTOMERS: 'customers',
     LOTS:      'lots',
     DAILY:     'daily',
+    MOS:       'mos',
     INVOICES:  'invoices',
     SHIPMENTS: 'shipments',
     TARGETS:   'targets',
