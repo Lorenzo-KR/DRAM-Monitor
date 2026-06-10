@@ -23,6 +23,7 @@ const Nav = (() => {
     progress:   { render: () => { Pages.Progress.initYearTabs(); Pages.Progress.render(); Pages.Progress.renderChart(); } },
     bizhistory: { render: () => Pages.BizHistory.render() },
     revenue:    { render: () => { Pages.Revenue.setMode('year'); } },
+    forecast:   { render: () => Pages.Forecast.render() },
     kpitarget:  { render: () => Pages.KpiTarget.render() },
     verify:     { render: () => Pages.Verify.render() },
     customers:  { render: () => Pages.Customers.render() },
