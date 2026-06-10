@@ -37,8 +37,20 @@ const DataLoader = (() => {
       country:  String(row.country || '').trim().toUpperCase(),
       biz:      String(row.biz     || '').trim().toUpperCase(),
       lotId:    String(row.lotId   || '').trim(),
+      moId:     String(row.moId    || '').trim(),
+      moNo:     String(row.moNo    || '').trim(),
       done:     String(row.done    || '0').trim(),
       date:     normalizeDate(row.date),
+    };
+  }
+
+  function normalizeMo(row) {
+    return {
+      ...row,
+      qty:    parseNumber(row.qty),
+      lotId:  String(row.lotId || '').trim(),
+      lotNo:  String(row.lotNo || '').trim(),
+      moNo:   String(row.moNo  || '').trim(),
     };
   }
 
@@ -125,6 +137,7 @@ const DataLoader = (() => {
 
         Store.setCustomers((data.customers || []).map(normalizeCustomer));
         Store.setLots((data.lots || []).map(normalizeLot));
+        Store.setMos((data.mos || []).map(normalizeMo));
         Store.setDailies((data.daily || []).map(normalizeDaily));
         Store.setInvoices((data.invoices || []).map(normalizeInvoice));
         Store.setShipments((data.shipments || []).map(normalizeShipment));
@@ -192,6 +205,11 @@ const DataLoader = (() => {
     async reloadDailies() {
       const raw = await Api.getAll(CONFIG.SHEETS.DAILY);
       Store.setDailies(raw.map(normalizeDaily));
+    },
+
+    async reloadMos() {
+      const raw = await Api.getAll(CONFIG.SHEETS.MOS);
+      Store.setMos(raw.map(normalizeMo));
     },
 
     async reloadInvoices() {

@@ -14,7 +14,8 @@ var LOCKOUT_MS      = 3 * 60 * 1000;
 
 var HEADERS = {
   lots:      ['id','biz','country','customerName','lotNo','inDate','targetDate','qty','unit','price','currency','product','note','done','actualDone'],
-  daily:     ['id','date','lotId','lotNo','biz','country','customerName','proc','normal','noBoot','abnormal','cumul','remain','note','done'],
+  daily:     ['id','date','lotId','lotNo','biz','country','customerName','proc','normal','noBoot','abnormal','cumul','remain','note','done','moId','moNo'],
+  mos:       ['id','lotId','lotNo','moNo','qty','note'],
   invoices:  ['id','no','date','due','lotId','lotNo','biz','country','customerName','amount','vat','total','currency','status','paidDate','paidAmt','note'],
   customers: ['id','name','country','biz','contact','currency','note'],
   targets:   ['id','year','biz','target'],
@@ -26,6 +27,7 @@ var HEADERS = {
 var DATE_COLS = {
   lots:      ['inDate','targetDate','actualDone'],
   daily:     ['date'],
+  mos:       [],
   invoices:  ['date','due','paidDate'],
   customers: [],
   targets:   [],
@@ -202,6 +204,7 @@ function doGet(e) {
       result = {
         lots:      getAll('lots'),
         daily:     getAll('daily'),
+        mos:       getAll('mos'),
         invoices:  getAll('invoices'),
         customers: getAll('customers'),
         targets:   getAll('targets'),

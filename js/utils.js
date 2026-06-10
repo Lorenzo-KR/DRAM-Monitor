@@ -191,6 +191,8 @@ function getLotStatus(lot) {
 
 /**
  * LOT의 누적 처리량 (dailies 기준)
+ * DO 직접 입력(moId 빈값) + 해당 DO에 속한 MO들의 입력(moId 채움)을
+ * 모두 합산. 모든 daily 레코드는 lotId(=DO id)를 가지므로 필터만으로 충분.
  * @param {string|number} lotId
  * @param {Array} dailies
  * @returns {number}
@@ -198,6 +200,19 @@ function getLotStatus(lot) {
 function getLotCumulative(lotId, dailies) {
   return dailies
     .filter(d => String(d.lotId) === String(lotId))
+    .reduce((total, d) => total + parseNumber(d.proc), 0);
+}
+
+/**
+ * 특정 MO의 누적 처리량
+ * @param {string|number} moId
+ * @param {Array} dailies
+ * @returns {number}
+ */
+function getMoCumulative(moId, dailies) {
+  if (!moId) return 0;
+  return dailies
+    .filter(d => String(d.moId) === String(moId))
     .reduce((total, d) => total + parseNumber(d.proc), 0);
 }
 
