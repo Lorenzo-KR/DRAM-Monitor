@@ -1,6 +1,8 @@
 /**
  * pages/dailyInput.js
- * 일별 처리 입력 — LOT 아코디언 카드 + 엑셀 붙여넣기 팝업
+ * 처리량 입력 — LOT 아코디언 카드 + MO 관리 + 엑셀 붙여넣기
+ *
+ * UI 규칙: 모노톤 / 색 최소화 — feedback_ui_style 메모리 참조
  */
 
 Pages.DailyInput = (() => {
@@ -28,7 +30,7 @@ Pages.DailyInput = (() => {
     const wrap = document.getElementById('dp-lot-cards');
     const info = document.getElementById('dp-filter-info');
     if (!_co || !_biz) {
-      wrap.innerHTML = '<div class="empty" style="padding:48px">위에서 국가와 사업을 선택하면 LOT 목록이 표시됩니다</div>';
+      wrap.innerHTML = '<div class="empty" style="padding:48px;color:var(--tx3)">위에서 국가와 사업을 선택하면 LOT 목록이 표시됩니다</div>';
       info.textContent = ''; return;
     }
 
@@ -40,40 +42,43 @@ Pages.DailyInput = (() => {
     info.textContent = (CONFIG.COUNTRY_LABELS[_co] || _co) + ' · ' + (CONFIG.BIZ_LABELS[_biz] || _biz) + ' · ' + lots.length + '건';
 
     if (!lots.length) {
-      wrap.innerHTML = `<div class="empty" style="padding:40px">등록된 LOT가 없습니다<br><a href="#" onclick="Nav.go('lotreg');return false;" style="color:var(--navy);font-weight:500">LOT 등록하러 가기</a></div>`;
+      wrap.innerHTML = '<div class="empty" style="padding:40px;color:var(--tx3)">등록된 LOT가 없습니다</div>';
       return;
     }
 
     wrap.innerHTML = lots.map(lot => {
-      const st    = getLotStatus(lot);
-      const cum   = getLotCumulative(lot.id, dailies);
-      const rem   = getLotRemaining(lot, dailies);
-      const pct   = getLotProgress(lot, dailies);
-      const dd    = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
-      const ddColor = dd === null ? 'var(--tx3)' : dd < 0 ? '#dc2626' : dd <= 3 ? '#92400e' : 'var(--tx2)';
-      const ddText  = dd === null ? '-' : dd < 0 ? 'D+' + Math.abs(dd) : dd === 0 ? 'D-Day' : 'D-' + dd;
-      const pbC   = st === 'done' ? '#16a34a' : st === 'overdue' ? '#dc2626' : pct >= 70 ? CONFIG.BIZ_COLORS.SSD : CONFIG.BIZ_COLORS[_biz];
-      const isOpen = _openId === lot.id;
+      const st     = getLotStatus(lot);
+      const cum    = getLotCumulative(lot.id, dailies);
+      const rem    = getLotRemaining(lot, dailies);
+      const pct    = getLotProgress(lot, dailies);
+      const dd     = lot.targetDate ? diffDays(today(), lot.targetDate) : null;
+      const ddText = dd === null ? '—' : dd < 0 ? 'D+' + Math.abs(dd) : dd === 0 ? 'D-Day' : 'D-' + dd;
+      const ddWeight = dd !== null && dd <= 3 ? 600 : 400;
+      const isOpen   = _openId === lot.id;
+      const stLabel  = st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행';
 
       return `
-        <div class="lot-acc-card" id="acc-${lot.id}" style="border:1px solid var(--bd);border-radius:var(--r);margin-bottom:8px;overflow:hidden;border-left:4px solid ${CONFIG.BIZ_COLORS[_biz]}">
-          <div onclick="Pages.DailyInput.toggleCard(${lot.id})" style="padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:${isOpen ? 'var(--bg)' : 'var(--card)'};transition:.15s">
-            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
-              <span style="font-size:14px;font-weight:600;font-family:var(--font-mono);flex-shrink:0">${lot.lotNo || lot.id}</span>
-              <div style="display:flex;gap:10px;font-size:14px;color:var(--tx2)">
-                <span>입고 <b style="color:var(--tx)">${formatNumber(parseNumber(lot.qty))}</b></span>
-                <span>처리 <b style="color:${CONFIG.BIZ_COLORS[_biz]}">${formatNumber(cum)}</b></span>
-                <span>잔량 <b style="color:${rem > 0 ? '#92400e' : '#166534'}">${formatNumber(rem)}</b></span>
+        <div id="acc-${lot.id}" style="border:1px solid var(--bd);border-radius:var(--rs);margin-bottom:8px;overflow:hidden;background:var(--card)">
+          <div onclick="Pages.DailyInput.toggleCard(${lot.id})"
+               style="padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:${isOpen ? 'var(--bg)' : 'var(--card)'};transition:background .15s">
+            <div style="display:flex;align-items:center;gap:18px;flex:1;min-width:0">
+              <span style="font-size:13px;font-weight:600;font-family:var(--font-mono);color:var(--tx);flex-shrink:0">${lot.lotNo || lot.id}</span>
+              <div style="display:flex;gap:18px;font-size:12px;color:var(--tx2)">
+                <span>입고 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(parseNumber(lot.qty))}</span></span>
+                <span>처리 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(cum)}</span></span>
+                <span>잔량 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:${rem > 0 ? 500 : 400}">${formatNumber(rem)}</span></span>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-                <div style="width:70px;height:5px;background:var(--bd);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${pbC};width:${pct}%"></div></div>
-                <span style="font-size:14px;font-weight:600;color:${pbC}">${pct}%</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                <div style="width:70px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">
+                  <div style="height:100%;background:var(--tx2);width:${pct}%"></div>
+                </div>
+                <span style="font-size:12px;font-family:var(--font-mono);color:var(--tx2);min-width:32px">${pct}%</span>
               </div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:12px">
-              <span style="font-size:14px;font-weight:500;color:${ddColor}">${ddText}</span>
-              ${renderStatusBadge(st)}
-              <svg width="14" height="14" fill="none" viewBox="0 0 16 16" style="transition:transform .2s;transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'}"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div style="display:flex;align-items:center;gap:14px;flex-shrink:0;margin-left:12px">
+              <span style="font-size:12px;font-family:var(--font-mono);color:var(--tx2);font-weight:${ddWeight}">${ddText}</span>
+              <span style="font-size:11px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;min-width:36px;text-align:right">${stLabel}</span>
+              <svg width="12" height="12" fill="none" viewBox="0 0 16 16" style="transition:transform .15s;transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'};color:var(--tx3)"><path d="M3 6l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
           </div>
           ${isOpen ? _renderCardBody(lot, dailies) : ''}
@@ -87,28 +92,27 @@ Pages.DailyInput = (() => {
     const hist   = dailies.filter(r => String(r.lotId) === String(lot.id)).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
     const mos    = Store.getMosByLot(lot.id);
 
-    // ── MO 목록 (이 DO에 속한 MO들) ──
+    // ── MO 목록 ────────────────────────────────────────────
     const moHeader = mos.length ? `
-      <div style="display:grid;grid-template-columns:1fr 90px 90px 90px 70px 30px;gap:8px;padding:5px 0;border-bottom:2px solid var(--bd2);font-size:13px;font-weight:600;color:var(--tx3);text-transform:uppercase">
+      <div style="display:grid;grid-template-columns:1fr 80px 80px 80px 60px 30px;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">
         <span>MO 번호</span><span style="text-align:right">수량</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span style="text-align:center">진행</span><span></span>
       </div>` : '';
 
     const moRows = mos.length === 0
-      ? '<div style="font-size:13px;color:var(--tx3);padding:8px 0;text-align:center">등록된 MO 없음 — DO 직접 입력만 가능</div>'
+      ? '<div style="font-size:12px;color:var(--tx3);padding:10px 0;text-align:center">등록된 MO 없음 — DO 직접 입력만 가능</div>'
       : mos.map(m => {
-          const mq  = parseNumber(m.qty);
-          const mc  = getMoCumulative(m.id, dailies);
-          const mr  = Math.max(0, mq - mc);
-          const mp  = mq > 0 ? Math.min(100, Math.round(mc / mq * 100)) : 0;
-          const pbC = mr === 0 && mq > 0 ? '#16a34a' : CONFIG.BIZ_COLORS[lot.biz];
+          const mq = parseNumber(m.qty);
+          const mc = getMoCumulative(m.id, dailies);
+          const mr = Math.max(0, mq - mc);
+          const mp = mq > 0 ? Math.min(100, Math.round(mc / mq * 100)) : 0;
           return `
-            <div style="display:grid;grid-template-columns:1fr 90px 90px 90px 70px 30px;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px;align-items:center">
-              <span style="font-family:var(--font-mono);font-weight:500">${m.moNo}</span>
-              <span style="font-family:var(--font-mono);text-align:right">${mq > 0 ? formatNumber(mq) : '-'}</span>
-              <span style="font-family:var(--font-mono);text-align:right;color:${CONFIG.BIZ_COLORS[lot.biz]}">${formatNumber(mc)}</span>
-              <span style="font-family:var(--font-mono);text-align:right;color:${mr > 0 ? '#92400e' : '#166534'}">${mq > 0 ? formatNumber(mr) : '-'}</span>
-              <span style="text-align:center;font-size:12px;color:${pbC};font-weight:600">${mq > 0 ? mp + '%' : '-'}</span>
-              <button class="btn del sm" style="padding:2px 5px;font-size:13px" onclick="Pages.DailyInput.deleteMo(${m.id},${lot.id})" title="MO 삭제">✕</button>
+            <div style="display:grid;grid-template-columns:1fr 80px 80px 80px 60px 30px;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px;align-items:center">
+              <span style="font-family:var(--font-mono);color:var(--tx)">${m.moNo}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${mq > 0 ? formatNumber(mq) : '—'}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx)">${formatNumber(mc)}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${mq > 0 ? formatNumber(mr) : '—'}</span>
+              <span style="text-align:center;font-size:11px;font-family:var(--font-mono);color:var(--tx2)">${mq > 0 ? mp + '%' : '—'}</span>
+              <button onclick="Pages.DailyInput.deleteMo(${m.id},${lot.id})" style="border:none;background:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:2px 4px" title="MO 삭제">✕</button>
             </div>`;
         }).join('');
 
@@ -119,75 +123,84 @@ Pages.DailyInput = (() => {
       return `<option value="${m.id}">${m.moNo}${mr !== null ? ` (잔 ${formatNumber(mr)})` : ''}</option>`;
     }).join('');
 
+    // ── 처리 이력 ──────────────────────────────────────────
+    const colGrid = isDram ? '90px 56px 56px 56px 70px 70px 70px 40px 1fr 30px' : '90px 70px 70px 70px 40px 1fr 30px';
     const histRows = hist.length === 0
-      ? '<div style="font-size:14px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
+      ? '<div style="font-size:12px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
       : hist.map(r => {
           const tot = isDram ? (parseNumber(r.normal) + parseNumber(r.noBoot) + parseNumber(r.abnormal)) || parseNumber(r.proc) : parseNumber(r.proc);
-          const moTag = r.moNo ? `<span style="display:inline-block;font-size:11px;padding:1px 5px;background:#EEF4FF;color:#1e40af;border-radius:3px;font-family:var(--font-mono);margin-left:4px">${r.moNo}</span>` : '';
+          const moTag = r.moNo ? `<span style="display:inline-block;font-size:10px;padding:1px 5px;background:var(--bg);color:var(--tx2);border:1px solid var(--bd);border-radius:2px;font-family:var(--font-mono);margin-left:6px">${r.moNo}</span>` : '';
           return `
-            <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
-              <span style="font-family:var(--font-mono)">${r.date}${moTag}</span>
-              ${isDram ? `<span style="font-family:var(--font-mono);color:#166534">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);color:#92400e">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);color:#991b1b">${formatNumber(parseNumber(r.abnormal))}</span>` : ''}
-              <span style="font-family:var(--font-mono);font-weight:600">${formatNumber(tot)}</span>
-              <span style="font-family:var(--font-mono);color:var(--tx2)">${formatNumber(parseNumber(r.cumul))}</span>
-              <span style="font-family:var(--font-mono);color:${parseNumber(r.remain) > 0 ? '#92400e' : '#166534'}">${formatNumber(parseNumber(r.remain))}</span>
-              <span>${r.done === '1' ? '<span class="bdg b-done" style="font-size:14px">완료</span>' : ''}</span>
-              <span style="color:var(--tx3);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note || ''}</span>
-              <button class="btn del sm" style="padding:2px 6px;font-size:15px" onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})">✕</button>
+            <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px;align-items:center">
+              <span style="font-family:var(--font-mono);color:var(--tx2)">${r.date}${moTag}</span>
+              ${isDram ? `<span style="font-family:var(--font-mono);text-align:right;color:var(--tx)">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.abnormal))}</span>` : ''}
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx);font-weight:500">${formatNumber(tot)}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.cumul))}</span>
+              <span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.remain))}</span>
+              <span style="text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">${r.done === '1' ? '완료' : ''}</span>
+              <span style="color:var(--tx3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note || ''}</span>
+              <button onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})" style="border:none;background:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:2px 4px">✕</button>
             </div>`;
         }).join('');
 
+    const histHeader = `
+      <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">
+        <span>날짜</span>${isDram ? '<span style="text-align:right">Normal</span><span style="text-align:right">NoBoot</span><span style="text-align:right">Abnor.</span>' : ''}<span style="text-align:right">처리</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span style="text-align:center">완료</span><span>비고</span><span></span>
+      </div>`;
+
     return `
-      <div style="padding:16px;background:var(--bg);border-top:1px solid var(--bd)">
+      <div style="padding:18px 20px;background:var(--bg);border-top:1px solid var(--bd)">
         <!-- MO 관리 -->
-        <div style="margin-bottom:16px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div style="font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3)">MO 목록 <span style="font-weight:400;font-size:13px;text-transform:none;letter-spacing:0">— 이 DO에 속한 Material Order</span></div>
-            <span style="font-size:12px;color:var(--tx3)">${mos.length}개</span>
+        <div style="margin-bottom:18px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em">MO 목록</div>
+            <span style="font-size:11px;color:var(--tx3)">${mos.length}개</span>
           </div>
           ${moHeader}
           ${moRows}
-          <div style="display:flex;gap:6px;margin-top:10px;align-items:flex-end">
-            <div class="fld" style="flex:1"><label style="font-size:12px">MO 번호</label><input type="text" id="mo-no-${lot.id}" placeholder="예: MO-001" style="font-size:13px;padding:6px 8px"></div>
-            <div class="fld" style="width:110px"><label style="font-size:12px">수량 (선택)</label><input type="number" id="mo-qty-${lot.id}" placeholder="0" min="0" style="font-size:13px;padding:6px 8px"></div>
-            <button class="btn pri sm" onclick="Pages.DailyInput.addMo(${lot.id})" style="padding:6px 14px;font-size:13px">+ MO 추가</button>
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:flex-end;padding-top:12px;border-top:1px solid var(--bd)">
+            <div class="fld" style="flex:1;margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">MO 번호</label><input type="text" id="mo-no-${lot.id}" placeholder="예: MO-001" style="font-size:13px;padding:6px 8px;width:100%"></div>
+            <div class="fld" style="width:110px;margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">수량 (선택)</label><input type="number" id="mo-qty-${lot.id}" placeholder="0" min="0" style="font-size:13px;padding:6px 8px;width:100%;text-align:right"></div>
+            <button onclick="Pages.DailyInput.addMo(${lot.id})" style="padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px;white-space:nowrap">MO 추가</button>
           </div>
         </div>
 
-        <div style="font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:8px">처리 이력</div>
-        <div style="display:grid;grid-template-columns:90px ${isDram ? '55px 55px 55px ' : ' '}70px 70px 70px 60px 1fr 30px;gap:6px;padding:5px 0;border-bottom:2px solid var(--bd2);font-size:14px;font-weight:600;color:var(--tx3);text-transform:uppercase">
-          <span>날짜</span>${isDram ? '<span style="color:#166534">Normal</span><span style="color:#92400e">NoBoot</span><span style="color:#991b1b">Abnor.</span>' : ''}<span>처리</span><span>누적</span><span>잔량</span><span>완료</span><span>비고</span><span></span>
-        </div>
+        <!-- 처리 이력 -->
+        <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">처리 이력 (${hist.length}건)</div>
+        ${histHeader}
         ${histRows}
-        <div style="margin-top:16px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:14px">
-          <div style="font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:10px">새 처리 기록 입력</div>
-          ${mos.length ? `<div class="fld" style="margin-bottom:10px"><label>입력 대상 <span style="font-weight:400;color:var(--tx3);font-size:12px">— MO를 선택하면 해당 MO에 귀속, 미선택 시 DO에 직접 입력</span></label>
-            <select id="dp-mo-${lot.id}">
-              <option value="">▣ DO 직접 입력 (${lot.lotNo})</option>
+
+        <!-- 새 처리 기록 입력 -->
+        <div style="margin-top:18px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rs);padding:14px 16px">
+          <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">새 처리 기록 입력</div>
+          ${mos.length ? `
+          <div class="fld" style="margin-bottom:10px"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">입력 대상 <span style="text-transform:none;letter-spacing:0;font-weight:400;color:var(--tx3)">— MO 선택 시 해당 MO에 귀속</span></label>
+            <select id="dp-mo-${lot.id}" style="font-size:13px;padding:6px 8px;width:100%">
+              <option value="">DO 직접 입력 (${lot.lotNo})</option>
               ${moOptions}
             </select>
           </div>` : ''}
-          <div style="display:grid;grid-template-columns:${isDram ? '110px 110px 110px auto' : '110px 130px auto'};gap:10px;margin-bottom:${isDram ? '10px' : '0'}">
-            <div class="fld"><label>날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}"></div>
-            <div class="fld"><label>처리량 합계</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcRemaining(${lot.id})"></div>
-            <div class="fld"><label>오늘 후 잔량</label><input type="number" id="dp-rem-${lot.id}" readonly style="color:var(--tx2)" value="${Math.max(0, parseNumber(lot.qty) - cum)}"></div>
-            <div class="fld"><label>완료 여부</label>
-              <select id="dp-done-${lot.id}"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}" style="font-size:13px;padding:6px 8px;width:130px"></div>
+            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">처리량 합계</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcRemaining(${lot.id})" style="font-size:13px;padding:6px 8px;width:100px;text-align:right"></div>
+            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">잔량 (자동)</label><input type="number" id="dp-rem-${lot.id}" readonly value="${Math.max(0, parseNumber(lot.qty) - cum)}" style="font-size:13px;padding:6px 8px;width:100px;text-align:right;color:var(--tx2);background:var(--bg)"></div>
+            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">완료 여부</label>
+              <select id="dp-done-${lot.id}" style="font-size:13px;padding:6px 8px;width:110px"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
             </div>
           </div>
           ${isDram ? `
-            <div style="margin-bottom:10px">
-              <div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:6px">DRAM 분류 입력 <span style="font-weight:400;color:var(--tx3)">(합계 자동 계산)</span></div>
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-                <div class="fld"><label style="color:#166534">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="border-color:#bbf7d0;background:#f0fdf4"></div>
-                <div class="fld"><label style="color:#92400e">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="border-color:#fde68a;background:#fefce8"></div>
-                <div class="fld"><label style="color:#991b1b">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="border-color:#fca5a5;background:#fef2f2"></div>
-              </div>
-            </div>` : ''}
-          <div class="fld" style="margin-bottom:10px"><label>비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등"></div>
-          <div class="br">
-            <button class="btn pri sm" onclick="Pages.DailyInput.saveRecord(${lot.id})">저장</button>
-            <span id="dp-ok-${lot.id}" style="font-size:14px;color:#166534;display:none;font-weight:500">✓ 저장됨</span>
+          <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--bd)">
+            <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">DRAM 분류 <span style="font-weight:400;text-transform:none;letter-spacing:0">— 합계 자동 계산</span></div>
+            <div style="display:flex;gap:10px;align-items:flex-end">
+              <div class="fld" style="margin:0"><label style="font-size:11px;color:var(--tx2)">Normal</label><input type="number" id="dp-normal-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="font-size:13px;padding:6px 8px;width:90px;text-align:right"></div>
+              <div class="fld" style="margin:0"><label style="font-size:11px;color:var(--tx2)">No Boot</label><input type="number" id="dp-noboot-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="font-size:13px;padding:6px 8px;width:90px;text-align:right"></div>
+              <div class="fld" style="margin:0"><label style="font-size:11px;color:var(--tx2)">Abnormal</label><input type="number" id="dp-abnormal-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcDram(${lot.id})" style="font-size:13px;padding:6px 8px;width:90px;text-align:right"></div>
+            </div>
+          </div>` : ''}
+          <div style="display:flex;gap:10px;align-items:flex-end">
+            <div class="fld" style="margin:0;flex:1"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등" style="font-size:13px;padding:6px 8px;width:100%"></div>
+            <button onclick="Pages.DailyInput.saveRecord(${lot.id})" style="padding:6px 18px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px">저장</button>
+            <span id="dp-ok-${lot.id}" style="font-size:11px;color:var(--tx2);display:none;align-self:center">저장됨</span>
           </div>
         </div>
       </div>`;
@@ -236,7 +249,6 @@ Pages.DailyInput = (() => {
     const remNew   = Math.max(0, parseNumber(lot.qty) - cumNew);
     const isDone   = document.getElementById('dp-done-' + lotId).value === '1' || remNew === 0;
 
-    // MO 선택 여부 (선택 시 해당 MO에 귀속)
     const moSelEl = document.getElementById('dp-mo-' + lotId);
     const moId    = moSelEl?.value || '';
     const mo      = moId ? Store.getMoById(moId) : null;
@@ -244,13 +256,7 @@ Pages.DailyInput = (() => {
 
     const record = { id: Date.now(), date, lotId: lot.id, lotNo: lot.lotNo || lot.id, moId, moNo, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew, note: document.getElementById('dp-note-' + lotId)?.value || '', done: isDone ? '1' : '0' };
 
-    const saveBtn = document.querySelector(`[onclick*="saveDaily(${lotId})"]`);
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
-
     const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
-
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
-
     if (!result.success) return;
 
     Store.upsertDaily(record);
@@ -258,7 +264,7 @@ Pages.DailyInput = (() => {
       const updated = { ...lot, done: '1', actualDone: date };
       Store.upsertLot(updated);
       Api.update(CONFIG.SHEETS.LOTS, lot.id, updated);
-      UI.toast(lot.lotNo + ' 완료!');
+      UI.toast(lot.lotNo + ' 완료');
     }
     const ok = document.getElementById('dp-ok-' + lotId);
     if (ok) { ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 1500); }
@@ -297,7 +303,6 @@ Pages.DailyInput = (() => {
       : `MO ${mo.moNo} 를 삭제하시겠습니까?`;
     if (!confirm(msg)) return;
 
-    // 연결된 daily 레코드의 moId/moNo 제거 (DO 직접 입력으로 전환)
     for (const d of linked) {
       const upd = { ...d, moId: '', moNo: '' };
       Store.upsertDaily(upd);
@@ -400,30 +405,28 @@ Pages.DailyInput = (() => {
       const isDram    = r.lot && r.lot.biz === 'DRAM';
       const matched   = r.matched;
       const statusHtml = matched
-        ? `<span style="font-size:15px;font-weight:500;color:#166534;white-space:nowrap">✓ ${CONFIG.BIZ_LABELS[r.lot.biz] || ''}</span>`
-        : `<span style="font-size:15px;color:#92400e;white-space:nowrap">LOT 불명확</span>`;
-      const selBorder = matched ? 'var(--bd2)' : '#fca5a5';
-      const selBg     = matched ? 'var(--bg)'  : '#fff7f7';
+        ? `<span style="font-size:11px;color:var(--tx2);white-space:nowrap">매칭 ${CONFIG.BIZ_LABELS[r.lot.biz] || ''}</span>`
+        : `<span style="font-size:11px;color:var(--tx3);font-style:italic;white-space:nowrap">LOT 불명확</span>`;
       const options   = lots.map(l => `<option value="${l.id}"${r.lot && String(r.lot.id) === String(l.id) ? ' selected' : ''}>${l.lotNo || l.id}</option>`).join('');
 
       return `
-        <tr style="${i % 2 === 0 ? '' : 'background:var(--bg)'}">
-          <td style="padding:9px 13px;white-space:nowrap;font-family:var(--font-mono);font-size:14px">${r.date}</td>
-          <td style="padding:9px 13px">${r.country ? renderCountryTag(r.country) : `<span style="font-size:15px;color:var(--tx3)">${r.region || '-'}</span>`}</td>
+        <tr style="${i % 2 === 0 ? '' : 'background:var(--bg)'};border-bottom:1px solid var(--bd)">
+          <td style="padding:8px 10px;white-space:nowrap;font-family:var(--font-mono);font-size:12px;color:var(--tx2)">${r.date}</td>
+          <td style="padding:8px 10px;font-size:12px;color:var(--tx2)">${r.country || r.region || '—'}</td>
           <td style="padding:4px 6px">
             <div style="display:flex;gap:4px;align-items:center">
-              <select onchange="Pages.DailyInput.setParsedLot(${i},this.value,false)" style="padding:4px 8px;border:1px solid ${selBorder};border-radius:5px;font-size:14px;background:${selBg};color:var(--tx);flex:1;min-width:110px">
+              <select onchange="Pages.DailyInput.setParsedLot(${i},this.value,false)" style="padding:4px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:12px;background:var(--card);color:var(--tx);flex:1;min-width:110px">
                 <option value="">-- 선택 --</option>${options}
               </select>
-              <button onclick="Pages.DailyInput.setParsedLot(${i},this.previousElementSibling.value,true)" style="padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:14px;font-weight:600;background:#EEF4FF;color:#1e40af;cursor:pointer;white-space:nowrap;flex-shrink:0" title="이 LOT를 전체 행에 적용">전체↓</button>
+              <button onclick="Pages.DailyInput.setParsedLot(${i},this.previousElementSibling.value,true)" style="padding:3px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:11px;background:var(--card);color:var(--tx2);cursor:pointer;white-space:nowrap" title="이 LOT를 전체 행에 적용">전체↓</button>
             </div>
           </td>
-          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);font-weight:600">${formatNumber(r.proc)}</td>
-          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#166534">${isDram || r.normal > 0 ? formatNumber(r.normal) : '—'}</td>
-          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#92400e">${isDram || r.noBoot > 0 ? formatNumber(r.noBoot) : '—'}</td>
-          <td style="padding:9px 13px;text-align:right;font-family:var(--font-mono);color:#991b1b">${isDram || r.abnormal > 0 ? formatNumber(r.abnormal) : '—'}</td>
-          <td style="padding:9px 13px;font-size:14px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
-          <td style="padding:9px 13px">${statusHtml}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx);font-weight:500">${formatNumber(r.proc)}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx2)">${isDram || r.normal > 0 ? formatNumber(r.normal) : '—'}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx2)">${isDram || r.noBoot > 0 ? formatNumber(r.noBoot) : '—'}</td>
+          <td style="padding:8px 10px;text-align:right;font-family:var(--font-mono);font-size:12px;color:var(--tx2)">${isDram || r.abnormal > 0 ? formatNumber(r.abnormal) : '—'}</td>
+          <td style="padding:8px 10px;font-size:11px;color:var(--tx3);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.note}</td>
+          <td style="padding:8px 10px">${statusHtml}</td>
         </tr>`;
     }).join('');
   }
@@ -471,7 +474,7 @@ Pages.DailyInput = (() => {
     btn.disabled = false;
     const msg = document.getElementById('paste-save-msg');
     msg.style.display = 'inline';
-    msg.textContent   = '✓ ' + saved + '건 저장 완료' + (skipped > 0 ? ' (LOT 미선택 ' + skipped + '건 제외)' : '');
+    msg.textContent   = saved + '건 저장 완료' + (skipped > 0 ? ' (LOT 미선택 ' + skipped + '건 제외)' : '');
     btn.style.display = 'none';
     render();
     UI.toast(saved + '건 저장 완료');
