@@ -391,3 +391,40 @@ select.ec {
 
 /* td-sum 마지막 셀 스타일 통일 */
 .std-table .td-sum { border-bottom: 1px solid #CCC !important; border-right: 1px solid #DDD !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   매출 예측 표 — .fc-tbl (모노톤, 고정 열폭으로 자릿수 정렬)
+   ═══════════════════════════════════════════════════════════ */
+.fc-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.fc-tbl th {
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid var(--bd);
+  white-space: nowrap;
+}
+.fc-tbl td {
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx2);
+  white-space: nowrap;
+}
+.fc-tbl th.l, .fc-tbl td.l { text-align: left; }
+.fc-tbl th.r, .fc-tbl td.r { text-align: right; }
+.fc-tbl td.rev { color: var(--tx); }
+.fc-tbl tr.fc td { font-style: italic; }
+.fc-tbl tr.fc td.rev { font-style: normal; font-weight: 600; }
+.fc-tbl tr.sum td { border-top: 1px solid var(--bd2); font-weight: 600; color: var(--tx); }
+.fc-tbl td.lbl {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--tx2);
+}
