@@ -106,6 +106,10 @@
         <svg fill="none" viewBox="0 0 16 16"><path d="M1.5 11.5l3.5-3.5 2.5 2.5 3.5-4 3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         매출현황
       </button>
+      <button class="ni" data-page="forecast" onclick="Nav.go('forecast')">
+        <svg fill="none" viewBox="0 0 16 16"><path d="M2 13l4-5 3 3 5-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 4h3v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/></svg>
+        매출 예측
+      </button>
 
       <div class="sb-sec">관리</div>
       <button class="ni" data-page="kpitarget" onclick="Nav.go('kpitarget')">
@@ -597,6 +601,11 @@
       <div id="inv-overlay" onclick="Pages.Invoice.closePanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:299"></div>
     </div>
 
+    <!-- 매출 예측 -->
+    <div class="pg" id="pg-forecast">
+      <div id="forecast-root"></div>
+    </div>
+
     <!-- 매출 현황 -->
     <div class="pg" id="pg-revenue">
       <div class="page-wrap">
@@ -835,6 +844,7 @@
 <script src="js/pages/shipment.js"></script>
 <script src="js/pages/invoice.js"></script>
 <script src="js/pages/revenue.js"></script>
+<script src="js/pages/forecast.js"></script>
 <script src="js/pages/kpiTarget.js?v=82"></script>
 <script src="js/pages/customers.js"></script>
 <script src="js/pages/verify.js"></script>
