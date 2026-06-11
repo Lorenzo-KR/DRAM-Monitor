@@ -471,10 +471,10 @@ Pages.KpiTarget = (() => {
 
     const mc = _modeColor(mode);
     const cards = [
-      { label: '연간 목표', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출')) + ' 기준' },
-      { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '목표 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
+      { label: '연간 예상', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : (showEbit ? 'EBIT' : '매출')) + ' 기준' },
+      { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '예상 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
       { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
-      { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '목표 미달' : diffCumFinal > 0 ? '목표 초과' : '정확 달성' },
+      { label: '누적 차이 (' + periodLabel + ')', value: fmtDiff(diffCumFinal) + ' ' + unitLabel, color: diffColor(diffCumFinal), sub: diffCumFinal < 0 ? '예상 미달' : diffCumFinal > 0 ? '예상 초과' : '정확 달성' },
     ].map(c =>
       '<div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">'
       + '<div style="font-size:14px;color:var(--tbl-tx-body);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">' + c.label + '</div>'
@@ -518,7 +518,7 @@ Pages.KpiTarget = (() => {
     // 차트: EBIT 누적만 유지
     var chart1Title = _modeLabel(mode) + ' · ' + chartLabel + ' 누적 · ' + unitLabel;
     var chart1Html  = makeChartCard('cv-ebit-cum', chart1Title, [
-      { label: chartLabel + ' 목표 누적', color: '#85B7EB', dashed: true  },
+      { label: chartLabel + ' 예상 누적', color: '#85B7EB', dashed: true  },
       { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
     ]);
 
@@ -842,7 +842,7 @@ Pages.KpiTarget = (() => {
     const progressHeader = '<thead><tr>'
       + '<th style="' + TS.thBiz + '">Biz</th>'
       + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
-      + '<th style="' + TS.thSum + ';width:150px">누적 실적/연간목표 (' + unitLabel + ')</th>'
+      + '<th style="' + TS.thSum + ';width:150px">누적 실적/연간예상 (' + unitLabel + ')</th>'
       + '<th style="' + TS.thSum + '">달성률</th>'
       + '<th style="' + TS.thSum + ';width:130px">달성률 Gap(실적-계획)</th>'
       + '</tr></thead>';
@@ -987,7 +987,7 @@ Pages.KpiTarget = (() => {
       destroyAndCreate('cv-ebit-cum', {
         type: 'line',
         data: { labels: MONTHS, datasets: [
-          { label: chartLabel + ' 목표 누적', data:ebitTgtCum,
+          { label: chartLabel + ' 예상 누적', data:ebitTgtCum,
             borderColor:'#85B7EB', borderWidth:2, borderDash:[5,3],
             pointRadius:3, pointBackgroundColor:'#85B7EB', fill:false, tension:0 },
           { label: chartLabel + ' 실적 누적', data:ebitActCum,
@@ -1186,7 +1186,7 @@ Pages.KpiTarget = (() => {
 
       const TH  = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
       const THR = l=>`<th style="padding:10px 14px;text-align:center;font-size:13px;font-weight:600;font-family:Pretendard,sans-serif;color:var(--tbl-hd-tx);background:var(--tbl-hd-bg);border-bottom:1px solid var(--tbl-hd-bd);white-space:nowrap">${l}</th>`;
-      const tgtHeader = `목표 ${basis} (${uLabel})`;
+      const tgtHeader = `예상 ${basis} (${uLabel})`;
       const actHeader = `누적 ${basis} (${uLabel})`;
 
       const bizBtns=[{key:'all',label:'전체',color:'#1B4F8A'},...CONFIG.BIZ_LIST.map(b=>({key:b,label:CONFIG.BIZ_LABELS[b],color:CONFIG.BIZ_COLORS[b]}))].map(({key,label,color})=>{
@@ -1239,7 +1239,7 @@ Pages.KpiTarget = (() => {
         <!-- ③ 요약 카드 -->
         ${totalTgt>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
           <div style="background:var(--tbl-sum-bg);border-radius:var(--rs);padding:13px 17px">
-            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">연간 목표 (${ml})</div>
+            <div style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--tbl-tx-body);margin-bottom:5px">연간 예상 (${ml})</div>
             <div style="font-size:22px;font-weight:600;color:var(--tx)">${_fmtN(totalTgtDisp)} ${uLabel}</div>
             <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${basis} 기준 · 롤링 합계</div>
           </div>
@@ -1254,12 +1254,12 @@ Pages.KpiTarget = (() => {
             <div style="font-size:13px;color:var(--tbl-tx-body);margin-top:3px">${basis} · ${uLabel} 기준</div>
           </div>
         </div>`:`<div style="background:var(--tbl-sum-bg);border-left:3px solid var(--bd);padding:10px 14px;border-radius:var(--rs);margin-bottom:16px;font-size:12px;color:var(--tx)">
-          롤링 데이터를 입력하면 목표가 자동으로 설정됩니다 →
+          롤링 데이터를 입력하면 예상이 자동으로 설정됩니다 →
           <button onclick="Pages.KpiTarget.openRolling('${mode}')" style="background:none;border:none;color:${mc};font-size:12px;font-weight:500;cursor:pointer;text-decoration:underline">${_rollingLabel(mode)} 입력</button>
         </div>`}
 
-        <!-- ④ 사업별 표: [A] 연간 목표 달성 현황 -->
-        <div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em;margin-bottom:6px">[A] 연간 목표 달성 현황</div>
+        <!-- ④ 사업별 표: [A] 연간 예상 달성 현황 -->
+        <div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em;margin-bottom:6px">[A] 연간 예상 달성 현황</div>
         <div style="background:var(--tbl-bg);border:1px solid var(--tbl-wrap-bd);border-radius:10px;overflow:hidden;margin-bottom:20px">
           <table style="width:100%;border-collapse:collapse">
             <thead><tr>${TH('사업')}${THR(tgtHeader)}${THR(actHeader)}${TH('달성률')}${THR('잔여')}</tr></thead>
@@ -2162,7 +2162,7 @@ Pages.KpiTarget = (() => {
         rows.push({ type: 'blank', vals: Array(NCOLS).fill('') });
         rows.push({ type: 'title', vals: [sectionLabel + ' 사업별 월 실적'].concat(Array(16).fill('')) });
         rows.push({ type: 'header', vals:
-          ['사업', '구분'].concat(MONS).concat(['누적실적 / 연간목표 (' + (unitLabel || '') + ')', '달성률', '달성률 Gap(실적-계획)']) });
+          ['사업', '구분'].concat(MONS).concat(['누적실적 / 연간예상 (' + (unitLabel || '') + ')', '달성률', '달성률 Gap(실적-계획)']) });
 
         bizList.forEach((b, k) => {
           const aEr = R(actBiz0 + k), pEr = R(planBiz0 + k);
