@@ -15,6 +15,7 @@ Pages.Progress = (() => {
   const _collapsedGroups = new Set();  // 간트 그룹 접힘 상태 (key: country_biz)
   let _chartPeriod   = 'month';        // 'month' | 'day' — 차트 기간 단위
   let _chartDayMonth = null;           // 일별 보기 대상 월 'YYYY-MM'
+  let _editDailyId   = null;           // 처리 이력 인라인 수정 대상 id
 
   // ── 상태 헬퍼 (입고예정 추가) ──────────────────────────────
   function _status(lot) {
@@ -821,7 +822,7 @@ Pages.Progress = (() => {
     const hist   = dailies.filter(r => String(r.lotId)===String(lot.id)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
     const mos    = Store.getMosByLot(lot.id);
 
-    const colGrid = isDram ? '90px 60px 60px 60px 70px 70px 70px 1fr 30px' : '90px 70px 70px 70px 1fr 30px';
+    const colGrid = isDram ? '90px 60px 60px 60px 70px 70px 70px 1fr 56px' : '90px 70px 70px 70px 1fr 56px';
 
     // ── MO 목록 ─────────────────────────────────────────────
     const moHeader = mos.length ? `
@@ -858,6 +859,7 @@ Pages.Progress = (() => {
     const histRows = hist.length === 0
       ? `<div style="font-size:13px;color:var(--tx3);padding:10px 0;text-align:center">처리 기록 없음</div>`
       : hist.map(r => {
+          if (String(r.id) === String(_editDailyId)) return _renderDailyEditRow(r, lot, isDram);
           const tot = isDram ? (parseNumber(r.normal)+parseNumber(r.noBoot)+parseNumber(r.abnormal))||parseNumber(r.proc) : parseNumber(r.proc);
           const moTag = r.moNo ? `<span style="display:inline-block;font-size:10px;padding:1px 5px;background:#EEF4FF;color:#1e40af;border-radius:3px;font-family:var(--font-mono);margin-left:4px">${r.moNo}</span>` : '';
           return `<div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:14px;align-items:center">
@@ -867,7 +869,10 @@ Pages.Progress = (() => {
             <span style="font-family:var(--font-mono);color:var(--tx2);text-align:right">${formatNumber(parseNumber(r.cumul))}</span>
             <span style="font-family:var(--font-mono);color:${parseNumber(r.remain)>0?'var(--tx3)':'var(--tx)'};text-align:right">${formatNumber(parseNumber(r.remain))}</span>
             <span style="font-size:13px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note||''}</span>
-            <button class="btn del sm" style="padding:2px 6px;font-size:14px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
+            <span style="display:flex;gap:4px;justify-content:flex-end">
+              <button class="btn sm" style="padding:2px 6px;font-size:13px" title="수정" onclick="Pages.Progress.startEditDaily(${r.id})">✎</button>
+              <button class="btn del sm" style="padding:2px 6px;font-size:14px" onclick="Pages.Progress.deleteDaily(${r.id},${lot.id})">✕</button>
+            </span>
           </div>`;
         }).join('');
 
@@ -1005,9 +1010,104 @@ Pages.Progress = (() => {
       </div>`;
   }
 
+  // ── 처리 이력 인라인 수정 ──────────────────────────────────
+  function _renderDailyEditRow(r, lot, isDram) {
+    const inp = "padding:5px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;font-family:var(--font-mono);background:#fff;color:var(--tx)";
+    const noteVal = String(r.note || '').replace(/"/g, '&quot;');
+    return `
+      <div style="padding:10px 12px;border-bottom:1px solid var(--bd);background:#F5F9FF;border-left:3px solid var(--navy)">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fld" style="margin:0"><label style="font-size:11px">날짜</label>
+            <input type="date" id="ed-date-${r.id}" value="${r.date || ''}" style="${inp};width:140px"></div>
+          ${isDram ? `
+          <div class="fld" style="margin:0"><label style="font-size:11px;color:#1A7F37">Normal</label>
+            <input type="number" id="ed-normal-${r.id}" value="${parseNumber(r.normal) || ''}" min="0" oninput="Pages.Progress.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>
+          <div class="fld" style="margin:0"><label style="font-size:11px;color:#B45309">No Boot</label>
+            <input type="number" id="ed-noboot-${r.id}" value="${parseNumber(r.noBoot) || ''}" min="0" oninput="Pages.Progress.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>
+          <div class="fld" style="margin:0"><label style="font-size:11px;color:#dc2626">Abnormal</label>
+            <input type="number" id="ed-abnormal-${r.id}" value="${parseNumber(r.abnormal) || ''}" min="0" oninput="Pages.Progress.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>` : ''}
+          <div class="fld" style="margin:0"><label style="font-size:11px">처리량${isDram ? ' (자동)' : ''}</label>
+            <input type="number" id="ed-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
+          <div class="fld" style="margin:0;flex:1;min-width:150px"><label style="font-size:11px">비고</label>
+            <input type="text" id="ed-note-${r.id}" value="${noteVal}" style="${inp};width:100%;font-family:'Pretendard',sans-serif"></div>
+          <button class="btn pri sm" onclick="Pages.Progress.saveDailyEdit(${lot.id},${r.id})" style="height:30px;white-space:nowrap">저장</button>
+          <button class="btn sm" onclick="Pages.Progress.cancelEditDaily()" style="height:30px;white-space:nowrap">취소</button>
+        </div>
+      </div>`;
+  }
+
+  function startEditDaily(id) { _editDailyId = id; render(); }
+  function cancelEditDaily() { _editDailyId = null; render(); }
+
+  function calcEditDailyDram(id) {
+    const nm = parseNumber(document.getElementById('ed-normal-'+id)?.value);
+    const nb = parseNumber(document.getElementById('ed-noboot-'+id)?.value);
+    const ab = parseNumber(document.getElementById('ed-abnormal-'+id)?.value);
+    const el = document.getElementById('ed-proc-'+id);
+    if (el) el.value = (nm + nb + ab) || '';
+  }
+
+  // 한 LOT의 모든 일별 기록을 날짜순으로 누적/잔량 재계산 후 변경분만 저장
+  function _resequenceLot(lot) {
+    const rows = Store.getDailies()
+      .filter(d => String(d.lotId) === String(lot.id))
+      .sort((a, b) => String(a.date||'').localeCompare(String(b.date||'')) || String(a.id).localeCompare(String(b.id)));
+    let run = 0;
+    rows.forEach(d => {
+      run += parseNumber(d.proc);
+      const remain = Math.max(0, parseNumber(lot.qty) - run);
+      if (parseNumber(d.cumul) !== run || parseNumber(d.remain) !== remain) {
+        const upd = { ...d, cumul: run, remain };
+        Store.upsertDaily(upd);
+        Api.update(CONFIG.SHEETS.DAILY, d.id, upd);
+      }
+    });
+    return run;
+  }
+
+  async function saveDailyEdit(lotId, dailyId) {
+    const lot = Store.getLotById(lotId); if (!lot) return;
+    const rec = Store.getDailies().find(d => String(d.id) === String(dailyId)); if (!rec) return;
+
+    const date = document.getElementById('ed-date-'+dailyId)?.value;
+    const isDram   = lot.biz === 'DRAM';
+    const normal   = isDram ? parseNumber(document.getElementById('ed-normal-'+dailyId)?.value)   : parseNumber(rec.normal);
+    const noBoot   = isDram ? parseNumber(document.getElementById('ed-noboot-'+dailyId)?.value)   : parseNumber(rec.noBoot);
+    const abnormal = isDram ? parseNumber(document.getElementById('ed-abnormal-'+dailyId)?.value) : parseNumber(rec.abnormal);
+    const proc     = isDram ? (normal + noBoot + abnormal) : parseNumber(document.getElementById('ed-proc-'+dailyId)?.value);
+    const note     = document.getElementById('ed-note-'+dailyId)?.value || '';
+    if (!date || !proc) { UI.toast('날짜와 처리량은 필수입니다', true); return; }
+
+    const updated = { ...rec, date, proc, normal, noBoot, abnormal, note };
+    Store.upsertDaily(updated);
+
+    const saveBtn = document.querySelector(`[onclick="Pages.Progress.saveDailyEdit(${lotId},${dailyId})"]`);
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+    const result = await Api.update(CONFIG.SHEETS.DAILY, dailyId, updated);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+    if (result && result.success === false) return;
+
+    // 누적/잔량 재계산 + LOT 완료 여부 갱신 (전량 처리되면 자동 완료)
+    const totalCum = _resequenceLot(lot);
+    if (parseNumber(lot.qty) > 0 && totalCum >= parseNumber(lot.qty) && lot.done !== '1') {
+      const lastDate = Store.getDailies()
+        .filter(d => String(d.lotId) === String(lot.id))
+        .reduce((mx, d) => String(d.date||'') > mx ? String(d.date||'') : mx, '');
+      const updLot = { ...lot, done: '1', actualDone: lot.actualDone || lastDate || date };
+      Store.upsertLot(updLot);
+      Api.update(CONFIG.SHEETS.LOTS, lot.id, updLot);
+    }
+
+    _editDailyId = null;
+    Api.log('일별처리', '수정', lot.lotNo || String(lotId), `${date} 처리 ${Number(proc).toLocaleString()}개${isDram ? ` (N:${Number(normal).toLocaleString()} / NB:${Number(noBoot).toLocaleString()} / AB:${Number(abnormal).toLocaleString()})` : ''}`);
+    UI.toast('수정됨');
+    render();
+  }
+
   // ── 토글 ───────────────────────────────────────────────────
   function toggleCard(lotId) {
     _openLotId = _openLotId === lotId ? null : lotId;
+    _editDailyId = null;
     render();
   }
 
@@ -1487,6 +1587,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setChartPeriod, chartDayShift, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, addMo, deleteMo, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
+  return { render, renderChart, initYearTabs, setChartPeriod, chartDayShift, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, startEditDaily, cancelEditDaily, calcEditDailyDram, saveDailyEdit, addMo, deleteMo, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
 
 })();
