@@ -13,6 +13,8 @@ Pages.Progress = (() => {
   let _openLotId = null;
   let _viewMode  = 'table';            // 'table' | 'gantt'
   const _collapsedGroups = new Set();  // 간트 그룹 접힘 상태 (key: country_biz)
+  let _chartPeriod   = 'month';        // 'month' | 'day' — 차트 기간 단위
+  let _chartDayMonth = null;           // 일별 보기 대상 월 'YYYY-MM'
 
   // ── 상태 헬퍼 (입고예정 추가) ──────────────────────────────
   function _status(lot) {
@@ -115,6 +117,19 @@ Pages.Progress = (() => {
       .reduce((s, r) => s + parseNumber(r.proc), 0);
   }
 
+  // 특정 날짜의 값 (지역·사업별) — 일별 차트용
+  function _dayValue(metric, biz, co, dateStr, lots, dailies) {
+    if (metric === 'qty') {
+      return lots
+        .filter(l => l.biz === biz && l.country === co && (l.inDate || '') === dateStr)
+        .reduce((s, l) => s + parseNumber(l.qty), 0);
+    }
+    // proc
+    return dailies
+      .filter(r => r.biz === biz && r.country === co && (r.date || '') === dateStr)
+      .reduce((s, r) => s + parseNumber(r.proc), 0);
+  }
+
   const METRIC_LABEL = { qty: '입고', proc: '처리', backlog: '잔량' };
   const _patternCache = {};
 
@@ -143,27 +158,51 @@ Pages.Progress = (() => {
   }
 
   function renderChart() {
+    _updateChartPeriodUI();
     const canvas = document.getElementById('monthly-chart'); if (!canvas) return;
     let { biz: bizArr = [], country: co = 'SG', year: chartYear, metric: metricArr = [] } = Store.getChartFilter();
     metricArr = metricArr.filter(m => m !== 'backlog');
     const lots    = Store.getLots();
     const dailies = Store.getDailies();
-    const months  = [];
-    for (let m = 1; m <= 12; m++) months.push(chartYear + '-' + String(m).padStart(2, '0'));
-    const labels = months.map(m => m.slice(5) + '월');
+    const isDay   = _chartPeriod === 'day';
+    if (!_chartDayMonth) _chartDayMonth = currentMonth();
 
+    let labels;
     const datasets = [];
-    bizArr.forEach(b => {
-      metricArr.forEach(mt => {
-        const color = CONFIG.BIZ_COLORS[b] || '#888';
-        datasets.push({
-          label: `${b} ${METRIC_LABEL[mt] || mt}`,
-          data: months.map(m => _monthValue(mt, b, co, m, lots, dailies)),
-          borderRadius: 3, borderSkipped: false,
-          ..._datasetStyle(mt, color),
+    if (isDay) {
+      // 선택된 월의 일별 처리/입고량 (지역·사업별)
+      const [yy, mm] = _chartDayMonth.split('-').map(Number);
+      const daysInMonth = new Date(yy, mm, 0).getDate();
+      const days = [];
+      for (let d = 1; d <= daysInMonth; d++) days.push(_chartDayMonth + '-' + String(d).padStart(2, '0'));
+      labels = days.map(d => Number(d.slice(8, 10)));
+      bizArr.forEach(b => {
+        metricArr.forEach(mt => {
+          const color = CONFIG.BIZ_COLORS[b] || '#888';
+          datasets.push({
+            label: `${b} ${METRIC_LABEL[mt] || mt}`,
+            data: days.map(d => _dayValue(mt, b, co, d, lots, dailies)),
+            borderRadius: 3, borderSkipped: false,
+            ..._datasetStyle(mt, color),
+          });
         });
       });
-    });
+    } else {
+      const months = [];
+      for (let m = 1; m <= 12; m++) months.push(chartYear + '-' + String(m).padStart(2, '0'));
+      labels = months.map(m => m.slice(5) + '월');
+      bizArr.forEach(b => {
+        metricArr.forEach(mt => {
+          const color = CONFIG.BIZ_COLORS[b] || '#888';
+          datasets.push({
+            label: `${b} ${METRIC_LABEL[mt] || mt}`,
+            data: months.map(m => _monthValue(mt, b, co, m, lots, dailies)),
+            borderRadius: 3, borderSkipped: false,
+            ..._datasetStyle(mt, color),
+          });
+        });
+      });
+    }
 
     if (_chart) { _chart.destroy(); _chart = null; }
     const datalabelsPlugin = window.ChartDataLabels ? [window.ChartDataLabels] : [];
@@ -176,7 +215,7 @@ Pages.Progress = (() => {
           legend: { display: datasets.length > 0, labels: { font:{size:11}, color:'#888', boxWidth:10, padding:12 } },
           tooltip: { mode:'index', intersect:false, callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${formatNumber(ctx.raw)}` } },
           datalabels: {
-            display: ctx => { const v=ctx.dataset.data[ctx.dataIndex]; const all=ctx.chart.data.datasets.flatMap(d=>d.data); const mx=Math.max(...all); return v>0&&(mx===0||v/mx>0.04); },
+            display: ctx => { if (isDay) return false; const v=ctx.dataset.data[ctx.dataIndex]; const all=ctx.chart.data.datasets.flatMap(d=>d.data); const mx=Math.max(...all); return v>0&&(mx===0||v/mx>0.04); },
             anchor:'end', align:'end', color:'#555', font:{size:10,weight:'600',family:'DM Mono,monospace'},
             formatter: v => v>0?formatNumber(v):'', offset:2, clip:false,
           },
@@ -190,8 +229,10 @@ Pages.Progress = (() => {
     });
 
     // 요약 카드 (선택된 BIZ만, 선택된 국가 기준)
-    const yearStr = String(chartYear);
-    const curM    = currentMonth();
+    // 일별 보기에서는 보고 있는 월/연 기준으로 집계
+    const yearStr  = isDay ? _chartDayMonth.slice(0, 4) : String(chartYear);
+    const curM     = isDay ? _chartDayMonth : currentMonth();
+    const mLabel   = isDay ? (Number(_chartDayMonth.slice(5)) + '월') : '이달';
     const lots_co    = lots.filter(l => l.country === co);
     const dailies_co = dailies.filter(r => r.country === co);
 
@@ -218,12 +259,46 @@ Pages.Progress = (() => {
             <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:6px">${it.label}</div>
             <div style="display:grid;grid-template-columns:32px 1fr 1fr;column-gap:8px;align-items:baseline">
               <span></span><span style="${lab}">입고</span><span style="${lab}">처리</span>
-              <span style="${row}">이달</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthInflow)}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthProc)}</span>
+              <span style="${row}">${mLabel}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthInflow)}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthProc)}</span>
               <span style="${row}">연간</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearInflow)}</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearProc)}</span>
             </div>
           </div>`).join('');
       }
     }
+  }
+
+  // ── 차트 기간 단위 (월별 / 일별) ───────────────────────────
+  function setChartPeriod(mode) {
+    if (mode !== 'month' && mode !== 'day') return;
+    _chartPeriod = mode;
+    if (mode === 'day' && !_chartDayMonth) _chartDayMonth = currentMonth();
+    renderChart();
+  }
+
+  function chartDayShift(delta) {
+    if (!_chartDayMonth) _chartDayMonth = currentMonth();
+    const [y, m] = _chartDayMonth.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    _chartDayMonth = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    renderChart();
+  }
+
+  function _updateChartPeriodUI() {
+    const mBtn = document.getElementById('chart-period-month');
+    const dBtn = document.getElementById('chart-period-day');
+    if (mBtn && dBtn) {
+      const on  = b => { b.style.background = '#1B3A6B'; b.style.color = '#fff'; };
+      const off = b => { b.style.background = '#fff';    b.style.color = 'var(--tx2)'; };
+      if (_chartPeriod === 'day') { on(dBtn); off(mBtn); } else { on(mBtn); off(dBtn); }
+    }
+    const yt = document.getElementById('chart-year-tabs');
+    const mn = document.getElementById('chart-day-nav');
+    if (yt) yt.style.display = _chartPeriod === 'day' ? 'none' : 'flex';
+    if (mn) mn.style.display = _chartPeriod === 'day' ? 'flex' : 'none';
+    const lbl = document.getElementById('chart-day-label');
+    if (lbl && _chartDayMonth) lbl.textContent = _chartDayMonth.slice(0, 4) + '년 ' + Number(_chartDayMonth.slice(5)) + '월';
+    const title = document.getElementById('chart-title');
+    if (title) title.textContent = _chartPeriod === 'day' ? '일별 입고/처리량' : '월별 입고/처리량';
   }
 
   // ── 필터 ───────────────────────────────────────────────────
@@ -1412,6 +1487,6 @@ Pages.Progress = (() => {
     render();
   }
 
-  return { render, renderChart, initYearTabs, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, addMo, deleteMo, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
+  return { render, renderChart, initYearTabs, setChartPeriod, chartDayShift, setFilter, setChartBiz, setChartCountry, setChartMetric, setChartYear, toggleCard, calcDram, calcRem, saveLot, saveDaily, deleteLot, deleteDaily, addMo, deleteMo, handleNewCust, calcNewTgt, exportExcel, openEditPanel, closeEditPanel, calcEditTgt, saveLotEdit, setShipDate, switchTab, parsePaste, savePaste, openDeleteModal, cancelDelete, confirmDelete, setViewMode, toggleGanttGroup };
 
 })();

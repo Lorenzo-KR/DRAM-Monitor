@@ -186,8 +186,21 @@
       <!-- 월별 입고/처리량 차트 -->
       <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:600;color:var(--tx)">월별 입고/처리량</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div id="chart-title" style="font-size:13px;font-weight:600;color:var(--tx)">월별 입고/처리량</div>
+            <div style="display:inline-flex;border:1px solid var(--bd2);border-radius:var(--rs);overflow:hidden">
+              <button id="chart-period-month" onclick="Pages.Progress.setChartPeriod('month')"
+                style="padding:4px 12px;font-size:12px;font-weight:600;border:none;background:#1B3A6B;color:#fff;cursor:pointer;font-family:'Pretendard',sans-serif">월별</button>
+              <button id="chart-period-day" onclick="Pages.Progress.setChartPeriod('day')"
+                style="padding:4px 12px;font-size:12px;font-weight:600;border:none;background:#fff;color:var(--tx2);cursor:pointer;font-family:'Pretendard',sans-serif;border-left:1px solid var(--bd2)">일별</button>
+            </div>
+          </div>
           <div style="display:flex;gap:4px" id="chart-year-tabs"></div>
+          <div id="chart-day-nav" style="display:none;align-items:center;gap:8px">
+            <button onclick="Pages.Progress.chartDayShift(-1)" style="width:26px;height:26px;border:1px solid var(--bd2);border-radius:var(--rs);background:#fff;color:var(--tx2);cursor:pointer;font-size:14px;line-height:1">‹</button>
+            <span id="chart-day-label" style="font-size:13px;font-weight:600;color:var(--tx);min-width:96px;text-align:center"></span>
+            <button onclick="Pages.Progress.chartDayShift(1)" style="width:26px;height:26px;border:1px solid var(--bd2);border-radius:var(--rs);background:#fff;color:var(--tx2);cursor:pointer;font-size:14px;line-height:1">›</button>
+          </div>
         </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
           <div style="display:flex;gap:6px;align-items:center">
