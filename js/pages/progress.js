@@ -96,25 +96,28 @@ Pages.Progress = (() => {
     tabs.innerHTML = html;
   }
 
+  // 국가 필터 매칭 — 'ALL'이면 전체 국가 합산
+  function _coMatch(co, val) { return co === 'ALL' || val === co; }
+
   function _monthValue(metric, biz, co, monthPrefix, lots, dailies) {
     if (metric === 'qty') {
       return lots
-        .filter(l => l.biz === biz && l.country === co && String(l.inDate||'').startsWith(monthPrefix))
+        .filter(l => l.biz === biz && _coMatch(co, l.country) && String(l.inDate||'').startsWith(monthPrefix))
         .reduce((s, l) => s + parseNumber(l.qty), 0);
     }
     if (metric === 'backlog') {
       const lastDay = monthPrefix + '-31';
       const inflow = lots
-        .filter(l => l.biz === biz && l.country === co && (l.inDate || '') <= lastDay)
+        .filter(l => l.biz === biz && _coMatch(co, l.country) && (l.inDate || '') <= lastDay)
         .reduce((s, l) => s + parseNumber(l.qty), 0);
       const outflow = dailies
-        .filter(r => r.biz === biz && r.country === co && (r.date || '') <= lastDay)
+        .filter(r => r.biz === biz && _coMatch(co, r.country) && (r.date || '') <= lastDay)
         .reduce((s, r) => s + parseNumber(r.proc), 0);
       return Math.max(0, inflow - outflow);
     }
     // proc
     return dailies
-      .filter(r => r.biz === biz && r.country === co && String(r.date||'').startsWith(monthPrefix))
+      .filter(r => r.biz === biz && _coMatch(co, r.country) && String(r.date||'').startsWith(monthPrefix))
       .reduce((s, r) => s + parseNumber(r.proc), 0);
   }
 
@@ -122,12 +125,12 @@ Pages.Progress = (() => {
   function _dayValue(metric, biz, co, dateStr, lots, dailies) {
     if (metric === 'qty') {
       return lots
-        .filter(l => l.biz === biz && l.country === co && (l.inDate || '') === dateStr)
+        .filter(l => l.biz === biz && _coMatch(co, l.country) && (l.inDate || '') === dateStr)
         .reduce((s, l) => s + parseNumber(l.qty), 0);
     }
     // proc
     return dailies
-      .filter(r => r.biz === biz && r.country === co && (r.date || '') === dateStr)
+      .filter(r => r.biz === biz && _coMatch(co, r.country) && (r.date || '') === dateStr)
       .reduce((s, r) => s + parseNumber(r.proc), 0);
   }
 
@@ -234,8 +237,8 @@ Pages.Progress = (() => {
     const yearStr  = isDay ? _chartDayMonth.slice(0, 4) : String(chartYear);
     const curM     = isDay ? _chartDayMonth : currentMonth();
     const mLabel   = isDay ? (Number(_chartDayMonth.slice(5)) + '월') : '이달';
-    const lots_co    = lots.filter(l => l.country === co);
-    const dailies_co = dailies.filter(r => r.country === co);
+    const lots_co    = lots.filter(l => _coMatch(co, l.country));
+    const dailies_co = dailies.filter(r => _coMatch(co, r.country));
 
     const items = bizArr.map(b => {
       const yearInflow  = lots_co.filter(l => l.biz===b && String(l.inDate||'').startsWith(yearStr)).reduce((s,l)=>s+parseNumber(l.qty), 0);
