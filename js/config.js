@@ -50,25 +50,31 @@ const CONFIG = {
     MOD:  '#8B3A3A',
   },
 
-  // 국가 목록
-  COUNTRY_LIST: ['HK', 'SG'],
+  // 국가(판매 법인) 목록
+  COUNTRY_LIST: ['HK', 'SG', 'KR', 'JP'],
 
   // 국가 표시명
   COUNTRY_LABELS: {
     HK: '홍콩',
     SG: '싱가포르',
+    KR: '한국',
+    JP: '일본TES',
   },
 
   // 국가 색상
   COUNTRY_COLORS: {
     HK: '#B45309',
     SG: '#0F6E56',
+    KR: '#1B4F8A',
+    JP: '#6A3D7C',
   },
 
   // 국가별 취급 사업
   COUNTRY_BIZ_MAP: {
     HK: ['DRAM', 'SCR', 'RMA', 'SUS', 'MOD'],
     SG: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
+    KR: ['MOD'],
+    JP: ['MOD'],
   },
 
   // KPI 차트 시작 연도

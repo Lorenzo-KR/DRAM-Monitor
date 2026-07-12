@@ -79,14 +79,20 @@ Pages.Revenue = (() => {
     }
 
     const totB = fi.reduce((s, r) => s + parseNumber(r.amount), 0);
-    const hkB  = fi.filter(r => r.country === 'HK').reduce((s, r) => s + parseNumber(r.amount), 0);
-    const sgB  = fi.filter(r => r.country === 'SG').reduce((s, r) => s + parseNumber(r.amount), 0);
+
+    // 매출이 있는 법인만 카드로 표시 (HK/SG는 기본 노출)
+    const coCards = CONFIG.COUNTRY_LIST
+      .filter(c => c === 'HK' || c === 'SG' || fi.some(r => r.country === c))
+      .map(c => {
+        const rows = fi.filter(r => r.country === c);
+        const amt  = rows.reduce((s, r) => s + parseNumber(r.amount), 0);
+        return renderMetricCard(CONFIG.COUNTRY_LABELS[c], '$' + formatNumber(Math.round(amt)), rows.length + '건', CONFIG.COUNTRY_COLORS[c]);
+      });
 
     const topEl = document.getElementById('rv-top'); if (!topEl) return;
     topEl.innerHTML =
       renderMetricCard('총 매출액', '$' + formatNumber(Math.round(totB)), periodLabel + ' · ' + fi.length + '건', CONFIG.BIZ_COLORS.DRAM) +
-      renderMetricCard('홍콩', '$' + formatNumber(Math.round(hkB)), fi.filter(r => r.country === 'HK').length + '건', CONFIG.COUNTRY_COLORS?.HK || '#B45309') +
-      renderMetricCard('싱가포르', '$' + formatNumber(Math.round(sgB)), fi.filter(r => r.country === 'SG').length + '건', CONFIG.COUNTRY_COLORS?.SG || '#0F6E56') +
+      coCards.join('') +
       renderMetricCard('건수', fi.length + '건', '인보이스');
 
     // ── 하단 LOT 기반 테이블 ───────────────────────────────────

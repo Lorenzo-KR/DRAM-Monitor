@@ -325,7 +325,7 @@ Pages.Progress = (() => {
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
         <td style="${tdS}">
           <select id="nl-co" style="${inp};width:100%;padding:2px 3px">
-            <option value="HK">HK</option><option value="SG">SG</option>
+            <option value="HK">HK</option><option value="SG">SG</option><option value="KR">KR</option><option value="JP">JP</option>
           </select>
         </td>
         <td style="${tdS}">

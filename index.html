@@ -290,7 +290,7 @@
         <div style="display:flex;flex-direction:column;gap:12px">
           <div class="fld"><label>LOT 번호</label><input type="text" id="ep-lot"></div>
           <div class="fld"><label>지역</label>
-            <select id="ep-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select>
+            <select id="ep-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option><option value="KR">한국 (KR)</option><option value="JP">일본TES (JP)</option></select>
           </div>
           <div class="fld"><label>사업</label>
             <select id="ep-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
@@ -422,7 +422,7 @@
               <select id="sp-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
             </div>
             <div class="fld"><label>국가</label>
-              <select id="sp-country"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
+              <select id="sp-country"><option value="HK">홍콩</option><option value="SG">싱가포르</option><option value="KR">한국</option><option value="JP">일본TES</option></select>
             </div>
           </div>
           <div class="fld"><label>고객사</label><input type="text" id="sp-cust" placeholder="고객사명"></div>
@@ -578,7 +578,7 @@
               <select id="ip-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option></select>
             </div>
             <div class="fld"><label>국가</label>
-              <select id="ip-co"><option value="HK">홍콩</option><option value="SG">싱가포르</option></select>
+              <select id="ip-co"><option value="HK">홍콩</option><option value="SG">싱가포르</option><option value="KR">한국</option><option value="JP">일본TES</option></select>
             </div>
           </div>
           <div class="fld"><label>고객사</label><input type="text" id="ip-cust" placeholder="고객사명"></div>
@@ -641,6 +641,8 @@
         <button class="pill pa on" id="rv-co-all" onclick="Pages.Revenue.setCo(this,'')">전체</button>
         <button class="pill phk" id="rv-co-hk"  onclick="Pages.Revenue.setCo(this,'HK')">홍콩</button>
         <button class="pill psg" id="rv-co-sg"  onclick="Pages.Revenue.setCo(this,'SG')">싱가포르</button>
+        <button class="pill pkr" id="rv-co-kr"  onclick="Pages.Revenue.setCo(this,'KR')">한국</button>
+        <button class="pill pjp" id="rv-co-jp"  onclick="Pages.Revenue.setCo(this,'JP')">일본TES</button>
         <span class="sep"></span>
         <button class="pill pa on" id="rv-biz-all"  onclick="Pages.Revenue.setBiz(this,'')">전체</button>
         <button class="pill pd"   id="rv-biz-dram" onclick="Pages.Revenue.setBiz(this,'DRAM')">DRAM</button>
@@ -791,7 +793,7 @@
         <div class="sect">고객사 등록</div>
         <div class="fg fg3">
           <div class="fld"><label>고객사명</label><input type="text" id="cu-name" placeholder="예: Samsung Electronics HK"></div>
-          <div class="fld"><label>국가 법인</label><select id="cu-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option></select></div>
+          <div class="fld"><label>국가 법인</label><select id="cu-co"><option value="HK">홍콩 (HK)</option><option value="SG">싱가포르 (SG)</option><option value="KR">한국 (KR)</option><option value="JP">일본TES (JP)</option></select></div>
           <div class="fld"><label>주요 사업</label><select id="cu-biz"><option value="DRAM">DRAM Test</option><option value="SSD">SSD Test</option><option value="MID">Mobile Ink Die</option><option value="SCR">Scrap 자재 공급</option><option value="RMA">RMA 운영</option><option value="SUS">Sustainability 컨설팅</option><option value="MOD">모듈 세일즈</option><option value="ALL">전체</option></select></div>
         </div>
         <div class="fg fg3">

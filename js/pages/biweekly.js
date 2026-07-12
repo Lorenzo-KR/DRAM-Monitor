@@ -77,7 +77,7 @@ Pages.Biweekly = (() => {
       const CO         = CONFIG.COUNTRY_LIST;
       const BIZ_LABELS = CONFIG.BIZ_LABELS;
       const BIZ_COLORS = CONFIG.BIZ_COLORS || {};
-      const CO_LABELS  = { HK: '홍콩', SG: '싱가포르' };
+      const CO_LABELS  = CONFIG.COUNTRY_LABELS;
 
       // 실제 BIZ_LIST에 존재하는 사업만 필터링
       const topBiz    = TOP_BIZ.filter(b => BIZ.includes(b));

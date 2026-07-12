@@ -595,7 +595,7 @@ Pages.BizHistory = (() => {
       </button>`;
     }).join('');
 
-    const coTabs = [['', '전체'], ['HK', '홍콩'], ['SG', '싱가포르']].map(([v, label]) => {
+    const coTabs = [['', '전체'], ...CONFIG.COUNTRY_LIST.map(c => [c, CONFIG.COUNTRY_LABELS[c]])].map(([v, label]) => {
       const active = v === _country;
       return `<button onclick="Pages.BizHistory.setCountry('${v}')"
         style="padding:5px 11px;border:1px solid ${active?'var(--tx2)':'var(--bd2)'};border-radius:6px;

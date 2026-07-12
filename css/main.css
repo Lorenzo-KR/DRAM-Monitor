@@ -249,8 +249,8 @@ select.ec {
 .pill { padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--bd); background: transparent; color: var(--tx2); transition: 0.12s; font-family: 'Pretendard', -apple-system, sans-serif; }
 .pill:hover { background: #F0EEE9; }
 .pill.on    { background: var(--tx); color: #fff; border-color: var(--tx); }
-.pa, .pd, .ps, .pm, .phk, .psg { border-color: var(--bd); color: var(--tx2); background: transparent; }
-.pa.on, .pd.on, .ps.on, .pm.on, .phk.on, .psg.on { background: var(--tx); color: #fff; border-color: var(--tx); }
+.pa, .pd, .ps, .pm, .phk, .psg, .pkr, .pjp { border-color: var(--bd); color: var(--tx2); background: transparent; }
+.pa.on, .pd.on, .ps.on, .pm.on, .phk.on, .psg.on, .pkr.on, .pjp.on { background: var(--tx); color: #fff; border-color: var(--tx); }
 .sep { width: 1px; height: 18px; background: var(--bd); display: inline-block; margin: 0 3px; vertical-align: middle; }
 
 /* 12. Progress Bars */

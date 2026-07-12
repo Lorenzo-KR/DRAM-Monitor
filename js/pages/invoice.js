@@ -82,7 +82,7 @@ Pages.Invoice = (() => {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <div style="display:flex;gap:4px">
-          ${['', 'HK', 'SG'].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
+          ${['', ...CONFIG.COUNTRY_LIST].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
         </div>
         <div style="display:flex;gap:4px">
           ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
