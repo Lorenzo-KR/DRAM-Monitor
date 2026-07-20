@@ -369,3 +369,40 @@ function makeEditableSelect(value, options, className, onChangeHandler) {
     .join('');
   return `<td><select class="ec ${className || ''}" onchange="${onChangeHandler}">${optionsHtml}</select></td>`;
 }
+
+// ─────────────────────────────────────────────────────────────
+// 6. 사업 ↔ 판매 법인 연동
+// ─────────────────────────────────────────────────────────────
+
+/** 법인 옵션 표시명 — mode: 'full'(홍콩 (HK)) | 'name'(홍콩) | 'code'(HK) */
+function countryOptionLabel(co, mode) {
+  if (mode === 'code') return co;
+  const name = CONFIG.COUNTRY_LABELS[co] || co;
+  return mode === 'name' ? name : `${name} (${co})`;
+}
+
+/**
+ * 사업 select에 맞춰 법인 select의 옵션을 다시 채운다.
+ * 한국(KR)·일본TES(JP)는 모듈 세일즈(MOD) 전용이므로 다른 사업에서는 노출되지 않는다.
+ * 폼의 사업 select에 onchange로 걸어 두고, 값을 채워 넣을 때도 직접 호출한다.
+ *
+ * @param {string} bizSelectId 사업 select element id
+ * @param {string} coSelectId  법인 select element id
+ * @param {'full'|'name'|'code'} [mode='full'] 옵션 표시 형식
+ */
+function syncCountryOptions(bizSelectId, coSelectId, mode = 'full') {
+  const bizEl = document.getElementById(bizSelectId);
+  const coEl  = document.getElementById(coSelectId);
+  if (!bizEl || !coEl) return;
+
+  // 고객사 폼의 '전체(ALL)'는 특정 사업이 아니므로 모든 법인을 허용
+  const biz     = bizEl.value === 'ALL' ? '' : bizEl.value;
+  const allowed = countriesForBiz(biz);
+  const prev    = coEl.value;
+
+  coEl.innerHTML = allowed
+    .map(co => `<option value="${co}">${countryOptionLabel(co, mode)}</option>`)
+    .join('');
+  // 기존 선택이 여전히 유효하면 유지, 아니면 첫 번째 법인으로
+  coEl.value = allowed.includes(prev) ? prev : (allowed[0] || '');
+}

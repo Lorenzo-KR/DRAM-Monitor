@@ -22,6 +22,22 @@ Pages.Revenue = (() => {
     document.getElementById('rv-yr').style.display = m === 'year'  ? '' : 'none';
     render();
   }
+  const CO_PILL_IDS = ['rv-co-all', ...CONFIG.COUNTRY_LIST.map(c => 'rv-co-' + c.toLowerCase())];
+
+  // 선택된 사업을 취급하는 법인 pill만 노출하고, 숨겨진 법인이 선택돼 있으면 '전체'로 되돌린다.
+  function _syncCoPills() {
+    const allowed = countriesForBiz(_biz);
+    CONFIG.COUNTRY_LIST.forEach(c => {
+      const b = document.getElementById('rv-co-' + c.toLowerCase()); if (!b) return;
+      b.style.display = allowed.includes(c) ? '' : 'none';
+    });
+    if (_co && !allowed.includes(_co)) {
+      _co = '';
+      CO_PILL_IDS.forEach(id => document.getElementById(id)?.classList.remove('on'));
+      document.getElementById('rv-co-all')?.classList.add('on');
+    }
+  }
+
   function setBiz(el, val) {
     _biz = val;
     ['rv-biz-all','rv-biz-dram','rv-biz-ssd','rv-biz-mid','rv-biz-scr','rv-biz-rma','rv-biz-sus','rv-biz-mod'].forEach(id => {
@@ -29,12 +45,13 @@ Pages.Revenue = (() => {
       b.classList.remove('on');
     });
     el.classList.add('on');
+    _syncCoPills();
     render();
   }
 
   function setCo(el, val) {
     _co = val;
-    ['rv-co-all','rv-co-hk','rv-co-sg'].forEach(id => {
+    CO_PILL_IDS.forEach(id => {
       const b = document.getElementById(id); if (!b) return;
       b.classList.remove('on');
     });
@@ -59,7 +76,7 @@ Pages.Revenue = (() => {
 
   // ── 메인 렌더 ──────────────────────────────────────────────
   function render() {
-    _buildMonthSelect(); _buildYearSelect();
+    _buildMonthSelect(); _buildYearSelect(); _syncCoPills();
     const biz  = _biz;
     const co   = _co;
     const tick = '#9aa0ad';
@@ -80,8 +97,8 @@ Pages.Revenue = (() => {
 
     const totB = fi.reduce((s, r) => s + parseNumber(r.amount), 0);
 
-    // 매출이 있는 법인만 카드로 표시 (HK/SG는 기본 노출)
-    const coCards = CONFIG.COUNTRY_LIST
+    // 선택 사업을 취급하는 법인 중, 매출이 있는 곳만 카드로 표시 (HK/SG는 기본 노출)
+    const coCards = countriesForBiz(biz)
       .filter(c => c === 'HK' || c === 'SG' || fi.some(r => r.country === c))
       .map(c => {
         const rows = fi.filter(r => r.country === c);

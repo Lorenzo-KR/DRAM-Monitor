@@ -595,7 +595,7 @@ Pages.BizHistory = (() => {
       </button>`;
     }).join('');
 
-    const coTabs = [['', '전체'], ...CONFIG.COUNTRY_LIST.map(c => [c, CONFIG.COUNTRY_LABELS[c]])].map(([v, label]) => {
+    const coTabs = [['', '전체'], ...countriesForBiz(_biz).map(c => [c, CONFIG.COUNTRY_LABELS[c]])].map(([v, label]) => {
       const active = v === _country;
       return `<button onclick="Pages.BizHistory.setCountry('${v}')"
         style="padding:5px 11px;border:1px solid ${active?'var(--tx2)':'var(--bd2)'};border-radius:6px;
@@ -629,7 +629,8 @@ Pages.BizHistory = (() => {
 
   return {
     render,
-    setBiz(b)     { _biz = b; render(); },
+    // 사업이 바뀌면 그 사업을 취급하지 않는 법인 선택은 해제
+    setBiz(b)     { _biz = b; if (!countriesForBiz(b).includes(_country)) _country = ''; render(); },
     setCountry(c) { _country = c; render(); },
   };
 

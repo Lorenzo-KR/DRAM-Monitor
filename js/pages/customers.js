@@ -6,6 +6,7 @@
 Pages.Customers = (() => {
 
   function render() {
+    syncCountryOptions('cu-biz', 'cu-co');   // 등록 폼: 사업에 맞는 법인만 노출
     const tb   = document.getElementById('cu-tb'); if (!tb) return;
     const custs = Store.getCustomers();
     if (!custs.length) {

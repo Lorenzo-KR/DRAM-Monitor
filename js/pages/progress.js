@@ -325,11 +325,11 @@ Pages.Progress = (() => {
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
         <td style="${tdS}">
           <select id="nl-co" style="${inp};width:100%;padding:2px 3px">
-            <option value="HK">HK</option><option value="SG">SG</option><option value="KR">KR</option><option value="JP">JP</option>
+            ${countriesForBiz('DRAM').map(c => `<option value="${c}">${c}</option>`).join('')}
           </select>
         </td>
         <td style="${tdS}">
-          <select id="nl-biz" style="${inp};width:100%;padding:2px 3px">
+          <select id="nl-biz" style="${inp};width:100%;padding:2px 3px" onchange="syncCountryOptions('nl-biz','nl-co','code')">
             <option value="DRAM">DRAM</option><option value="SSD">SSD</option><option value="MID">MID</option><option value="SCR">Scrap 자재</option><option value="RMA">RMA</option><option value="SUS">Sustainability</option><option value="MOD">모듈 세일즈</option>
           </select>
         </td>
@@ -1357,8 +1357,9 @@ Pages.Progress = (() => {
     _editLotId = lotId;
 
     document.getElementById('ep-lot').value          = lot.lotNo       || '';
-    document.getElementById('ep-co').value           = lot.country     || 'HK';
     document.getElementById('ep-biz').value          = lot.biz         || 'DRAM';
+    syncCountryOptions('ep-biz', 'ep-co');   // 사업에 맞는 법인 목록으로 갱신 후 값 지정
+    document.getElementById('ep-co').value           = lot.country     || 'HK';
     document.getElementById('ep-cust').value         = lot.customerName|| '';
     document.getElementById('ep-indate').value       = lot.inDate      || '';
     document.getElementById('ep-tgt').value          = lot.targetDate  || '';

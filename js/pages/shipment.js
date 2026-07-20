@@ -48,6 +48,7 @@ Pages.Shipment = (() => {
     if (id) {
       const s = Store.getShipmentById(id); if (!s) return;
       document.getElementById('sp-biz').value     = s.biz     || 'DRAM';
+      syncCountryOptions('sp-biz', 'sp-country', 'name');
       document.getElementById('sp-country').value = s.country || 'HK';
       document.getElementById('sp-cust').value    = s.customerName || '';
       document.getElementById('sp-lot').value     = s.lotNo   || '';
@@ -59,6 +60,7 @@ Pages.Shipment = (() => {
     } else {
       ['sp-cust','sp-lot','sp-qty','sp-note','sp-date'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
       document.getElementById('sp-status').value = 'pending';
+      syncCountryOptions('sp-biz', 'sp-country', 'name');
     }
     document.getElementById('ship-panel').style.display   = 'block';
     document.getElementById('ship-overlay').style.display = 'block';

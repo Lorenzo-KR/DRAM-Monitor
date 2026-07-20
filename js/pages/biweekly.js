@@ -41,6 +41,15 @@ Pages.Biweekly = (() => {
       .reduce((s, r) => s + parseNumber(r.amount || r.total), 0);
   }
 
+  /** 해당 연도에 (사업, 법인) 조합의 인보이스나 LOT 실적이 하나라도 있는지 */
+  function _hasDataByBizCo(biz, co, year) {
+    const yr = String(year);
+    const hit = r => r.biz === biz && r.country === co;
+    return Store.getInvoices().some(r => hit(r) && String(r.date || '').startsWith(yr))
+        || Store.getLots().some(l => hit(l) &&
+             (String(l.actualDone || '').startsWith(yr) || String(l.targetDate || '').startsWith(yr)));
+  }
+
   function _unbilledByBizCo(biz, co, year, month) {
     // 해당 월에 완료(actualDone||targetDate)된 LOT 중 현시점 기준 인보이스 미청구분의 수량 합
     // 완료 판정: 누적 처리량이 LOT qty 이상 (report.js 청구예정과 동일)
@@ -142,23 +151,37 @@ Pages.Biweekly = (() => {
           </td>`;
         };
 
+        // 사업별 취급 법인 (예: 한국·일본TES는 MOD 전용)
+        // 취급 법인이 아니더라도 실제 실적이 있으면 컬럼을 남긴다 —
+        // 잘못 입력된 조합을 조용히 숨겨 소계에서 누락시키지 않기 위함.
+        // 월 행마다 반복 호출되므로 사업별로 1회만 계산
+        const _coCache = {};
+        const coOf = biz => _coCache[biz] || (_coCache[biz] = CO.filter(co =>
+          countriesForBiz(biz).includes(co) || _hasDataByBizCo(biz, co, curYear)
+        ));
+
         // 헤더 1행
         const bizHeaders = bizList.map(biz => {
           const color = BIZ_COLORS[biz] || HTX;
           return THM(BIZ_LABELS[biz], HBG,
-            `color:${color};border-bottom:2px solid ${color}`, CO.length + 1);
+            `color:${color};border-bottom:2px solid ${color}`, coOf(biz).length + 1);
         }).join('');
 
         // 헤더 2행
-        const subHeaders = bizList.map(() =>
-          CO.map(co => THM(CO_LABELS[co], HBG)).join('') + THM('소계', SBG, `background:${SBG}`)
+        const subHeaders = bizList.map(biz =>
+          coOf(biz).map(co => THM(CO_LABELS[co], HBG)).join('') + THM('소계', SBG, `background:${SBG}`)
         ).join('');
 
         // 데이터 행 — 월별
-        const N = bizList.length * (CO.length + 1);
-        const colTotalsP = Array(N).fill(0);
-        const colTotalsR = Array(N).fill(0);
-        const colTotalsU = Array(N).fill(0);
+        // 컬럼 합계는 사업마다 법인 수가 다르므로 `사업|법인` 키로 누적 (소계는 '|__sub')
+        const colTotalsP = {};
+        const colTotalsR = {};
+        const colTotalsU = {};
+        const addCol = (key, p, r, u) => {
+          colTotalsP[key] = (colTotalsP[key] || 0) + p;
+          colTotalsR[key] = (colTotalsR[key] || 0) + r;
+          colTotalsU[key] = (colTotalsU[key] || 0) + u;
+        };
         let grandP = 0, grandR = 0, grandU = 0;
 
         const dataRows = MONTHS.map(m => {
@@ -167,22 +190,18 @@ Pages.Biweekly = (() => {
           const subBg = isCur ? '#DCDCE6' : SBG;
           let rowTotalP = 0, rowTotalR = 0, rowTotalU = 0;
 
-          const cells = bizList.map((biz, bi) => {
+          const cells = bizList.map(biz => {
             let bizSubP = 0, bizSubR = 0, bizSubU = 0;
-            const coCells = CO.map((co, ci) => {
+            const coCells = coOf(biz).map(co => {
               const p = _procByBizCo(biz, co, curYear, m);
               const r = _revByBizCo(biz, co, curYear, m);
               const u = _unbilledByBizCo(biz, co, curYear, m);
               bizSubP += p; bizSubR += r; bizSubU += u;
-              colTotalsP[bi * (CO.length + 1) + ci] += p;
-              colTotalsR[bi * (CO.length + 1) + ci] += r;
-              colTotalsU[bi * (CO.length + 1) + ci] += u;
+              addCol(`${biz}|${co}`, p, r, u);
               return DC(p, r, u, rowBg, false);
             }).join('');
             rowTotalP += bizSubP; rowTotalR += bizSubR; rowTotalU += bizSubU;
-            colTotalsP[bi * (CO.length + 1) + CO.length] += bizSubP;
-            colTotalsR[bi * (CO.length + 1) + CO.length] += bizSubR;
-            colTotalsU[bi * (CO.length + 1) + CO.length] += bizSubU;
+            addCol(`${biz}|__sub`, bizSubP, bizSubR, bizSubU);
             return coCells + DC(bizSubP, bizSubR, bizSubU, subBg, true);
           }).join('');
 
@@ -196,23 +215,19 @@ Pages.Biweekly = (() => {
         }).join('');
 
         // 합계 행 — 사업별 컬럼 합계
-        const totalCells = bizList.map((biz, bi) => {
-          const coTotals = CO.map((co, ci) => {
-            const p = colTotalsP[bi * (CO.length + 1) + ci];
-            const r = colTotalsR[bi * (CO.length + 1) + ci];
-            const u = colTotalsU[bi * (CO.length + 1) + ci];
-            return DC(p, r, u, SBG, true);
+        const totalCells = bizList.map(biz => {
+          const coTotals = coOf(biz).map(co => {
+            const k = `${biz}|${co}`;
+            return DC(colTotalsP[k] || 0, colTotalsR[k] || 0, colTotalsU[k] || 0, SBG, true);
           }).join('');
-          const sp = colTotalsP[bi * (CO.length + 1) + CO.length];
-          const sr = colTotalsR[bi * (CO.length + 1) + CO.length];
-          const su = colTotalsU[bi * (CO.length + 1) + CO.length];
-          return coTotals + DC(sp, sr, su, SBG, true);
+          const sk = `${biz}|__sub`;
+          return coTotals + DC(colTotalsP[sk] || 0, colTotalsR[sk] || 0, colTotalsU[sk] || 0, SBG, true);
         }).join('');
 
         const cols = `
           <col style="width:${W_MONTH}px">
-          ${bizList.map(() =>
-            CO.map(() => `<col style="width:${W_DATA}px">`).join('') +
+          ${bizList.map(biz =>
+            coOf(biz).map(() => `<col style="width:${W_DATA}px">`).join('') +
             `<col style="width:${W_SUB}px">`
           ).join('')}
           <col style="width:${W_TOTAL}px">`;

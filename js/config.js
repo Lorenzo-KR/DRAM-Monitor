@@ -86,3 +86,13 @@ const CONFIG = {
   // LOT 기본 목표 완료일 (입고일 + N일)
   LOT_DEFAULT_TARGET_DAYS: 14,
 };
+
+/**
+ * 해당 사업을 취급하는 판매 법인 목록.
+ * biz가 비어 있으면(전체) 모든 법인을 반환합니다.
+ * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국·일본TES는 MOD 전용)
+ */
+function countriesForBiz(biz) {
+  if (!biz) return CONFIG.COUNTRY_LIST;
+  return CONFIG.COUNTRY_LIST.filter(c => (CONFIG.COUNTRY_BIZ_MAP[c] || []).includes(biz));
+}

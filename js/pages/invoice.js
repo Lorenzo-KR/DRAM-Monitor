@@ -82,7 +82,7 @@ Pages.Invoice = (() => {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <div style="display:flex;gap:4px">
-          ${['', ...CONFIG.COUNTRY_LIST].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
+          ${['', ...countriesForBiz(_filterBiz)].map(co => `<button class="btn sm${_filterCo === co ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterCo('${co}')">${co || '전체'}</button>`).join('')}
         </div>
         <div style="display:flex;gap:4px">
           ${['', ...CONFIG.BIZ_LIST].map(b => `<button class="btn sm${_filterBiz === b ? ' pri' : ''}" style="font-size:12px;padding:3px 10px" onclick="Pages.Invoice.filterBiz('${b}')">${b ? CONFIG.BIZ_LABELS[b] : '전체'}</button>`).join('')}
@@ -135,7 +135,12 @@ Pages.Invoice = (() => {
 
   // ── 필터 / 정렬 ─────────────────────────────────────────────
   function filterCo(co)   { _filterCo  = co;  render(); }
-  function filterBiz(biz) { _filterBiz = biz; render(); }
+  function filterBiz(biz) {
+    _filterBiz = biz;
+    // 사업이 바뀌면 그 사업을 취급하지 않는 법인 필터는 해제
+    if (!countriesForBiz(biz).includes(_filterCo)) _filterCo = '';
+    render();
+  }
   function sort(key) {
     if (_sortKey === key) _sortDir *= -1; else { _sortKey = key; _sortDir = -1; }
     render();
@@ -161,6 +166,7 @@ Pages.Invoice = (() => {
       document.getElementById('ip-no').value        = r.no           || '';
       document.getElementById('ip-date').value      = r.date         || '';
       document.getElementById('ip-biz').value       = r.biz          || 'DRAM';
+      syncCountryOptions('ip-biz', 'ip-co', 'name');
       document.getElementById('ip-co').value        = r.country      || 'HK';
       document.getElementById('ip-cust').value      = r.customerName || '';
       document.getElementById('ip-amount').value    = r.amount       || '';
@@ -181,6 +187,7 @@ Pages.Invoice = (() => {
       document.getElementById('ip-paid-date').value = today();
       document.getElementById('ip-cur').value       = 'USD';
       document.getElementById('ip-lot').value       = '';
+      syncCountryOptions('ip-biz', 'ip-co', 'name');
       togglePaidFields('paid');
     }
     panel.style.display   = 'block';
@@ -202,6 +209,7 @@ Pages.Invoice = (() => {
   function fillFromLot(lotId) {
     const lot = Store.getLots().find(l => String(l.id) === lotId); if (!lot) return;
     document.getElementById('ip-biz').value       = lot.biz          || 'DRAM';
+    syncCountryOptions('ip-biz', 'ip-co', 'name');
     document.getElementById('ip-co').value        = lot.country      || 'HK';
     document.getElementById('ip-cust').value      = lot.customerName || '';
     document.getElementById('ip-date').value      = lot.actualDone   || today();
