@@ -40,14 +40,17 @@ Pages.DramPrice = (() => {
     '#2D7D46','#8B3A3A','#555','#C05621','#1A6B3A',
   ];
 
-  // 섹션별 상태 (제품 필터 + 차트 인스턴스)
+  // 표 한 페이지당 행 수
+  const PAGE_SIZE = 20;
+
+  // 섹션별 상태 (제품 필터 + 차트 인스턴스 + 표 페이지)
   let _data      = {};   // { spot: [{Date, Item, 'Daily High', ...}, ...], ... }
-  let _state     = {};   // { spot: { selProds: Set, chart: null }, ... }
+  let _state     = {};   // { spot: { selProds: Set, chart: null, page: 0 }, ... }
   let _activeKey = SHEETS[0].key;  // 현재 활성 탭
 
   SHEETS.forEach(s => {
     _data[s.key]  = [];
-    _state[s.key] = { selProds: new Set(), chart: null };
+    _state[s.key] = { selProds: new Set(), chart: null, page: 0 };
   });
 
   // ── 데이터 fetch ───────────────────────────────────────────
@@ -158,6 +161,36 @@ Pages.DramPrice = (() => {
     }).join('');
   }
 
+  // ── 페이지네이션 버튼 ─────────────────────────────────────
+  function _buildPagerHtml(cfg, page, pageCount, total, from, to) {
+    const base = `padding:4px 9px;margin-left:4px;border:1px solid #E0E0E0;border-radius:4px;
+                  background:#fff;color:#555;font-family:Pretendard,sans-serif;font-size:11px;
+                  line-height:1.4;cursor:pointer`;
+    const off  = `${base};color:#CCC;cursor:default`;
+    const on   = `${base};background:#111110;border-color:#111110;color:#fff;font-weight:600`;
+
+    const btn = (label, target, disabled, active) =>
+      disabled
+        ? `<button disabled style="${off}">${label}</button>`
+        : `<button onclick="Pages.DramPrice.goPage('${cfg.key}',${target})"
+             style="${active ? on : base}">${label}</button>`;
+
+    let nums = '';
+    for (let p = 0; p < pageCount; p++) nums += btn(p + 1, p, false, p === page);
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;
+                        flex-wrap:wrap;gap:8px;margin-top:10px">
+      <div style="font-family:Pretendard,sans-serif;font-size:11px;color:#888">
+        ${from}–${to} / ${total}건
+      </div>
+      <div style="display:flex;flex-wrap:wrap;justify-content:flex-end">
+        ${btn('이전', page - 1, page === 0, false)}
+        ${nums}
+        ${btn('다음', page + 1, page >= pageCount - 1, false)}
+      </div>
+    </div>`;
+  }
+
   // ── 데이터 표 ─────────────────────────────────────────────
   function _renderTable(cfg) {
     const el = document.getElementById(`dp-table-${cfg.key}`);
@@ -174,6 +207,13 @@ Pages.DramPrice = (() => {
       return;
     }
 
+    // 페이지 분할 — 필터 변경으로 총 건수가 줄면 범위 밖 페이지를 보정
+    const pageCount = Math.ceil(rows.length / PAGE_SIZE);
+    if (state.page >= pageCount) state.page = pageCount - 1;
+    if (state.page < 0) state.page = 0;
+    const start    = state.page * PAGE_SIZE;
+    const pageRows = rows.slice(start, start + PAGE_SIZE);
+
     const FS  = "font-family:Pretendard,sans-serif;font-size:12px";
     const FM  = "font-family:'DM Mono',monospace;font-size:12px";
     const thS = `padding:6px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`;
@@ -182,7 +222,7 @@ Pages.DramPrice = (() => {
     const ths = ['날짜', 'Last Update', '제품', ...cfg.cols]
       .map(h => `<th style="${thS}">${h}</th>`).join('');
 
-    const trs = rows.map((r, i) => {
+    const trs = pageRows.map((r, i) => {
       const dataCells = cfg.cols.map(col => {
         const v = r[col] || '—';
         if (col === cfg.chgCol) {
@@ -206,7 +246,8 @@ Pages.DramPrice = (() => {
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>${ths}</tr></thead>
         <tbody>${trs}</tbody>
-      </table></div>`;
+      </table></div>`
+      + _buildPagerHtml(cfg, state.page, pageCount, rows.length, start + 1, start + pageRows.length);
   }
 
   // ── 섹션 전체 업데이트 ────────────────────────────────────
@@ -301,8 +342,18 @@ Pages.DramPrice = (() => {
       if (!state) return;
       if (state.selProds.has(prod)) state.selProds.delete(prod);
       else state.selProds.add(prod);
+      state.page = 0;   // 필터가 바뀌면 첫 페이지부터
       const cfg = SHEETS.find(s => s.key === key);
       if (cfg) _refreshSection(cfg);
+    },
+
+    /** 표 페이지 이동 (표만 다시 그림 — 차트는 유지) */
+    goPage(key, page) {
+      const state = _state[key];
+      if (!state) return;
+      state.page = page;
+      const cfg = SHEETS.find(s => s.key === key);
+      if (cfg) _renderTable(cfg);
     },
 
     async render() {
