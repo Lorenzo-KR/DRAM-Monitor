@@ -6,7 +6,14 @@
 //             LockService 로 동시성 보호
 // ================================================================
 
-var PASSWORD        = '***REMOVED***';
+// 비밀번호는 소스에 두지 않는다.
+// Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에
+//   APP_PASSWORD = <비밀번호>
+// 를 등록해 두고 여기서 읽어 쓴다. (속성이 없으면 로그인은 항상 실패)
+function getPassword_() {
+  return PropertiesService.getScriptProperties().getProperty('APP_PASSWORD');
+}
+
 var TOKEN_EXPIRE_MS = 8 * 60 * 60 * 1000;
 var MAX_TOKENS      = 50;
 var MAX_FAIL        = 5;
@@ -129,6 +136,22 @@ function saveToken(token) {
   }
 }
 
+/**
+ * 발급된 토큰을 전부 폐기한다. (Apps Script 편집기에서 직접 실행)
+ *
+ * 비밀번호 노출·변경 시 반드시 한 번 실행할 것.
+ * isValidToken 의 sliding expiration 때문에, 이미 발급된 토큰은
+ * 계속 사용되기만 하면 만료되지 않는다. 비밀번호를 바꾸거나 숨기는 것만으로는
+ * 기존 토큰 보유자를 쫓아낼 수 없다.
+ */
+function resetAuth() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('AUTH_TOKENS', '[]');
+  props.setProperty('AUTH_FAIL_COUNT', '0');
+  props.setProperty('AUTH_LOCK_UNTIL', '0');
+  return '모든 토큰을 폐기했습니다. 전원 재로그인이 필요합니다.';
+}
+
 function isValidToken(token) {
   if (!token) return false;
   var tokens = loadTokens_();
@@ -174,8 +197,9 @@ function doGet(e) {
       if (isLockedOut()) {
         return respond({ error: 'LOCKED', message: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.' });
       }
-      var pw = e.parameter.pw;
-      if (pw === PASSWORD) {
+      var pw     = e.parameter.pw;
+      var realPw = getPassword_();
+      if (realPw && pw === realPw) {
         clearFail();
         var newToken = generateToken();
         saveToken(newToken);
@@ -234,7 +258,8 @@ function doPost(e) {
     body = JSON.parse(e.postData.contents);
     if (body.action === 'auth') {
       if (isLockedOut()) return respond({ error: 'LOCKED', message: '로그인 시도가 너무 많습니다.' });
-      if (body.pw === PASSWORD) {
+      var realPw = getPassword_();
+      if (realPw && body.pw === realPw) {
         clearFail();
         var newToken = generateToken();
         saveToken(newToken);
