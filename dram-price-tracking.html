@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>DRAM Price Tracking</title>
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/main.css">
+
+  <!-- External libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+  <style>
+    .pub-body { padding: 28px 36px; }
+    @media (max-width: 600px) { .pub-body { padding: 20px 18px; } }
+  </style>
+</head>
+<body>
+
+<div class="pub-body">
+  <div id="dp-root"></div>
+</div>
+
+<script>
+  /**
+   * 외부 공개용 단독 페이지.
+   * 내부 대시보드(index.html)의 스크립트·마크업은 일절 로드하지 않으며,
+   * 아래 API_URL로 호출 가능한 것은 토큰이 필요 없는 getDramPrices 뿐입니다.
+   * (그 외 모든 action은 Apps Script에서 isValidToken 검증으로 차단됨)
+   */
+  const CONFIG = {
+    API_URL: 'https://script.google.com/macros/s/AKfycbyoyZClwnBKsDYC9Wdoq22ko6bERKY_dRfDIoRPpPm8I2UWwYTur9O_B49gAFmZJ_2O/exec',
+  };
+  const Pages = {};
+</script>
+
+<script src="js/pages/dramPrice.js"></script>
+
+<script>
+  Pages.DramPrice.render();
+</script>
+
+</body>
+</html>
