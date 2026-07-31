@@ -145,11 +145,17 @@ function saveToken(token) {
  * 기존 토큰 보유자를 쫓아낼 수 없다.
  */
 function resetAuth() {
-  var props = PropertiesService.getScriptProperties();
+  var props   = PropertiesService.getScriptProperties();
+  var before  = loadTokens_().length;
   props.setProperty('AUTH_TOKENS', '[]');
   props.setProperty('AUTH_FAIL_COUNT', '0');
   props.setProperty('AUTH_LOCK_UNTIL', '0');
-  return '모든 토큰을 폐기했습니다. 전원 재로그인이 필요합니다.';
+
+  // 편집기에서 수동 실행하면 반환값은 로그에 남지 않으므로 console.log 로 출력한다.
+  var msg = '토큰 ' + before + '개를 폐기했습니다. 전원 재로그인이 필요합니다.';
+  console.log(msg);
+  console.log('APP_PASSWORD 속성 설정됨: ' + (getPassword_() ? 'YES' : 'NO — 로그인이 전부 실패합니다'));
+  return msg;
 }
 
 function isValidToken(token) {
