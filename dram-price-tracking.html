@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,19 +29,16 @@
 </div>
 
 <script>
-  /**
-   * 외부 공개용 단독 페이지.
-   * 내부 대시보드(index.html)의 스크립트·마크업은 일절 로드하지 않으며,
-   * 아래 API_URL로 호출 가능한 것은 토큰이 필요 없는 getDramPrices 뿐입니다.
-   * (그 외 모든 action은 Apps Script에서 isValidToken 검증으로 차단됨)
-   */
+  /** Standalone public page — DRAM price data only. */
+  window.DP_LANG = 'en';
+
   const CONFIG = {
     API_URL: 'https://script.google.com/macros/s/AKfycbyoyZClwnBKsDYC9Wdoq22ko6bERKY_dRfDIoRPpPm8I2UWwYTur9O_B49gAFmZJ_2O/exec',
   };
   const Pages = {};
 </script>
 
-<script src="js/pages/dramPrice.js?v=2"></script>
+<script src="js/pages/dramPrice.js?v=3"></script>
 
 <script>
   Pages.DramPrice.render();

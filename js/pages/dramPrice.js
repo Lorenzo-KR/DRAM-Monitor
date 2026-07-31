@@ -43,6 +43,39 @@ Pages.DramPrice = (() => {
   // 표 한 페이지당 행 수
   const PAGE_SIZE = 20;
 
+  // ── 표시 언어 ──────────────────────────────────────────────
+  // 기본은 한글(내부 대시보드). 외부 공개 페이지에서 스크립트 로드 전에
+  // window.DP_LANG = 'en' 을 지정하면 화면 문구가 영문으로 나갑니다.
+  const LANG = (typeof window !== 'undefined' && window.DP_LANG === 'en') ? 'en' : 'ko';
+
+  const TEXT = {
+    ko: {
+      subtitle: 'TrendForce · 시트별 독립 업데이트 주기',
+      loading:  '데이터 불러오는 중...',
+      noData:   '데이터 없음',
+      colDate:  '날짜',
+      colItem:  '제품',
+      days:     n => `${n}일 누적`,
+      recent:   '최근 200건',
+      prev:     '이전',
+      next:     '다음',
+      range:    (from, to, total) => `${from}–${to} / ${total}건`,
+    },
+    en: {
+      subtitle: 'TrendForce · each sheet updates on its own schedule',
+      loading:  'Loading data...',
+      noData:   'No data',
+      colDate:  'Date',
+      colItem:  'Product',
+      days:     n => `${n} days`,
+      recent:   'Latest 200 records',
+      prev:     'Prev',
+      next:     'Next',
+      range:    (from, to, total) => `${from}–${to} of ${total}`,
+    },
+  };
+  const L = TEXT[LANG];
+
   // 섹션별 상태 (제품 필터 + 차트 인스턴스 + 표 페이지)
   let _data      = {};   // { spot: [{Date, Item, 'Daily High', ...}, ...], ... }
   let _state     = {};   // { spot: { selProds: Set, chart: null, page: 0 }, ... }
@@ -181,12 +214,12 @@ Pages.DramPrice = (() => {
     return `<div style="display:flex;align-items:center;justify-content:space-between;
                         flex-wrap:wrap;gap:8px;margin-top:10px">
       <div style="font-family:Pretendard,sans-serif;font-size:11px;color:#888">
-        ${from}–${to} / ${total}건
+        ${L.range(from, to, total)}
       </div>
       <div style="display:flex;flex-wrap:wrap;justify-content:flex-end">
-        ${btn('이전', page - 1, page === 0, false)}
+        ${btn(L.prev, page - 1, page === 0, false)}
         ${nums}
-        ${btn('다음', page + 1, page >= pageCount - 1, false)}
+        ${btn(L.next, page + 1, page >= pageCount - 1, false)}
       </div>
     </div>`;
   }
@@ -203,7 +236,7 @@ Pages.DramPrice = (() => {
       .slice(0, 200);
 
     if (!rows.length) {
-      el.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-family:Pretendard,sans-serif;font-size:12px">데이터 없음</div>';
+      el.innerHTML = `<div style="padding:20px;text-align:center;color:#999;font-family:Pretendard,sans-serif;font-size:12px">${L.noData}</div>`;
       return;
     }
 
@@ -219,7 +252,7 @@ Pages.DramPrice = (() => {
     const thS = `padding:6px 10px;text-align:center;${FS};font-weight:700;color:#222;background:#F0F0F0;border-bottom:2px solid #CCC;border-right:1px solid #DDD;white-space:nowrap`;
     const tdB = `padding:6px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8`;
 
-    const ths = ['날짜', 'Last Update', '제품', ...cfg.cols]
+    const ths = [L.colDate, 'Last Update', L.colItem, ...cfg.cols]
       .map(h => `<th style="${thS}">${h}</th>`).join('');
 
     const trs = pageRows.map((r, i) => {
@@ -261,7 +294,7 @@ Pages.DramPrice = (() => {
   function _buildSectionHtml(cfg) {
     const rows      = _data[cfg.key];
     const lastRow   = rows.length ? [...rows].sort((a, b) => b['Date'].localeCompare(a['Date']))[0] : null;
-    const lastUpdate = lastRow ? (lastRow['Last Update'] || lastRow['Date'] || '—') : '데이터 없음';
+    const lastUpdate = lastRow ? (lastRow['Last Update'] || lastRow['Date'] || '—') : L.noData;
     const dayCount  = new Set(rows.map(r => r['Date'])).size;
 
     return `
@@ -271,7 +304,7 @@ Pages.DramPrice = (() => {
           <div style="display:flex;align-items:center;gap:10px">
             <span style="width:4px;height:20px;background:${cfg.color};border-radius:2px;display:inline-block"></span>
             <span style="font-size:14px;font-weight:700;font-family:Pretendard,sans-serif;color:var(--tx)">${cfg.label}</span>
-            <span style="font-size:11px;color:#888;font-family:Pretendard,sans-serif">${dayCount}일 누적</span>
+            <span style="font-size:11px;color:#888;font-family:Pretendard,sans-serif">${L.days(dayCount)}</span>
           </div>
           <span style="font-size:11px;color:#888;font-family:Pretendard,sans-serif">${lastUpdate}</span>
         </div>
@@ -287,7 +320,7 @@ Pages.DramPrice = (() => {
         <!-- 표 -->
         <div style="border-top:1px solid #EBEBEB;padding-top:10px">
           <div style="font-size:11px;font-weight:600;color:#888;font-family:Pretendard,sans-serif;margin-bottom:6px">
-            최근 200건
+            ${L.recent}
           </div>
           <div id="dp-table-${cfg.key}"></div>
         </div>
@@ -359,7 +392,7 @@ Pages.DramPrice = (() => {
     async render() {
       const el = document.getElementById('dp-root');
       if (!el) return;
-      el.innerHTML = `<div class="page-wrap"><div style="padding:40px;text-align:center;color:#999;font-family:Pretendard,sans-serif">데이터 불러오는 중...</div></div>`;
+      el.innerHTML = `<div class="page-wrap"><div style="padding:40px;text-align:center;color:#999;font-family:Pretendard,sans-serif">${L.loading}</div></div>`;
 
       // 4개 시트 병렬 fetch
       const fetched = await Promise.all(SHEETS.map(s => _fetchSheet(s.sheet)));
@@ -377,7 +410,7 @@ Pages.DramPrice = (() => {
           <div class="ph-row">
             <div class="ph">
               <h1>DRAM Price Tracking</h1>
-              <p>TrendForce · 시트별 독립 업데이트 주기</p>
+              <p>${L.subtitle}</p>
             </div>
           </div>
           ${_buildTabsHtml()}
