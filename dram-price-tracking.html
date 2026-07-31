@@ -20,11 +20,53 @@
   <style>
     .pub-body { padding: 28px 36px; }
     @media (max-width: 600px) { .pub-body { padding: 20px 18px; } }
+
+    /* Access gate */
+    #gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gate-card {
+      background: #fff; border: 1px solid var(--bd); border-radius: 14px;
+      padding: 40px 44px; width: 340px; max-width: calc(100vw - 32px);
+    }
+    .gate-t { font-size: 15px; font-weight: 600; color: var(--tx); letter-spacing: -.01em; margin-bottom: 4px; }
+    .gate-s { font-size: 11px; color: var(--tx3); margin-bottom: 32px; }
+    .gate-l {
+      display: block; font-size: 9.5px; font-weight: 600; color: var(--tx3);
+      text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px;
+    }
+    #gate-pw {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--bd); border-radius: var(--rs);
+      font-size: 12px; background: var(--bg); color: var(--tx); outline: none;
+      transition: border-color .12s;
+    }
+    #gate-pw:focus { border-color: var(--tx2); }
+    #gate-btn {
+      width: 100%; margin-top: 16px; padding: 10px; border: none; border-radius: var(--rs);
+      background: var(--tx); color: #fff; font-size: 12px; font-weight: 600;
+      font-family: inherit; cursor: pointer;
+    }
+    #gate-btn:disabled { background: var(--bd2); cursor: default; }
+    #gate-err { display: none; margin-top: 12px; font-size: 11px; color: #A32D2D; }
   </style>
 </head>
 <body>
 
-<div class="pub-body">
+<!-- Access gate — content is not fetched or rendered until unlocked -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-t">DRAM Price Tracking</div>
+    <div class="gate-s">TrendForce</div>
+    <label class="gate-l" for="gate-pw">Password</label>
+    <input type="password" id="gate-pw" placeholder="••••••" autocomplete="current-password">
+    <button id="gate-btn">Enter</button>
+    <div id="gate-err">Incorrect password.</div>
+  </div>
+</div>
+
+<div class="pub-body" id="pub-body" style="display:none">
   <div id="dp-root"></div>
 </div>
 
@@ -41,7 +83,52 @@
 <script src="js/pages/dramPrice.js?v=3"></script>
 
 <script>
-  Pages.DramPrice.render();
+(() => {
+  // SHA-256 of the access password — the password itself is not in this file.
+  const PW_HASH = '76c33ccae7be0d8f65e4285a94ab85673563004812861db514ba53f09be92a82';
+  const OK_KEY  = 'dp_viewer_ok';
+
+  const gate = document.getElementById('gate');
+  const body = document.getElementById('pub-body');
+  const pw   = document.getElementById('gate-pw');
+  const btn  = document.getElementById('gate-btn');
+  const err  = document.getElementById('gate-err');
+
+  async function sha256(text) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function unlock() {
+    gate.remove();
+    body.style.display = '';
+    Pages.DramPrice.render();
+  }
+
+  async function submit() {
+    if (!pw.value) return;
+    btn.disabled = true;
+    err.style.display = 'none';
+    try {
+      if (await sha256(pw.value) === PW_HASH) {
+        localStorage.setItem(OK_KEY, PW_HASH);
+        unlock();
+        return;
+      }
+    } catch (e) { /* crypto.subtle unavailable — fall through to error */ }
+    err.style.display = 'block';
+    pw.value = '';
+    pw.focus();
+    btn.disabled = false;
+  }
+
+  btn.addEventListener('click', submit);
+  pw.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+
+  // Already unlocked on this browser
+  if (localStorage.getItem(OK_KEY) === PW_HASH) unlock();
+  else pw.focus();
+})();
 </script>
 
 </body>
