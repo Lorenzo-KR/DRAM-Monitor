@@ -1119,11 +1119,13 @@ Pages.KpiTarget = (() => {
     // ── 사업별 종합 표 (매출 · Material Cost · Material Profit) ──
     // KPI-7월 전용. 사업 한 칸(rowspan)에 3개 지표 행을 묶어 한눈에 보이게 한다.
     // 표②③④와 같은 TS 스타일 상수·같은 열 너비를 써서 세로선이 일직선으로 맞는다.
-    // 지난 달까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 선 두께는 전부 동일.
+    // 전월까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 선 두께는 전부 동일.
+    // 현재월은 아직 마감 전이라 계산은 롤링(계획)값으로 하고, 그 아래에
+    // 지금까지 쌓인 실적을 괄호로 참고 표시한다.
     var comboTable = '';
     if (_isMpMode(mode)) {
       var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '-'; };
-      var dimFuture = function(i) { return i > curMonIdx ? ';color:#AAA' : ''; };
+      var dimFuture = function(i) { return i > closedIdx ? ';color:#AAA' : ''; };   // 실적 확정 구간만 진하게
 
       // 지표 행 — 첫 열(사업명)은 블록의 첫 행에서만 rowspan으로 출력
       var metricRow = function(label, vals, opt, firstCell) {
@@ -1131,8 +1133,11 @@ Pages.KpiTarget = (() => {
         var rowBg = opt.bg ? ';background:' + opt.bg : '';
         var bold  = opt.strong ? ';font-weight:600' : '';
         var cells = vals.map(function(v, i) {
+          var note = (i === curMonIdx && opt.cur !== undefined && opt.cur !== null)
+            ? '<div style="font-size:10px;color:#888;font-weight:400;line-height:1.1">(' + fmtCell(opt.cur) + ')</div>'
+            : '';
           return '<td style="' + TS.td + dimFuture(i) + bold + rowBg + '">'
-               + (opt.minus && v ? '-' : '') + fmtCell(v) + '</td>';
+               + (opt.minus && v ? '-' : '') + fmtCell(v) + note + '</td>';
         }).join('');
         var total = opt.total !== undefined ? opt.total : vals.reduce(function(s, v) { return s + (v || 0); }, 0);
         return '<tr>'
@@ -1148,8 +1153,12 @@ Pages.KpiTarget = (() => {
 
       var monthsOf = function(b, act, plan) {
         return MONTHS.map(function(_, i) {
-          return i <= curMonIdx ? actToDispNum(act[b][i] || 0) : rawToDisp(plan[b][i]);
+          return i <= closedIdx ? actToDispNum(act[b][i] || 0) : rawToDisp(plan[b][i]);
         });
+      };
+      // 현재월 실적 (참고 표시용)
+      var curAct = function(b, act) {
+        return curMonIdx >= 0 && curMonIdx < 12 ? actToDispNum(act[b][curMonIdx] || 0) : null;
       };
 
       // 사업별 블록 — 매출 / Material Cost / Material Profit
@@ -1165,16 +1174,18 @@ Pages.KpiTarget = (() => {
 
         var bizCell = '<td rowspan="3" style="' + TS.tdL + ';font-weight:600;vertical-align:middle">'
                     + (CONFIG.BIZ_LABELS[b] || b) + '</td>';
-        return metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan }, bizCell)
+        return metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan, cur: curAct(b, actRevByBiz) }, bizCell)
              + metricRow('MC', mcVals, { minus: true })
-             + metricRow('MP', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan });
+             + metricRow('MP', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan, cur: curAct(b, actEbitByBiz) });
       }).join('');
 
       // 전체 합계 블록
       var sumOf = function(fn) { return MONTHS.map(function(_, i) { return bizList.reduce(function(s, b) { return s + fn(b, i); }, 0); }); };
-      var tRev = sumOf(function(b, i) { return i <= curMonIdx ? actToDispNum(actRevByBiz[b][i] || 0) : rawToDisp(revByBiz[b][i]); });
+      var tRev = sumOf(function(b, i) { return i <= closedIdx ? actToDispNum(actRevByBiz[b][i] || 0) : rawToDisp(revByBiz[b][i]); });
       var tMc  = sumOf(function(b, i) { return rawToDisp(_getMcMonths(year, b)[i]); });
-      var tMp  = sumOf(function(b, i) { return i <= curMonIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]); });
+      var tMp  = sumOf(function(b, i) { return i <= closedIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]); });
+      var tCurRev = bizList.reduce(function(s, b) { return s + (curAct(b, actRevByBiz)  || 0); }, 0);
+      var tCurMp  = bizList.reduce(function(s, b) { return s + (curAct(b, actEbitByBiz) || 0); }, 0);
       var tRevPlan = bizList.reduce(function(s, b) { return s + revByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
       var tMpPlan  = bizList.reduce(function(s, b) { return s + ebitByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
       var tRevTot  = tRev.reduce(function(s, v) { return s + v; }, 0);
@@ -1183,9 +1194,9 @@ Pages.KpiTarget = (() => {
       // 월별 누적 (실적 구간 + 잔여 계획을 이어서 누적)
       var runCum = function(arr) { var r = 0; return arr.map(function(v) { r += (v || 0); return r; }); };
       var totalCell = '<td rowspan="5" style="' + TS.tdCumL + ';font-weight:600;vertical-align:middle">전체 합계</td>';
-      comboBody += metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#F7F7F7' }, totalCell)
+      comboBody += metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#F7F7F7', cur: tCurRev }, totalCell)
                  + metricRow('MC', tMc, { minus: true, bg: '#F7F7F7' })
-                 + metricRow('MP', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan })
+                 + metricRow('MP', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan, cur: tCurMp })
                  + metricRow('누적 매출', runCum(tRev), { total: tRevTot, plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#EFEFEF' })
                  + metricRow('누적 MP', runCum(tMp), { strong: true, total: tMpTot, plan: tMpPlan, diff: tMpTot - tMpPlan, bg: '#E8E4D8' });
 
@@ -1198,8 +1209,11 @@ Pages.KpiTarget = (() => {
         + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
         + '① 사업별 종합 — 매출 · Material Cost · Material Profit (' + unitLabel + ')</div>'
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
-        + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (curMonIdx >= 0 ? (curMonIdx + 1) + '월' : '없음') + '까지) · '
-        + '<span style="color:#AAA">흐린 값</span> = 계획 · 합계는 실적+잔여계획</span>'
+        + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지) · '
+        + '<span style="color:#AAA">흐린 값</span> = 계획 · '
+        + (curMonIdx >= 0 && curMonIdx < 12
+            ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 계획값으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
+        + '합계는 실적+잔여계획</span>'
         + '</div>'
         + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
         + '<table style="border-collapse:collapse;table-layout:fixed">' + comboColgroup
