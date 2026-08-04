@@ -324,13 +324,13 @@ Pages.Progress = (() => {
       <tr id="new-lot-row">
         <td style="${tdS};text-align:center;color:var(--tx2);font-size:14px;font-weight:400">+</td>
         <td style="${tdS}">
-          <select id="nl-co" style="${inp};width:100%;padding:2px 3px">
-            ${countriesForBiz('DRAM').map(c => `<option value="${c}">${c}</option>`).join('')}
+          <select id="nl-co" style="${inp};width:100%;padding:2px 3px" onchange="syncBizOptions('nl-co','nl-biz','code')">
+            ${CONFIG.COUNTRY_LIST.map(c => `<option value="${c}">${c}</option>`).join('')}
           </select>
         </td>
         <td style="${tdS}">
           <select id="nl-biz" style="${inp};width:100%;padding:2px 3px" onchange="syncCountryOptions('nl-biz','nl-co','code')">
-            <option value="DRAM">DRAM</option><option value="SSD">SSD</option><option value="MID">MID</option><option value="SCR">Scrap 자재</option><option value="RMA">RMA</option><option value="SUS">Sustainability</option><option value="MOD">모듈 세일즈</option>
+            ${CONFIG.BIZ_LIST.map(b => `<option value="${b}">${b}</option>`).join('')}
           </select>
         </td>
         <td style="${tdS}">

@@ -453,3 +453,25 @@ function syncCountryOptions(bizSelectId, coSelectId, mode = 'full') {
   // 기존 선택이 여전히 유효하면 유지, 아니면 첫 번째 법인으로
   coEl.value = allowed.includes(prev) ? prev : (allowed[0] || '');
 }
+
+/**
+ * 위와 반대 방향 — 법인 select에 맞춰 사업 select의 옵션을 다시 채운다.
+ * 두 방향을 모두 걸어 두면 어느 쪽을 먼저 고르든 유효한 조합만 남는다.
+ *
+ * @param {string} coSelectId  법인 select element id
+ * @param {string} bizSelectId 사업 select element id
+ * @param {'label'|'code'} [mode='label'] 옵션 표시 형식 (좁은 표 셀은 'code')
+ */
+function syncBizOptions(coSelectId, bizSelectId, mode = 'label') {
+  const coEl  = document.getElementById(coSelectId);
+  const bizEl = document.getElementById(bizSelectId);
+  if (!coEl || !bizEl) return;
+
+  const allowed = bizesForCountry(coEl.value);
+  const prev    = bizEl.value;
+
+  bizEl.innerHTML = allowed
+    .map(b => `<option value="${b}">${mode === 'code' ? b : (CONFIG.BIZ_LABELS[b] || b)}</option>`)
+    .join('');
+  bizEl.value = allowed.includes(prev) ? prev : (allowed[0] || '');
+}

@@ -108,3 +108,13 @@ function countriesForBiz(biz) {
   if (!biz) return CONFIG.COUNTRY_LIST;
   return CONFIG.COUNTRY_LIST.filter(c => (CONFIG.COUNTRY_BIZ_MAP[c] || []).includes(biz));
 }
+
+/**
+ * 해당 법인이 취급하는 사업 목록 (countriesForBiz의 반대 방향).
+ * co가 비어 있으면 모든 사업을 반환합니다.
+ */
+function bizesForCountry(co) {
+  if (!co) return CONFIG.BIZ_LIST;
+  const allowed = CONFIG.COUNTRY_BIZ_MAP[co] || [];
+  return CONFIG.BIZ_LIST.filter(b => allowed.includes(b));
+}
