@@ -89,6 +89,50 @@ Pages.KpiTarget = (() => {
   let _materialCost = JSON.parse(localStorage.getItem('kpi_material_cost') || 'null') || {};
   let _mcYear       = new Date().getFullYear();   // Material Cost 입력 패널의 대상 연도
 
+  // ── KPI-7월 기준값 (2026-07 리비전) ───────────────────────
+  // 출처: '반도체 Value Chain 협업과제_상반기 실적 및 연간 예상_20260701_1340.xlsx'
+  // 단위 M USD. 1~6월은 문서상 확정 실적, 7~12월은 계획.
+  // 저장된(입력한) 값이 있으면 항상 그쪽이 우선이고, 비어 있을 때만 이 값을 채운다.
+  // 문서 합계: 매출 10.612 / Material Cost 0.338 / Material Profit 10.274 (U$M)
+  const _KPI7_BASE_YEAR = 2026;
+  const _KPI7_BASELINE = {
+    DRAM: { rev:  [0,0,0.0863,0.2096,0.8418,0.3045,0.2308,0.2308,0.2308,0.2308,0.2308,0.2308],
+            ebit: [0,0,0.0863,0.2096,0.8418,0.3045,0.2308,0.2308,0.2308,0.2308,0.2308,0.2308] },
+    SSD:  { rev:  [0.0613,0.0331,0,0.0404,0,0.0402,0.0402,0.0402,0.0402,0.0402,0.0402,0.0402],
+            ebit: [0.0613,0.0331,0,0.0404,0,0.0402,0.0402,0.0402,0.0402,0.0402,0.0402,0.0402] },
+    MID:  { rev:  [0,0,1.2604,1.2527,1.9514,0,1,0.95,0,0,0,0],
+            ebit: [0,0,1.1314,1.1526,1.9514,0,0.95,0.9,0,0,0,0] },
+    SCR:  { rev:  [0,0,0,0,0,0.2052,0.099,0.09,0.06,0,0,0],
+            ebit: [0,0,0,0,0,0.2021,0.0972,0.087,0.0588,0,0,0] },
+    RMA:  { rev:  [0,0,0,0,0,0,0.25,0.25,0,0,0,0],
+            ebit: [0,0,0,0,0,0,0.25,0.25,0,0,0,0] },
+  };
+  // 같은 문서의 Material Cost (M USD)
+  const _KPI7_MC_BASELINE = {
+    MID: [0,0,0.129,0.1001,0,0,0.05,0.05,0,0,0,0],
+    SCR: [0,0,0,0,0,0.003,0.0018,0.003,0.0012,0,0,0],
+  };
+
+  /** 값이 하나도 없는 사업만 기준 문서 값으로 채운다 (입력값이 있으면 손대지 않음) */
+  function _seedKpi7Baseline() {
+    const y = _KPI7_BASE_YEAR;
+    if (!_rolling7[y]) _rolling7[y] = {};
+    Object.keys(_KPI7_BASELINE).forEach(biz => {
+      const d = _rolling7[y][biz];
+      const empty = !d || (Array.isArray(d)
+        ? d.every(v => !parseFloat(v))
+        : (!d.rev || d.rev.every(v => !parseFloat(v))) && (!d.ebit || d.ebit.every(v => !parseFloat(v))));
+      if (empty) _rolling7[y][biz] = { rev: _KPI7_BASELINE[biz].rev.slice(), ebit: _KPI7_BASELINE[biz].ebit.slice() };
+    });
+    if (!_materialCost[y]) _materialCost[y] = {};
+    Object.keys(_KPI7_MC_BASELINE).forEach(biz => {
+      const arr = _materialCost[y][biz];
+      if (!Array.isArray(arr) || arr.every(v => !parseFloat(v))) {
+        _materialCost[y][biz] = _KPI7_MC_BASELINE[biz].slice();
+      }
+    });
+  }
+
   // ── 전망(LE) — KPI-7월 기준 전용 ──────────────────────────
   // 베이스라인(롤링 계획)은 고정 벤치마크로 두고, 매달 제출하는 잔여기간 전망은
   // 제출 회차(vintage)별 스냅샷으로 따로 보관한다.
@@ -99,6 +143,8 @@ Pages.KpiTarget = (() => {
   let _fcVintage  = null;    // 화면에서 선택된 제출 회차
   let _fcYear     = new Date().getFullYear();
   let _fcEditVintage = null; // 입력 패널에서 편집 중인 회차
+
+  _seedKpi7Baseline();
 
   /** 이번 달 제출 회차 키 (YYYY-MM) */
   function _thisVintage() {
@@ -329,6 +375,7 @@ Pages.KpiTarget = (() => {
     _loadMaterialCost();
     _loadForecast();
     _loadExchangeRate();
+    _seedKpi7Baseline();   // 서버 값 병합 후, 비어 있는 사업만 기준 문서 값으로 채움
   }
 
   function selectYear(year) { _year = year; Pages.KpiTarget.render(); }
