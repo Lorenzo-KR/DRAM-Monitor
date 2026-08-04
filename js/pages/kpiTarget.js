@@ -1133,7 +1133,12 @@ Pages.KpiTarget = (() => {
     // 지금까지 쌓인 실적을 괄호로 참고 표시한다.
     var comboTable = '';
     if (_isMpMode(mode)) {
-      var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '-'; };
+      // 작은 값을 0.01로 올려 표시하면 월 셀을 눈으로 더한 값과 합계가 어긋난다.
+      // 0.1 미만은 소수 3자리까지 그대로 보여준다.
+      var fmtCell = function(v) {
+        if (!v) return '-';
+        return Math.abs(v) < 0.1 ? (+v.toFixed(3)).toFixed(3) : v.toFixed(2);
+      };
       var dimFuture = function(i) { return i > closedIdx ? ';color:#AAA' : ''; };   // 실적 확정 구간만 진하게
 
       // 지표 행 — 첫 열(사업명)은 블록의 첫 행에서만 rowspan으로 출력
