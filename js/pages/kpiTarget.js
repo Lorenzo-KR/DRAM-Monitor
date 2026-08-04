@@ -87,7 +87,6 @@ Pages.KpiTarget = (() => {
   // 구조: { 연도: { 사업: [12개월] } }, 단위 M USD (계획·제출 문서와 동일)
   // Material Profit 실적 = 매출 실적(USD) − Material Cost(USD)
   let _materialCost = JSON.parse(localStorage.getItem('kpi_material_cost') || 'null') || {};
-  let _mcYear       = new Date().getFullYear();   // Material Cost 입력 패널의 대상 연도
 
   // ── KPI-7월 기준값 (2026-07 리비전) ───────────────────────
   // 출처: '반도체 Value Chain 협업과제_상반기 실적 및 연간 예상_20260701_1340.xlsx'
@@ -1640,9 +1639,7 @@ Pages.KpiTarget = (() => {
             <button onclick="Pages.KpiTarget.openRolling('${mode}')" style="${adminBtnStyle}">${mode==='ec'?'롤링(EC)':mode==='kpi103'?'롤링(103)':mode==='kpi7'?'롤링(7월)':'롤링(67)'}</button>
             ${mode==='kpi67'?`<button onclick="Pages.KpiTarget.openRolling('kpi103')" style="${adminBtnStyle}">롤링(103)</button>`:''}
             ${_isMpMode(mode)?`<button onclick="Pages.KpiTarget.openForecastPanel()" style="${adminBtnStyle}">전망 입력</button>`:''}
-            ${isKpiM?(_isMpMode(mode)
-              ? `<button onclick="Pages.KpiTarget.openMaterialCostPanel()" style="${adminBtnStyle}">Material Cost</button>`
-              : `<button onclick="Pages.KpiTarget.openFactorPanel()" style="${adminBtnStyle}">Factor</button>`):''}
+            ${isKpiM && !_isMpMode(mode) ? `<button onclick="Pages.KpiTarget.openFactorPanel()" style="${adminBtnStyle}">Factor</button>` : ''}
           </div>
         </div>
 
@@ -2073,9 +2070,9 @@ Pages.KpiTarget = (() => {
           // 첫 컬럼: 사업명
           // 두 번째 컬럼: 타입(매출/에빗) 또는 숫자
           let bizName, typeStr, numStart;
-          if (/^(매출|에빗|ebit|rev)$/i.test(cols[1])) {
+          if (/^(매출|에빗|ebit|rev|revenue|material\s*cost|material\s*profit|mc|mp|자재비)$/i.test(cols[1])) {
             bizName = cols[0]; typeStr = cols[1]; numStart = 2;
-          } else if (/^(매출|에빗|ebit|rev)$/i.test(cols[0].split(/\s+/).pop())) {
+          } else if (/(매출|에빗|EBIT|Material\s*Profit|Material\s*Cost|MP|MC|자재비)$/i.test(cols[0])) {
             // 사업명과 타입이 첫 컬럼에 붙어있는 경우
             const parts = cols[0].match(/^(.*?)(매출|에빗|EBIT|Material\s*Profit|Material\s*Cost|MP|MC)$/i);
             bizName = parts ? parts[1] : cols[0]; typeStr = parts ? parts[2] : '매출'; numStart = 1;
@@ -2302,29 +2299,6 @@ Pages.KpiTarget = (() => {
       document.body.style.overflow='';
     },
 
-    // ── Material Cost (KPI-7월 기준) ────────────────────────
-    // 사업 × 12개월, 단위 USD. Material Profit 실적 = 매출 실적 − Material Cost
-    openMaterialCostPanel() {
-      _mcYear = _year;
-      const sel = document.getElementById('kpi-mc-year');
-      if (sel) sel.value = String(_mcYear);
-      const el = document.getElementById('kpi-mc-panel');
-      const ov = document.getElementById('kpi-rolling-overlay');
-      if (el) { el.style.display='block'; document.body.style.overflow='hidden'; }
-      if (ov) ov.style.display='block';
-      Pages.KpiTarget.renderMaterialCost();
-    },
-
-    closeMaterialCostPanel() {
-      const el = document.getElementById('kpi-mc-panel');
-      const ov = document.getElementById('kpi-rolling-overlay');
-      if (el) el.style.display='none';
-      if (ov) ov.style.display='none';
-      document.body.style.overflow='';
-    },
-
-    setMcYear(y) { _mcYear = parseInt(y); Pages.KpiTarget.renderMaterialCost(); },
-
     // ── 전망(LE) ────────────────────────────────────────────
     setLeView(on)      { _leView = !!on; Pages.KpiTarget.render(); },
     setLeVintage(v)    { _fcVintage = v || null; Pages.KpiTarget.render(); },
@@ -2442,106 +2416,6 @@ Pages.KpiTarget = (() => {
       _leView = true;
       Pages.KpiTarget.closeForecastPanel();
       UI.toast(vintage + ' 전망 저장됨');
-      Pages.KpiTarget.render();
-    },
-
-    renderMaterialCost() {
-      const wrap = document.getElementById('kpi-mc-inner'); if (!wrap) return;
-      const y    = _mcYear;
-      const MO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-      const thS  = 'padding:6px 4px;text-align:center;font-size:11px;font-weight:500;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap';
-      const inpW = 'width:62px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
-
-      const rows = CONFIG.BIZ_LIST.map(b => {
-        const vals  = _getMcMonths(y, b);
-        const cells = vals.map(v =>
-          '<td style="padding:3px 3px;border:1px solid var(--bd)">'
-          + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.0001" style="' + inpW + '" oninput="Pages.KpiTarget.calcMcRow(this)">'
-          + '</td>').join('');
-        const sum = vals.reduce((s, v) => s + v, 0);
-        return '<tr data-biz="' + b + '">'
-          + '<td style="padding:5px 8px;font-size:12px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
-          + cells
-          + '<td class="mc-rowtotal" style="padding:5px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (sum > 0 ? (+sum.toFixed(4)) : '-') + '</td></tr>';
-      }).join('');
-
-      wrap.innerHTML =
-        '<div style="font-size:12px;color:var(--tx3);margin-bottom:12px;font-family:Pretendard,sans-serif">'
-        + 'Material Profit = 매출 실적 − Material Cost · 단위 <b>M USD</b> (계획과 동일) · ' + y + '년'
-        + '</div>'
-        + '<div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">'
-        + '<div style="font-size:12px;font-weight:600;color:#333;margin-bottom:6px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>'
-        + '<div style="font-size:11px;color:#777;margin-bottom:8px;font-family:Pretendard,sans-serif">'
-        + '한 줄에 <b>사업명 + 12개월 값</b> — 예) <code>Mobile Ink Die&nbsp;&nbsp;0&nbsp;&nbsp;0&nbsp;&nbsp;0.129&nbsp;…</code> · 값이 12개보다 적으면 앞에서부터 채웁니다</div>'
-        + '<textarea id="kpi-mc-paste" placeholder="여기에 Ctrl+V" style="width:100%;height:70px;padding:8px;border:1px solid #CCC;border-radius:4px;font-family:var(--font-mono);font-size:11px;resize:vertical"></textarea>'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
-        + '<button onclick="Pages.KpiTarget.applyMcPaste()" style="padding:5px 14px;font-size:12px;font-weight:600;border:1px solid #1D1D1F;background:#1D1D1F;color:#fff;border-radius:4px;cursor:pointer;font-family:Pretendard,sans-serif">표에 채우기</button>'
-        + '<span id="kpi-mc-paste-msg" style="font-size:11px;color:#777;font-family:Pretendard,sans-serif"></span>'
-        + '</div></div>'
-        + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
-        + '<thead><tr><th style="' + thS + '">사업</th>'
-        + MO.map(m => '<th style="' + thS + '">' + m + '</th>').join('')
-        + '<th style="' + thS + '">합계</th></tr></thead>'
-        + '<tbody id="kpi-mc-tbody">' + rows + '</tbody></table></div>';
-    },
-
-    /** 입력 시 해당 행 합계만 갱신 */
-    calcMcRow(inp) {
-      const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
-      const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
-      const cell = tr.querySelector('.mc-rowtotal');
-      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(4)) : '-';
-    },
-
-    /** MC 붙여넣기 — '사업명 + 12개월' 형태의 줄을 표에 채운다 */
-    applyMcPaste() {
-      const ta  = document.getElementById('kpi-mc-paste');
-      const msg = document.getElementById('kpi-mc-paste-msg');
-      const tbody = document.getElementById('kpi-mc-tbody');
-      if (!ta || !tbody) return;
-      const raw = (ta.value || '').trim();
-      if (!raw) { if (msg) msg.textContent = '붙여넣은 내용이 없습니다'; return; }
-
-      const BIZ_KW = [
-        { key:'DRAM', kw:['dram','디램'] },
-        { key:'SSD',  kw:['ssd'] },
-        { key:'MID',  kw:['mid','mobile ink','ink die','모바일'] },
-        { key:'SCR',  kw:['scr','scrap','스크랩','자재'] },
-        { key:'RMA',  kw:['rma'] },
-        { key:'SUS',  kw:['sus','sustainability','컨설팅','지속'] },
-        { key:'MOD',  kw:['mod','모듈'] },
-      ];
-      let applied = 0;
-      raw.split(/\r?\n/).forEach(line => {
-        if (!line.trim()) return;
-        const cols = line.split(/\t|\s{2,}|,/).map(c => c.trim()).filter(c => c !== '');
-        if (cols.length < 2) return;
-        const lower = cols[0].toLowerCase();
-        const hit = BIZ_KW.find(b => b.kw.some(k => lower.includes(k)));
-        if (!hit) return;
-        const nums = cols.slice(1)
-          .map(c => parseFloat(String(c).replace(/[,\s$]/g, '')))
-          .filter(v => !isNaN(v));
-        const row = tbody.querySelector('tr[data-biz="' + hit.key + '"]');
-        if (!row) return;
-        const inputs = Array.from(row.querySelectorAll('input'));
-        inputs.forEach((inp, i) => { inp.value = nums[i] ? nums[i] : ''; });
-        Pages.KpiTarget.calcMcRow(inputs[0] || row.querySelector('input'));
-        applied++;
-      });
-      if (msg) msg.textContent = applied ? applied + '개 사업 반영됨 — 확인 후 저장하세요' : '사업명을 인식하지 못했습니다';
-    },
-
-    saveMaterialCost() {
-      const tbody = document.getElementById('kpi-mc-tbody'); if (!tbody) return;
-      const data = {};
-      tbody.querySelectorAll('tr[data-biz]').forEach(tr => {
-        data[tr.dataset.biz] = Array.from(tr.querySelectorAll('input')).map(el => parseFloat(el.value) || 0);
-      });
-      _saveMaterialCost(_mcYear, data);
-      Pages.KpiTarget.closeMaterialCostPanel();
-      UI.toast('Material Cost 저장됨');
       Pages.KpiTarget.render();
     },
 
