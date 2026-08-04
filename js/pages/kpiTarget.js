@@ -84,7 +84,7 @@ Pages.KpiTarget = (() => {
   }
 
   // ── Material Cost (KPI-7월 전용) ──────────────────────────
-  // 구조: { 연도: { 사업: [12개월] } }, 단위 USD (매출 실적과 동일)
+  // 구조: { 연도: { 사업: [12개월] } }, 단위 M USD (계획·제출 문서와 동일)
   // Material Profit 실적 = 매출 실적(USD) − Material Cost(USD)
   let _materialCost = JSON.parse(localStorage.getItem('kpi_material_cost') || 'null') || {};
   let _mcYear       = new Date().getFullYear();   // Material Cost 입력 패널의 대상 연도
@@ -161,6 +161,9 @@ Pages.KpiTarget = (() => {
   }
   function _getMcMonth(year, biz, month) { return _getMcMonths(year, biz)[month - 1] || 0; }
   function _getMcYear(year, biz)         { return _getMcMonths(year, biz).reduce((s, v) => s + v, 0); }
+  /** 실적 차감용 — M USD → USD */
+  function _getMcUsdMonth(year, biz, month) { return _getMcMonth(year, biz, month) * 1000000; }
+  function _getMcUsdYear(year, biz)         { return _getMcYear(year, biz) * 1000000; }
 
   function _saveMaterialCost(year, data) {
     if (!_materialCost[year]) _materialCost[year] = {};
@@ -184,16 +187,43 @@ Pages.KpiTarget = (() => {
   // ── 이익 지표 (모드별) ────────────────────────────────────
   // kpi7 → Material Profit (매출 − Material Cost) / 그 외 → EBIT (매출 × Factor)
   function _isMpMode(mode)   { return (mode || _rollingMode) === 'kpi7'; }
+
+  // ── 롤링 raw 저장 단위 ────────────────────────────────────
+  // EC·KPI-7월 = M USD / 그 외 KPI = 억원.
+  // KPI-7월 계획은 달러로 확정된 값이라 원화로 저장하면 환율이 바뀔 때마다
+  // 계획 금액이 흔들리므로 M USD 원본 그대로 보관한다.
+  function _isUsdRaw(mode) {
+    const m = mode || _rollingMode;
+    return m === 'ec' || m === 'kpi7';
+  }
+  /** 롤링 raw → USD */
+  function _rawToUsd(raw, mode) {
+    const n = parseFloat(raw) || 0;
+    if (_isUsdRaw(mode)) return n * 1000000;
+    return _exchangeRate > 0 ? n * 100000000 / _exchangeRate : 0;
+  }
+  /** 롤링 raw → 표시 단위 숫자 ('krw'=억원 | 'sgd'=M SGD | 그 외=M USD) */
+  function _rawToDispUnit(raw, mode, tunit) {
+    const n = parseFloat(raw) || 0;
+    if (tunit === 'krw') {
+      if (!_isUsdRaw(mode)) return n;                                   // 이미 억원
+      return _exchangeRate > 0 ? n * 1000000 * _exchangeRate / 100000000 : null;
+    }
+    const usd = _rawToUsd(n, mode);
+    if (!_isUsdRaw(mode) && _exchangeRate <= 0) return null;            // 환율 없으면 환산 불가
+    const mUsd = usd / 1000000;
+    return tunit === 'sgd' ? mUsd * _SGD_RATE : mUsd;
+  }
   function _profitLabel(mode){ return _isMpMode(mode) ? 'Material Profit' : 'EBIT'; }
 
   /** 월별 이익 실적 (USD) */
   function _getActualProfitMonth(year, biz, month, mode) {
     const rev = _getActualMonth(year, biz, month);
-    return _isMpMode(mode) ? rev - _getMcMonth(year, biz, month) : rev * _getFactor(biz);
+    return _isMpMode(mode) ? rev - _getMcUsdMonth(year, biz, month) : rev * _getFactor(biz);
   }
   /** 연간 이익 실적 (USD) */
   function _getActualProfit(year, biz, mode) {
-    if (_isMpMode(mode)) return _getActual(year, biz) - _getMcYear(year, biz);
+    if (_isMpMode(mode)) return _getActual(year, biz) - _getMcUsdYear(year, biz);
     return _getActual(year, biz) * _getFactor(biz);
   }
 
@@ -225,7 +255,7 @@ Pages.KpiTarget = (() => {
   function _getRollingMonths(year, biz, mode) {
     const store = _getRollingStore(mode);
     const ebitVals = _getRollingEbitRaw(store, year, biz);
-    if (mode === 'ec') return ebitVals.map(v => v * 1000000);         // M USD → USD
+    if (_isUsdRaw(mode)) return ebitVals.map(v => v * 1000000);       // M USD → USD (EC·KPI-7월)
     return ebitVals.map(v => v * 100000000);                           // 억원 → 원
   }
 
@@ -245,7 +275,7 @@ Pages.KpiTarget = (() => {
     const sum = CONFIG.BIZ_LIST.reduce((s, b) => {
       return s + _getRollingRevRaw(store, year, b).reduce((a,v)=>a+v, 0);
     }, 0);
-    return mode === 'ec' ? sum * 1000000 : sum * 100000000;
+    return _isUsdRaw(mode) ? sum * 1000000 : sum * 100000000;
   }
 
   function _getActual(year, biz) {
@@ -438,20 +468,8 @@ Pages.KpiTarget = (() => {
       if (v === null || v === undefined) return '—';
       const n = parseFloat(v) || 0;
       if (n === 0) return '—';
-      if (isKpiMode && useKrw) {
-        return n.toFixed(2); // 억원 그대로
-      }
-      if (isKpiMode && useSgd && hasRate) {
-        // 억원 → M USD → M SGD: M USD × 1.27
-        const mUsd = (n * 100000000 / _exchangeRate) / 1000000;
-        return (mUsd * _SGD_RATE).toFixed(2);
-      }
-      if (isKpiMode && !useKrw && !useSgd && hasRate) {
-        // 억원 → M USD
-        const mUsd = (n * 100000000 / _exchangeRate) / 1000000;
-        return mUsd.toFixed(2);
-      }
-      return n.toFixed(2);
+      const d = _rawToDispUnit(n, mode, useKrw ? 'krw' : useSgd ? 'sgd' : 'usd');
+      return d === null ? '—' : d.toFixed(2);
     }
 
     function fmtActual(usdVal) {
@@ -608,13 +626,7 @@ Pages.KpiTarget = (() => {
 
     /** 롤링 raw(억원/M USD) → 표시 단위 숫자 */
     function rawToDisp(v) {
-      const n = parseFloat(v) || 0;
-      if (isKpiMode && useKrw) return n;
-      if (isKpiMode && hasRate) {
-        const mUsd = n * 100000000 / _exchangeRate / 1000000;
-        return useSgd ? mUsd * _SGD_RATE : mUsd;
-      }
-      return n;
+      return _rawToDispUnit(v, mode, useKrw ? 'krw' : useSgd ? 'sgd' : 'usd') || 0;
     }
     /** 실적 USD → 표시 단위 숫자 */
     function actToDispNum(usd) {
@@ -1194,15 +1206,8 @@ Pages.KpiTarget = (() => {
         // 목표 누적: EC=매출(revSumRaw), KPI+EBIT=ebitSumRaw, KPI+매출=revSumRaw
         var rawVal = isEcMode ? revSumRaw[i] : (!showEbit ? revSumRaw[i] : ebitSumRaw[i]);
         et += rawVal;
-        if (useKrw || isEcMode) {
-          ebitTgtCum.push(et);  // 억원(KPI+억원) or M USD(EC) 그대로
-        } else if (useSgd) {
-          // 억원 → M USD → M SGD
-          ebitTgtCum.push(hasRate ? (et * 100000000 / _exchangeRate / 1000000) * _SGD_RATE : et);
-        } else {
-          // KPI+M USD: 억원 → M USD
-          ebitTgtCum.push(hasRate ? et * 100000000 / _exchangeRate / 1000000 : et);
-        }
+        var etDisp = _rawToDispUnit(et, mode, useKrw ? 'krw' : useSgd ? 'sgd' : 'usd');
+        ebitTgtCum.push(etDisp === null ? et : etDisp);
 
         // 실적 누적: 표와 동일한 기준
         if (i <= curMonIdx) {
@@ -1273,11 +1278,7 @@ Pages.KpiTarget = (() => {
   }
   // 롤링 raw(억원/M USD) → 표시 단위 숫자
   function _tgtToDisp(raw, ctx) {
-    if (!ctx.isKpiM)         return raw;              // EC: M USD
-    if (ctx.tunit === 'krw') return raw;              // 억원
-    if (!ctx.hasRate)        return null;
-    const mUsd = raw * 100000000 / _exchangeRate / 1000000;
-    return ctx.tunit === 'sgd' ? mUsd * 1.27 : mUsd;
+    return _rawToDispUnit(raw, ctx.mode, ctx.tunit);
   }
   // 실적 USD → 표시 단위 숫자
   function _actToDisp(usd, ctx) {
@@ -1288,8 +1289,7 @@ Pages.KpiTarget = (() => {
   }
   // 롤링 raw → USD (달성률 계산용)
   function _tgtToUsd(raw, ctx) {
-    if (!ctx.isKpiM) return raw * 1000000;
-    return ctx.hasRate ? raw * 100000000 / _exchangeRate : 0;
+    return _rawToUsd(raw, ctx.mode);
   }
   // 상단 단위/지표 토글 바 (KPI 모드 전용)
   function _buildUnitBar() {
@@ -1342,7 +1342,8 @@ Pages.KpiTarget = (() => {
       if (!tgt) return null;
       const actUsd = _getActualProfit(year, biz, mode);
       const actKrw = hasRate ? actUsd * _exchangeRate : null;
-      const actInTgtUnit = hasRate ? actKrw : actUsd;
+      // 계획 저장 단위와 실적 단위를 맞춘다 (EC·KPI-7월 = USD, 그 외 = 원)
+      const actInTgtUnit = _isUsdRaw(mode) ? actUsd : (hasRate ? actKrw : actUsd);
       const pctRaw = tgt > 0 ? actInTgtUnit / tgt * 100 : 0;
       const pct = Math.min(100, Math.round(pctRaw));
       return { tgt, act: actInTgtUnit, actUsd, pct, pctRaw, hasRate };
@@ -1393,7 +1394,7 @@ Pages.KpiTarget = (() => {
         const pct     = tgtUsd>0 ? Math.min(100, Math.round(actUsd/tgtUsd*100)) : 0;
         const remDisp = (tgtDisp!==null && actDisp!==null) ? Math.max(0, tgtDisp-actDisp) : null;
         const factor  = _getFactor(b);
-        const mcUsd   = _getMcYear(year, b);   // kpi7 전용 표기
+        const mcUsd   = _getMcUsdYear(year, b);   // kpi7 전용 표기
         const barClr  = '#4B5563';
         const canBar  = tgtRaw>0 && tgtDisp!==null && actDisp!==null;
 
@@ -1573,14 +1574,14 @@ Pages.KpiTarget = (() => {
       const inputs = row.querySelectorAll('input[type=number]');
       let sum = 0; inputs.forEach(i => { sum += parseFloat(i.value) || 0; });
       const rt = row.querySelector('.rolling-rowtotal');
-      const dp = _rollingMode === 'ec' ? 4 : 2;
+      const dp = _isUsdRaw(_rollingMode) ? 4 : 2;
       if (rt) rt.textContent = sum > 0 ? (+sum.toFixed(dp)) + '' : '—';
       Pages.KpiTarget.calcRollingAll();
     },
 
     calcRollingAll() {
       const body = document.getElementById('rolling-tbody'); if (!body) return;
-      const rdp  = _rollingMode === 'ec' ? 4 : 2;
+      const rdp  = _isUsdRaw(_rollingMode) ? 4 : 2;
       const revSums  = Array(12).fill(0);
       const ebitSums = Array(12).fill(0);
 
@@ -1627,7 +1628,7 @@ Pages.KpiTarget = (() => {
       const store = _getActiveRolling();
       const yData = store[y] || {};
       const isKpi = _isKpi(_rollingMode);
-      const dp    = _rollingMode === 'ec' ? 4 : 2;
+      const dp    = _isUsdRaw(_rollingMode) ? 4 : 2;
       const mc    = _modeColor(_rollingMode);
 
       const ROWS = [
@@ -1682,8 +1683,8 @@ Pages.KpiTarget = (() => {
 
         if (isKpi) {
           return bizHeader
-            + makeInputRow(r.key, 'rev',  revVals,  '매출(억원)',  '#185FA5')
-            + makeInputRow(r.key, 'ebit', ebitVals, _profitLabel(_rollingMode) + '(억원)', '#0F6E56');
+            + makeInputRow(r.key, 'rev',  revVals,  '매출(' + (_isUsdRaw(_rollingMode) ? 'M USD' : '억원') + ')',  '#185FA5')
+            + makeInputRow(r.key, 'ebit', ebitVals, _profitLabel(_rollingMode) + '(' + (_isUsdRaw(_rollingMode) ? 'M USD' : '억원') + ')', '#0F6E56');
         } else {
           // EC 모드: 매출(M USD) 단일 입력, data-type='ec'
           return bizHeader
@@ -1715,8 +1716,8 @@ Pages.KpiTarget = (() => {
 
       wrap.innerHTML = `
         <div style="font-size:12px;color:${mc};font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:16px">
-          <span>단위: ${_rollingMode === 'ec' ? 'Million USD' : '억원'} &nbsp;·&nbsp; ${_modeLabel(_rollingMode)} · 저장하면 즉시 반영됩니다</span>
-          ${isKpi ? '<span style="display:flex;gap:10px"><span style="color:#185FA5;font-size:11px">■ 매출(억원)</span><span style="color:#0F6E56;font-size:11px">■ ' + _profitLabel(_rollingMode) + '(억원)</span></span>' : ''}
+          <span>단위: ${_isUsdRaw(_rollingMode) ? 'Million USD' : '억원'} &nbsp;·&nbsp; ${_modeLabel(_rollingMode)} · 저장하면 즉시 반영됩니다</span>
+          ${isKpi ? (u => '<span style="display:flex;gap:10px"><span style="color:#185FA5;font-size:11px">■ 매출(' + u + ')</span><span style="color:#0F6E56;font-size:11px">■ ' + _profitLabel(_rollingMode) + '(' + u + ')</span></span>')(_isUsdRaw(_rollingMode) ? 'M USD' : '억원') : ''}
         </div>
         <div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">
           <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:8px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>
@@ -1816,7 +1817,7 @@ Pages.KpiTarget = (() => {
       const msg = document.getElementById('rolling-paste-msg');
       const raw = ta.value.trim(); if (!raw) return;
       const isKpi = _isKpi(_rollingMode);
-      const dp    = _rollingMode === 'ec' ? 4 : 2;
+      const dp    = _isUsdRaw(_rollingMode) ? 4 : 2;
 
       // ── 값 파싱 유틸 ─────────────────────────────────────────
       function parseVal(s) {
@@ -2174,8 +2175,8 @@ Pages.KpiTarget = (() => {
       const rows = CONFIG.BIZ_LIST.map((b, i) =>
         '<tr><td colspan="' + (MO.length + 2) + '" style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#EBEBEB;border:1px solid var(--bd)">'
         + (i + 1) + '. ' + (CONFIG.BIZ_LABELS[b] || b) + '</td></tr>'
-        + row(b, 'rev',  '매출(억원)', '#185FA5')
-        + row(b, 'ebit', 'Material Profit(억원)', '#0F6E56')
+        + row(b, 'rev',  '매출(M USD)', '#185FA5')
+        + row(b, 'ebit', 'Material Profit(M USD)', '#0F6E56')
       ).join('');
 
       const vintOptions = Array.from(new Set([vintage].concat(_fcVintages(y))))
@@ -2186,7 +2187,7 @@ Pages.KpiTarget = (() => {
         + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">제출 회차</span>'
         + '<select onchange="Pages.KpiTarget.setFcEditVintage(this.value)" style="padding:4px 8px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;background:var(--bg);color:var(--tx)">' + vintOptions + '</select>'
         + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">'
-        + '단위 억원 · ' + (closed >= 0 ? (closed + 1) + '월까지는 실적 확정이라 입력하지 않습니다' : '전 기간 입력 대상입니다')
+        + '단위 M USD · ' + (closed >= 0 ? (closed + 1) + '월까지는 실적 확정이라 입력하지 않습니다' : '전 기간 입력 대상입니다')
         + (prevVin ? ' · 초기값은 ' + prevVin + ' 제출본에서 복사' : ' · 초기값은 베이스라인 계획에서 복사') + '</span>'
         + '</div>'
         + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
@@ -2197,7 +2198,7 @@ Pages.KpiTarget = (() => {
     },
 
     calcFcRow(inp) {
-      const tr = inp.closest('tr'); if (!tr) return;
+      const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
       const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       const cell = tr.querySelector('.fc-rowtotal');
       if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '—';
@@ -2237,20 +2238,29 @@ Pages.KpiTarget = (() => {
         const vals  = _getMcMonths(y, b);
         const cells = vals.map(v =>
           '<td style="padding:3px 3px;border:1px solid var(--bd)">'
-          + '<input type="number" value="' + (v || '') + '" placeholder="0" step="1" style="' + inpW + '" oninput="Pages.KpiTarget.calcMcRow(this)">'
+          + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.0001" style="' + inpW + '" oninput="Pages.KpiTarget.calcMcRow(this)">'
           + '</td>').join('');
         const sum = vals.reduce((s, v) => s + v, 0);
         return '<tr data-biz="' + b + '">'
           + '<td style="padding:5px 8px;font-size:12px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
           + cells
           + '<td class="mc-rowtotal" style="padding:5px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (sum > 0 ? formatNumber(Math.round(sum)) : '—') + '</td></tr>';
+          + (sum > 0 ? (+sum.toFixed(4)) : '—') + '</td></tr>';
       }).join('');
 
       wrap.innerHTML =
         '<div style="font-size:12px;color:var(--tx3);margin-bottom:12px;font-family:Pretendard,sans-serif">'
-        + 'Material Profit = 매출 실적 − Material Cost · 단위 <b>USD</b> · ' + y + '년'
+        + 'Material Profit = 매출 실적 − Material Cost · 단위 <b>M USD</b> (계획과 동일) · ' + y + '년'
         + '</div>'
+        + '<div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">'
+        + '<div style="font-size:12px;font-weight:600;color:#333;margin-bottom:6px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>'
+        + '<div style="font-size:11px;color:#777;margin-bottom:8px;font-family:Pretendard,sans-serif">'
+        + '한 줄에 <b>사업명 + 12개월 값</b> — 예) <code>Mobile Ink Die&nbsp;&nbsp;0&nbsp;&nbsp;0&nbsp;&nbsp;0.129&nbsp;…</code> · 값이 12개보다 적으면 앞에서부터 채웁니다</div>'
+        + '<textarea id="kpi-mc-paste" placeholder="여기에 Ctrl+V" style="width:100%;height:70px;padding:8px;border:1px solid #CCC;border-radius:4px;font-family:var(--font-mono);font-size:11px;resize:vertical"></textarea>'
+        + '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'
+        + '<button onclick="Pages.KpiTarget.applyMcPaste()" style="padding:5px 14px;font-size:12px;font-weight:600;border:1px solid #1D1D1F;background:#1D1D1F;color:#fff;border-radius:4px;cursor:pointer;font-family:Pretendard,sans-serif">표에 채우기</button>'
+        + '<span id="kpi-mc-paste-msg" style="font-size:11px;color:#777;font-family:Pretendard,sans-serif"></span>'
+        + '</div></div>'
         + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
         + '<thead><tr><th style="' + thS + '">사업</th>'
         + MO.map(m => '<th style="' + thS + '">' + m + '</th>').join('')
@@ -2260,10 +2270,49 @@ Pages.KpiTarget = (() => {
 
     /** 입력 시 해당 행 합계만 갱신 */
     calcMcRow(inp) {
-      const tr = inp.closest('tr'); if (!tr) return;
+      const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
       const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       const cell = tr.querySelector('.mc-rowtotal');
-      if (cell) cell.textContent = sum > 0 ? formatNumber(Math.round(sum)) : '—';
+      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(4)) : '—';
+    },
+
+    /** MC 붙여넣기 — '사업명 + 12개월' 형태의 줄을 표에 채운다 */
+    applyMcPaste() {
+      const ta  = document.getElementById('kpi-mc-paste');
+      const msg = document.getElementById('kpi-mc-paste-msg');
+      const tbody = document.getElementById('kpi-mc-tbody');
+      if (!ta || !tbody) return;
+      const raw = (ta.value || '').trim();
+      if (!raw) { if (msg) msg.textContent = '붙여넣은 내용이 없습니다'; return; }
+
+      const BIZ_KW = [
+        { key:'DRAM', kw:['dram','디램'] },
+        { key:'SSD',  kw:['ssd'] },
+        { key:'MID',  kw:['mid','mobile ink','ink die','모바일'] },
+        { key:'SCR',  kw:['scr','scrap','스크랩','자재'] },
+        { key:'RMA',  kw:['rma'] },
+        { key:'SUS',  kw:['sus','sustainability','컨설팅','지속'] },
+        { key:'MOD',  kw:['mod','모듈'] },
+      ];
+      let applied = 0;
+      raw.split(/\r?\n/).forEach(line => {
+        if (!line.trim()) return;
+        const cols = line.split(/\t|\s{2,}|,/).map(c => c.trim()).filter(c => c !== '');
+        if (cols.length < 2) return;
+        const lower = cols[0].toLowerCase();
+        const hit = BIZ_KW.find(b => b.kw.some(k => lower.includes(k)));
+        if (!hit) return;
+        const nums = cols.slice(1)
+          .map(c => parseFloat(String(c).replace(/[,\s$]/g, '')))
+          .filter(v => !isNaN(v));
+        const row = tbody.querySelector('tr[data-biz="' + hit.key + '"]');
+        if (!row) return;
+        const inputs = Array.from(row.querySelectorAll('input'));
+        inputs.forEach((inp, i) => { inp.value = nums[i] ? nums[i] : ''; });
+        Pages.KpiTarget.calcMcRow(inputs[0] || row.querySelector('input'));
+        applied++;
+      });
+      if (msg) msg.textContent = applied ? applied + '개 사업 반영됨 — 확인 후 저장하세요' : '사업명을 인식하지 못했습니다';
     },
 
     saveMaterialCost() {
