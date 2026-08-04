@@ -13,14 +13,18 @@ Pages.DailyInput = (() => {
   let _parsedRows = [];
 
   // ── 필터 ────────────────────────────────────────────────────
+  // 기본값은 전체(_co/_biz 빈 값). 'ALL' 버튼을 누르면 다시 전체로 돌아갑니다.
   function setFilter(el, type) {
-    if (type === 'co') {
-      document.querySelectorAll('#pg-daily [data-co]').forEach(e => e.classList.remove('on'));
-      el.classList.add('on'); _co = el.dataset.co;
-    } else {
-      document.querySelectorAll('#pg-daily [data-biz]').forEach(e => e.classList.remove('on'));
-      el.classList.add('on'); _biz = el.dataset.biz;
-    }
+    const key = type === 'co' ? 'co' : 'biz';
+    const raw = el.dataset[key];
+    const val = raw === 'ALL' ? '' : raw;
+
+    document.querySelectorAll(`#pg-daily [data-${key}]`).forEach(e => e.classList.remove('on'));
+    el.classList.add('on');
+
+    if (key === 'co') _co = val;
+    else              _biz = val;
+
     _openId = null;
     render();
   }
@@ -29,20 +33,20 @@ Pages.DailyInput = (() => {
   function render() {
     const wrap = document.getElementById('dp-lot-cards');
     const info = document.getElementById('dp-filter-info');
-    if (!_co || !_biz) {
-      wrap.innerHTML = '<div class="empty" style="padding:48px;color:var(--tx3)">위에서 국가와 사업을 선택하면 LOT 목록이 표시됩니다</div>';
-      info.textContent = ''; return;
-    }
 
     const dailies = Store.getDailies();
     const lots    = Store.getLots()
-      .filter(l => l.country === _co && l.biz === _biz)
+      .filter(l => (!_co || l.country === _co) && (!_biz || l.biz === _biz))
       .sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')));
 
-    info.textContent = (CONFIG.COUNTRY_LABELS[_co] || _co) + ' · ' + (CONFIG.BIZ_LABELS[_biz] || _biz) + ' · ' + lots.length + '건';
+    const scope = [
+      _co  ? (CONFIG.COUNTRY_LABELS[_co] || _co)  : '전체 국가',
+      _biz ? (CONFIG.BIZ_LABELS[_biz]    || _biz) : '전체 사업',
+    ].join(' · ');
+    info.textContent = scope + ' · ' + lots.length + '건';
 
     if (!lots.length) {
-      wrap.innerHTML = '<div class="empty" style="padding:40px;color:var(--tx3)">등록된 LOT가 없습니다</div>';
+      wrap.innerHTML = '<div class="empty" style="padding:40px;color:var(--tx3)">해당 조건의 LOT가 없습니다</div>';
       return;
     }
 
@@ -56,6 +60,11 @@ Pages.DailyInput = (() => {
       const ddWeight = dd !== null && dd <= 3 ? 600 : 400;
       const isOpen   = _openId === lot.id;
       const stLabel  = st === 'done' ? '완료' : st === 'overdue' ? '지연' : '진행';
+      // 전체 보기일 때 어느 국가·사업 LOT인지 구분되도록 표시 (필터가 걸린 항목은 생략)
+      const tag = [
+        _co  ? '' : (CONFIG.COUNTRY_LABELS[lot.country] || lot.country || ''),
+        _biz ? '' : (CONFIG.BIZ_LABELS[lot.biz]         || lot.biz     || ''),
+      ].filter(Boolean).join(' · ');
 
       return `
         <div id="acc-${lot.id}" style="border:1px solid var(--bd);border-radius:var(--rs);margin-bottom:8px;overflow:hidden;background:var(--card)">
@@ -63,6 +72,7 @@ Pages.DailyInput = (() => {
                style="padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:${isOpen ? 'var(--bg)' : 'var(--card)'};transition:background .15s">
             <div style="display:flex;align-items:center;gap:18px;flex:1;min-width:0">
               <span style="font-size:13px;font-weight:600;font-family:var(--font-mono);color:var(--tx);flex-shrink:0">${lot.lotNo || lot.id}</span>
+              ${tag ? `<span style="font-size:11px;color:var(--tx3);flex-shrink:0;white-space:nowrap">${tag}</span>` : ''}
               <div style="display:flex;gap:18px;font-size:12px;color:var(--tx2)">
                 <span>입고 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(parseNumber(lot.qty))}</span></span>
                 <span>처리 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(cum)}</span></span>

@@ -457,17 +457,17 @@
         </button>
       </div>
       <div class="fb" style="margin-bottom:16px">
+        <button class="pill on" data-co="ALL" onclick="Pages.DailyInput.setFilter(this,'co')">전체 국가</button>
         <button class="pill phk" data-co="HK" onclick="Pages.DailyInput.setFilter(this,'co')">홍콩</button>
         <button class="pill psg" data-co="SG" onclick="Pages.DailyInput.setFilter(this,'co')">싱가포르</button>
         <span class="sep"></span>
+        <button class="pill on" data-biz="ALL" onclick="Pages.DailyInput.setFilter(this,'biz')">전체 사업</button>
         <button class="pill pd" data-biz="DRAM" onclick="Pages.DailyInput.setFilter(this,'biz')">DRAM Test</button>
         <button class="pill ps" data-biz="SSD" onclick="Pages.DailyInput.setFilter(this,'biz')">SSD Test</button>
         <button class="pill pm" data-biz="MID" onclick="Pages.DailyInput.setFilter(this,'biz')">Mobile Ink Die</button>
         <span style="margin-left:auto;font-size:12px;color:var(--tx3)" id="dp-filter-info"></span>
       </div>
-      <div id="dp-lot-cards">
-        <div class="empty" style="padding:48px">위에서 국가와 사업을 선택하면 LOT 목록이 표시됩니다</div>
-      </div>
+      <div id="dp-lot-cards"></div>
     </div>
 
     <!-- 엑셀 붙여넣기 팝업 -->
@@ -849,7 +849,7 @@
 <script src="js/pages/progress.js"></script>
 <script src="js/pages/bizHistory.js"></script>
 <script src="js/pages/lotRegister.js"></script>
-<script src="js/pages/dailyInput.js"></script>
+<script src="js/pages/dailyInput.js?v=2"></script>
 <script src="js/pages/shipment.js"></script>
 <script src="js/pages/invoice.js"></script>
 <script src="js/pages/revenue.js"></script>
