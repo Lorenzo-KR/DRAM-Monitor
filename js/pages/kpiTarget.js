@@ -89,6 +89,71 @@ Pages.KpiTarget = (() => {
   let _materialCost = JSON.parse(localStorage.getItem('kpi_material_cost') || 'null') || {};
   let _mcYear       = new Date().getFullYear();   // Material Cost 입력 패널의 대상 연도
 
+  // ── 전망(LE) — KPI-7월 기준 전용 ──────────────────────────
+  // 베이스라인(롤링 계획)은 고정 벤치마크로 두고, 매달 제출하는 잔여기간 전망은
+  // 제출 회차(vintage)별 스냅샷으로 따로 보관한다.
+  //   구조: { 연도: { 'YYYY-MM'(제출 회차): { 사업: { rev:[12], ebit:[12] } } } }  단위 억원
+  //   연말 추정 = 실적(1월~마감월) + 전망(마감월+1~12월), 전망 미입력 월은 베이스라인으로 폴백
+  let _forecast   = JSON.parse(localStorage.getItem('kpi_forecast_7') || 'null') || {};
+  let _leView     = false;   // 연말 추정(LE) 보기 토글
+  let _fcVintage  = null;    // 화면에서 선택된 제출 회차
+  let _fcYear     = new Date().getFullYear();
+  let _fcEditVintage = null; // 입력 패널에서 편집 중인 회차
+
+  /** 이번 달 제출 회차 키 (YYYY-MM) */
+  function _thisVintage() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+  /** 해당 연도의 제출 회차 목록 (최신순) */
+  function _fcVintages(year) {
+    return Object.keys(_forecast[year] || {}).sort().reverse();
+  }
+  function _latestVintage(year) { return _fcVintages(year)[0] || null; }
+  /** 직전 회차 (비교용) */
+  function _prevVintage(year, vintage) {
+    const list = _fcVintages(year);
+    const i = list.indexOf(vintage);
+    return i >= 0 ? (list[i + 1] || null) : (list[0] || null);
+  }
+  /** 전망 12개월 배열 (억원). 없으면 null */
+  function _getForecastArr(year, vintage, biz, type) {
+    const d = _forecast[year]?.[vintage]?.[biz];
+    if (!d) return null;
+    const arr = d[type];
+    if (!Array.isArray(arr)) return null;
+    return Array.from({ length: 12 }, (_, i) => parseFloat(arr[i]) || 0);
+  }
+  function _saveForecast(year, vintage, data) {
+    if (!_forecast[year]) _forecast[year] = {};
+    _forecast[year][vintage] = { ...(_forecast[year][vintage] || {}), ...data };
+    const json = JSON.stringify(_forecast);
+    localStorage.setItem('kpi_forecast_7', json);
+    Api.setSetting('kpi_forecast_7', json);
+  }
+  function _loadForecast() {
+    const raw = Store.getSetting('kpi_forecast_7');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.keys(parsed).forEach(y => { _forecast[y] = { ...(_forecast[y] || {}), ...parsed[y] }; });
+        localStorage.setItem('kpi_forecast_7', JSON.stringify(_forecast));
+      }
+    } catch(e) {}
+  }
+  /**
+   * 실적/전망 경계 — '전월까지 자동 실적' 규칙.
+   * 반환값은 마지막 실적 월의 0-based 인덱스 (과거 연도=11, 미래 연도=-1)
+   */
+  function _closedMonthIdx(year) {
+    const now = new Date();
+    const y = parseInt(year);
+    if (y < now.getFullYear()) return 11;
+    if (y > now.getFullYear()) return -1;
+    return now.getMonth() - 1;   // 이번 달이 8월(getMonth()=7)이면 6 → 7월까지 실적
+  }
+
   function _getMcMonths(year, biz) {
     const arr = _materialCost[year]?.[biz];
     if (!Array.isArray(arr)) return Array(12).fill(0);
@@ -232,6 +297,7 @@ Pages.KpiTarget = (() => {
     sync('ec_rolling',      _ecRolling,  null);
     _loadFactors();
     _loadMaterialCost();
+    _loadForecast();
     _loadExchangeRate();
   }
 
@@ -531,8 +597,68 @@ Pages.KpiTarget = (() => {
       return (diff > 0 ? '+' : '') + diff.toFixed(1) + '%';
     }
 
+    // ── 연말 추정(LE) 계산 ───────────────────────────────────
+    // 실적(1월~마감월) + 전망(마감월+1~12월, 미입력 시 베이스라인 폴백)
+    // 모든 값을 '표시 단위 숫자'로 통일해서 더한다 (실적=USD, 계획/전망=억원)
+    const isLe      = _isMpMode(mode) && _leView;
+    const closedIdx = _closedMonthIdx(year);
+    const leVintage = _fcVintage && _forecast[year]?.[_fcVintage] ? _fcVintage : _latestVintage(year);
+    const lePrevVin = leVintage ? _prevVintage(year, leVintage) : null;
+    const leType    = showEbit ? 'ebit' : 'rev';
+
+    /** 롤링 raw(억원/M USD) → 표시 단위 숫자 */
+    function rawToDisp(v) {
+      const n = parseFloat(v) || 0;
+      if (isKpiMode && useKrw) return n;
+      if (isKpiMode && hasRate) {
+        const mUsd = n * 100000000 / _exchangeRate / 1000000;
+        return useSgd ? mUsd * _SGD_RATE : mUsd;
+      }
+      return n;
+    }
+    /** 실적 USD → 표시 단위 숫자 */
+    function actToDispNum(usd) {
+      const n = parseFloat(usd) || 0;
+      if (isEcMode) return n / 1000000;
+      if (useKrw)   return n * _exchangeRate / 100000000;
+      if (useSgd)   return n * _SGD_RATE / 1000000;
+      return n / 1000000;
+    }
+    /** 사업별 LE 월 배열 + 출처(act|fc|base) */
+    function leMonthsOf(biz, vintage) {
+      const fcArr   = vintage ? _getForecastArr(year, vintage, biz, leType) : null;
+      const baseArr = showEbit ? ebitByBiz[biz] : revByBiz[biz];
+      const actArr  = showEbit ? actEbitByBiz[biz] : actRevByBiz[biz];
+      return MONTHS.map((_, i) => {
+        if (i <= closedIdx) return { v: actToDispNum(actArr[i] || 0), src: 'act' };
+        if (fcArr && fcArr[i] > 0) return { v: rawToDisp(fcArr[i]), src: 'fc' };
+        return { v: rawToDisp(baseArr[i] || 0), src: 'base' };
+      });
+    }
+    const leByBiz   = {};
+    bizList.forEach(b => { leByBiz[b] = leMonthsOf(b, leVintage); });
+    const leSum     = MONTHS.map((_, i) => bizList.reduce((s, b) => s + leByBiz[b][i].v, 0));
+    const leTotal   = leSum.reduce((s, v) => s + v, 0);
+    const leBaseTotal = (showEbit ? ebitSumRaw : revSumRaw).reduce((s, v) => s + rawToDisp(v), 0);
+    const leDiff    = leTotal - leBaseTotal;
+    const lePct     = leBaseTotal > 0 ? leTotal / leBaseTotal * 100 : null;
+    // 직전 제출본 대비 변화
+    const lePrevTotal = lePrevVin
+      ? bizList.reduce((s, b) => s + leMonthsOf(b, lePrevVin).reduce((a, m) => a + m.v, 0), 0)
+      : null;
+
     const mc = _modeColor(mode);
-    const cards = [
+    const cards = isLe ? [
+      { label: '연말 추정 (' + (leVintage || '전망 미입력') + ')', value: leTotal.toFixed(2) + ' ' + unitLabel,
+        sub: '실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망' },
+      { label: '베이스라인 (' + _modeLabel(mode) + ')', value: leBaseTotal.toFixed(2) + ' ' + unitLabel,
+        sub: (showEbit ? _profitLabel(mode) : '매출') + ' 계획 · 고정' },
+      { label: '베이스라인 대비', value: fmtDiff(leDiff) + ' ' + unitLabel, color: diffColor(leDiff),
+        sub: lePct === null ? '계획 미입력' : '추정 달성률 ' + lePct.toFixed(1) + '%' },
+      { label: '직전 제출 대비', value: lePrevTotal === null ? '—' : fmtDiff(leTotal - lePrevTotal) + ' ' + unitLabel,
+        color: lePrevTotal === null ? '' : diffColor(leTotal - lePrevTotal),
+        sub: lePrevVin ? lePrevVin + ' 제출본 ' + lePrevTotal.toFixed(2) : '직전 제출본 없음' },
+    ] : [
       { label: '연간 계획', value: fmtRolling(totalTgtRaw) + ' ' + unitLabel, sub: _modeLabel(mode) + ' · ' + (isEcMode ? '매출' : (showEbit ? _profitLabel(mode) : '매출')) + ' 기준' },
       { label: '누적 실적 (' + periodLabel + ')', value: curActDisp.toFixed(2) + ' ' + unitLabel, sub: '계획 ' + curTgtDisp.toFixed(2) + ' ' + unitLabel },
       { label: '누적 달성률 (' + periodLabel + ')', value: fmtPctDiff(overallPct), color: pctColor(Math.round(overallPct)), sub: '계획대비 · ' + unitLabel + ' 기준' },
@@ -583,7 +709,7 @@ Pages.KpiTarget = (() => {
     var chart1Html  = makeChartCard('cv-ebit-cum', chart1Title, [
       { label: chartLabel + ' 계획 누적', color: '#85B7EB', dashed: true  },
       { label: chartLabel + ' 실적 누적', color: '#1D9E75', dashed: false },
-    ]);
+    ].concat(isLe ? [{ label: '연말 추정 누적', color: '#1D1D1F', dashed: true }] : []));
 
     // 단위/지표 토글은 상단(render)으로 이동됨 → _buildUnitBar()
 
@@ -931,13 +1057,66 @@ Pages.KpiTarget = (() => {
       actRevCumUsd,  actEbitCumUsd,
     };
 
+    // ── 연말 추정(LE) 표 ─────────────────────────────────────
+    // 마감월까지 실적 / 이후 전망(없으면 베이스라인) — 출처를 셀 배경으로 구분
+    var leTableHtml = '';
+    if (isLe) {
+      var SRC_BG = { act: '#FFFFFF', fc: '#EEF4FB', base: '#F7F7F7' };
+      var leRows = bizList.map(function(b) {
+        var ms = leByBiz[b];
+        var cells = ms.map(function(m) {
+          return '<td style="' + TS.td + ';background:' + SRC_BG[m.src] + '">'
+            + (m.v ? m.v.toFixed(2) : '—') + '</td>';
+        }).join('');
+        var rowTotal = ms.reduce(function(s, m) { return s + m.v; }, 0);
+        var baseTot  = (showEbit ? ebitByBiz[b] : revByBiz[b]).reduce(function(s, v) { return s + rawToDisp(v); }, 0);
+        return '<tr>'
+          + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
+          + '<td style="' + TS.tdSub + '">연말 추정</td>'
+          + cells
+          + '<td style="' + TS.tdSum + '">' + rowTotal.toFixed(2) + '</td>'
+          + '<td style="' + TS.tdSum + '">' + baseTot.toFixed(2) + '</td>'
+          + '<td style="' + TS.tdSum + ';color:' + diffColor(rowTotal - baseTot) + '">' + fmtDiff(rowTotal - baseTot) + '</td>'
+          + '</tr>';
+      }).join('');
+      var leSumCells = leSum.map(function(v, i) {
+        return '<td style="' + TS.tdCum + '">' + (v ? v.toFixed(2) : '—') + '</td>';
+      }).join('');
+      leTableHtml = '<div style="margin-bottom:4px">'
+        + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
+        + '① 연말 추정 (LE) — 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망 (' + unitLabel + ')'
+        + '</div>'
+        + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+        + '<span style="display:inline-block;width:9px;height:9px;background:#FFFFFF;border:1px solid #BFBFBF;vertical-align:-1px"></span> 실적 '
+        + '<span style="display:inline-block;width:9px;height:9px;background:#EEF4FB;border:1px solid #BFBFBF;vertical-align:-1px;margin-left:8px"></span> 전망 '
+        + '<span style="display:inline-block;width:9px;height:9px;background:#F7F7F7;border:1px solid #BFBFBF;vertical-align:-1px;margin-left:8px"></span> 베이스라인 폴백</span>'
+        + (leVintage
+            ? '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">제출 회차 ' + leVintage + '</span>'
+            : '<span style="font-size:11px;color:#B45309;font-family:Pretendard,sans-serif">전망 미입력 — 잔여월은 베이스라인 계획으로 표시됩니다</span>')
+        + '</div>'
+        + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
+        + '<table style="border-collapse:collapse;table-layout:fixed"><thead><tr>'
+        + '<th style="' + TS.thBiz + '">Biz</th><th style="' + TS.thSub + '">구분</th>'
+        + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
+        + '<th style="' + TS.thSum + '">연말 추정</th><th style="' + TS.thSum + '">베이스라인</th><th style="' + TS.thSum + '">차이</th>'
+        + '</tr></thead><tbody>' + leRows
+        + '<tr><td style="' + TS.tdCumL + ';font-weight:600">합계</td><td style="' + TS.tdCumL + '">연말 추정</td>'
+        + leSumCells
+        + '<td style="' + TS.tdCum + '">' + leTotal.toFixed(2) + '</td>'
+        + '<td style="' + TS.tdCum + '">' + leBaseTotal.toFixed(2) + '</td>'
+        + '<td style="' + TS.tdCum + ';color:' + diffColor(leDiff) + '">' + fmtDiff(leDiff) + '</td></tr>'
+        + '</tbody></table></div></div>';
+    }
+
     // ── 최종 렌더 ────────────────────────────────────────────
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
+      + leTableHtml
       + '<div style="margin-bottom:4px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + '① ' + (showEbit ? profitLabel + ' 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
+      + (isLe ? '② ' : '① ') + (showEbit ? profitLabel + ' 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
       + '</div>'
       + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
       + '</div>'
@@ -945,13 +1124,13 @@ Pages.KpiTarget = (() => {
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + '② ' + (showEbit ? profitLabel + ' 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
+      + (isLe ? '③ ' : '② ') + (showEbit ? profitLabel + ' 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + '③ 사업별 월 실적 — ' + (showEbit ? profitLabel : '매출') + ' 기준 (' + unitLabel + ')'
+      + (isLe ? '④ ' : '③ ') + '사업별 월 실적 — ' + (showEbit ? profitLabel : '매출') + ' 기준 (' + unitLabel + ')'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + progressTable + '</div>'
       + '</div>';
@@ -1041,8 +1220,15 @@ Pages.KpiTarget = (() => {
         }
       });
 
+      // 연말 추정(LE) 누적 — 실적+전망을 이어붙인 한 줄
+      var leCum = null;
+      if (isLe) {
+        var run = 0;
+        leCum = leSum.map(function(v) { run += v; return run; });
+      }
+
       // y축: 데이터 최대값 기준으로 적절한 최대값 설정
-      var allVals = ebitTgtCum.concat(ebitActCum).filter(function(v) { return v !== null && v > 0; });
+      var allVals = ebitTgtCum.concat(ebitActCum).concat(leCum || []).filter(function(v) { return v !== null && v > 0; });
       var dataMax = allVals.length > 0 ? Math.max.apply(null, allVals) : 10;
       var yMax    = dataMax * 1.3;
 
@@ -1058,7 +1244,11 @@ Pages.KpiTarget = (() => {
             pointBackgroundColor:'#1D9E75',
             fill:{target:0,above:'rgba(29,158,117,0.08)',below:'rgba(226,75,74,0.08)'},
             tension:0.2 },
-        ]},
+        ].concat(leCum ? [
+          { label: '연말 추정 누적', data:leCum,
+            borderColor:'#1D1D1F', borderWidth:2, borderDash:[2,2],
+            pointRadius:2, pointBackgroundColor:'#1D1D1F', fill:false, tension:0 },
+        ] : [])},
         options: makeChartOptions(
           function(ctx) { return fmtTooltip(ctx.raw, ctx.dataset.label); },
           function(v)   { return fmtTick(v); },
@@ -1279,6 +1469,10 @@ Pages.KpiTarget = (() => {
                 <button onclick="Pages.KpiTarget.setMode('ec')" style="padding:6px 14px;border:none;font-size:12px;font-weight:${mode==='ec'?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${mode==='ec'?'#1D1D1F':'#fff'};color:${mode==='ec'?'#fff':'#333'};transition:.15s">EC 기준</button>
               </div>
             </div>
+            ${_isMpMode(mode)?`<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">
+              <button onclick="Pages.KpiTarget.setLeView(false)" style="padding:6px 14px;border:none;border-right:1px solid #CCC;font-size:12px;font-weight:${_leView?'400':'700'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#fff':'#1D1D1F'};color:${_leView?'#333':'#fff'}">계획 대비</button>
+              <button onclick="Pages.KpiTarget.setLeView(true)" style="padding:6px 14px;border:none;font-size:12px;font-weight:${_leView?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#1D1D1F':'#fff'};color:${_leView?'#fff':'#333'}">연말 추정(LE)</button>
+            </div>`:''}
             ${isKpiM?`<div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:12px;color:var(--tx2);font-weight:400;font-family:Pretendard,sans-serif">기준환율 $1 =</span>
               <input type="number" id="kpi-exchange-input" value="${_exchangeRate||1395}" placeholder="1395"
@@ -1292,6 +1486,7 @@ Pages.KpiTarget = (() => {
           <div style="display:flex;gap:5px;align-items:center;opacity:0.7">
             <button onclick="Pages.KpiTarget.openRolling('${mode}')" style="${adminBtnStyle}">${mode==='ec'?'롤링(EC)':mode==='kpi103'?'롤링(103)':mode==='kpi7'?'롤링(7월)':'롤링(67)'}</button>
             ${mode==='kpi67'?`<button onclick="Pages.KpiTarget.openRolling('kpi103')" style="${adminBtnStyle}">롤링(103)</button>`:''}
+            ${_isMpMode(mode)?`<button onclick="Pages.KpiTarget.openForecastPanel()" style="${adminBtnStyle}">전망 입력</button>`:''}
             ${isKpiM?(_isMpMode(mode)
               ? `<button onclick="Pages.KpiTarget.openMaterialCostPanel()" style="${adminBtnStyle}">Material Cost</button>`
               : `<button onclick="Pages.KpiTarget.openFactorPanel()" style="${adminBtnStyle}">Factor</button>`):''}
@@ -1910,6 +2105,126 @@ Pages.KpiTarget = (() => {
     },
 
     setMcYear(y) { _mcYear = parseInt(y); Pages.KpiTarget.renderMaterialCost(); },
+
+    // ── 전망(LE) ────────────────────────────────────────────
+    setLeView(on)      { _leView = !!on; Pages.KpiTarget.render(); },
+    setLeVintage(v)    { _fcVintage = v || null; Pages.KpiTarget.render(); },
+
+    openForecastPanel() {
+      _fcYear = _year;
+      // 편집 대상: 이번 달 회차 (없으면 새로 만들고, 직전 회차/베이스라인을 복사해 시작)
+      _fcEditVintage = _thisVintage();
+      const el = document.getElementById('kpi-fc-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      const sel = document.getElementById('kpi-fc-year');
+      if (sel) sel.value = String(_fcYear);
+      if (el) { el.style.display='block'; document.body.style.overflow='hidden'; }
+      if (ov) ov.style.display='block';
+      Pages.KpiTarget.renderForecast();
+    },
+
+    closeForecastPanel() {
+      const el = document.getElementById('kpi-fc-panel');
+      const ov = document.getElementById('kpi-rolling-overlay');
+      if (el) el.style.display='none';
+      if (ov) ov.style.display='none';
+      document.body.style.overflow='';
+    },
+
+    setFcYear(y) { _fcYear = parseInt(y); Pages.KpiTarget.renderForecast(); },
+    setFcEditVintage(v) { _fcEditVintage = v; Pages.KpiTarget.renderForecast(); },
+
+    renderForecast() {
+      const wrap = document.getElementById('kpi-fc-inner'); if (!wrap) return;
+      const y        = _fcYear;
+      const vintage  = _fcEditVintage || _thisVintage();
+      const closed   = _closedMonthIdx(y);
+      const prevVin  = _fcVintages(y).filter(v => v !== vintage)[0] || null;
+      const baseStore = _getRollingStore('kpi7');
+      const MO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+      const thS  = 'padding:6px 4px;text-align:center;font-size:11px;font-weight:500;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap';
+      const inpW = 'width:56px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
+
+      // 값 우선순위: 이번 회차 입력값 → 직전 회차 → 베이스라인 계획
+      function seed(biz, type) {
+        return _getForecastArr(y, vintage, biz, type)
+            || (prevVin ? _getForecastArr(y, prevVin, biz, type) : null)
+            || (type === 'rev' ? _getRollingRevRaw(baseStore, y, biz) : _getRollingEbitRaw(baseStore, y, biz));
+      }
+
+      function row(biz, type, label, color) {
+        const vals = seed(biz, type);
+        const cells = vals.map((v, i) => {
+          // 마감월 이전은 실적 확정 구간 → 입력 비활성 (합계에서도 제외)
+          if (i <= closed) {
+            return '<td style="padding:3px 3px;border:1px solid var(--bd);background:#F2F2F2;text-align:right;font-size:11px;color:#999;font-family:var(--font-mono)">실적</td>';
+          }
+          return '<td style="padding:3px 3px;border:1px solid var(--bd)">'
+            + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.01" style="' + inpW + '" oninput="Pages.KpiTarget.calcFcRow(this)">'
+            + '</td>';
+        }).join('');
+        const sum = vals.reduce((s, v, i) => i > closed ? s + (parseFloat(v) || 0) : s, 0);
+        return '<tr data-biz="' + biz + '" data-type="' + type + '">'
+          + '<td style="padding:5px 8px;font-size:11px;font-weight:600;color:' + color + ';border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + label + '</td>'
+          + cells
+          + '<td class="fc-rowtotal" style="padding:5px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
+          + (sum > 0 ? (+sum.toFixed(2)) : '—') + '</td></tr>';
+      }
+
+      const rows = CONFIG.BIZ_LIST.map((b, i) =>
+        '<tr><td colspan="' + (MO.length + 2) + '" style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#EBEBEB;border:1px solid var(--bd)">'
+        + (i + 1) + '. ' + (CONFIG.BIZ_LABELS[b] || b) + '</td></tr>'
+        + row(b, 'rev',  '매출(억원)', '#185FA5')
+        + row(b, 'ebit', 'Material Profit(억원)', '#0F6E56')
+      ).join('');
+
+      const vintOptions = Array.from(new Set([vintage].concat(_fcVintages(y))))
+        .map(v => '<option value="' + v + '"' + (v === vintage ? ' selected' : '') + '>' + v + (v === _thisVintage() ? ' (이번 달)' : '') + '</option>').join('');
+
+      wrap.innerHTML =
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
+        + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">제출 회차</span>'
+        + '<select onchange="Pages.KpiTarget.setFcEditVintage(this.value)" style="padding:4px 8px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;background:var(--bg);color:var(--tx)">' + vintOptions + '</select>'
+        + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+        + '단위 억원 · ' + (closed >= 0 ? (closed + 1) + '월까지는 실적 확정이라 입력하지 않습니다' : '전 기간 입력 대상입니다')
+        + (prevVin ? ' · 초기값은 ' + prevVin + ' 제출본에서 복사' : ' · 초기값은 베이스라인 계획에서 복사') + '</span>'
+        + '</div>'
+        + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
+        + '<thead><tr><th style="' + thS + '">구분</th>'
+        + MO.map(m => '<th style="' + thS + '">' + m + '</th>').join('')
+        + '<th style="' + thS + '">잔여 합계</th></tr></thead>'
+        + '<tbody id="kpi-fc-tbody">' + rows + '</tbody></table></div>';
+    },
+
+    calcFcRow(inp) {
+      const tr = inp.closest('tr'); if (!tr) return;
+      const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+      const cell = tr.querySelector('.fc-rowtotal');
+      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '—';
+    },
+
+    saveForecast() {
+      const tbody = document.getElementById('kpi-fc-tbody'); if (!tbody) return;
+      const y       = _fcYear;
+      const vintage = _fcEditVintage || _thisVintage();
+      const closed  = _closedMonthIdx(y);
+      const data    = {};
+      tbody.querySelectorAll('tr[data-biz]').forEach(tr => {
+        const biz  = tr.dataset.biz, type = tr.dataset.type;
+        if (!data[biz]) data[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+        // 마감월 이전 칸은 input이 없으므로 셀 순서 기준으로 채운다
+        const inputs = Array.from(tr.querySelectorAll('input'));
+        const arr = Array(12).fill(0);
+        for (let i = closed + 1, k = 0; i < 12; i++, k++) arr[i] = parseFloat(inputs[k]?.value) || 0;
+        data[biz][type] = arr;
+      });
+      _saveForecast(y, vintage, data);
+      _fcVintage = vintage;
+      _leView = true;
+      Pages.KpiTarget.closeForecastPanel();
+      UI.toast(vintage + ' 전망 저장됨');
+      Pages.KpiTarget.render();
+    },
 
     renderMaterialCost() {
       const wrap = document.getElementById('kpi-mc-inner'); if (!wrap) return;
