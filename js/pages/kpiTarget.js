@@ -515,11 +515,11 @@ Pages.KpiTarget = (() => {
     // 값 포맷 헬퍼
     function fmtRolling(v) {
       // 롤링 저장값(억원 or M USD) → 표시 단위
-      if (v === null || v === undefined) return '—';
+      if (v === null || v === undefined) return '-';
       const n = parseFloat(v) || 0;
-      if (n === 0) return '—';
+      if (n === 0) return '-';
       const d = _rawToDispUnit(n, mode, useKrw ? 'krw' : useSgd ? 'sgd' : 'usd');
-      return d === null ? '—' : d.toFixed(2);
+      return d === null ? '-' : d.toFixed(2);
     }
 
     function fmtActual(usdVal) {
@@ -532,14 +532,14 @@ Pages.KpiTarget = (() => {
     }
 
     function fmtDiff(v) {
-      if (v === null || v === undefined || isNaN(parseFloat(v))) return '—';
+      if (v === null || v === undefined || isNaN(parseFloat(v))) return '-';
       const n = parseFloat(v);
       // 부호를 여기서만 붙임 (호출부에서 sign 추가 금지)
       return (n > 0 ? '+' : '') + n.toFixed(2);
     }
 
     function fmtPct(p) {
-      if (p === null) return '—';
+      if (p === null) return '-';
       return Math.round(p) + '%';
     }
 
@@ -638,7 +638,7 @@ Pages.KpiTarget = (() => {
     const overallPct   = curTgtDisp > 0 ? curActDisp / curTgtDisp * 100 : 0;
     const diffCumFinal = curActDisp - curTgtDisp;
     const pctCumFinal  = curTgtDisp > 0 ? curActDisp / curTgtDisp * 100 : null;
-    const periodLabel  = curMonIdx >= 0 ? '1~' + (curMonIdx + 1) + '월' : '—';
+    const periodLabel  = curMonIdx >= 0 ? '1~' + (curMonIdx + 1) + '월' : '-';
     const unitLabel    = isEcMode ? 'M USD' : (useKrw ? '억원' : useSgd ? 'M SGD' : 'M USD');
 
     // ── 색상 규칙 ────────────────────────────────────────────
@@ -660,7 +660,7 @@ Pages.KpiTarget = (() => {
     // ── 요약 카드 ────────────────────────────────────────────
     // 달성률 표현: 130% → +30%, 97% → -3%, 100% → ±0%
     function fmtPctDiff(pct) {
-      if (pct === null || pct === undefined) return '—';
+      if (pct === null || pct === undefined) return '-';
       var diff = pct - 100;
       return (diff > 0 ? '+' : '') + diff.toFixed(1) + '%';
     }
@@ -717,7 +717,7 @@ Pages.KpiTarget = (() => {
         sub: (showEbit ? _profitLabel(mode) : '매출') + ' 계획 · 고정' },
       { label: '계획 대비', value: fmtDiff(leDiff) + ' ' + unitLabel, color: diffColor(leDiff),
         sub: lePct === null ? '계획 미입력' : '추정 달성률 ' + lePct.toFixed(1) + '%' },
-      { label: '직전 제출 대비', value: lePrevTotal === null ? '—' : fmtDiff(leTotal - lePrevTotal) + ' ' + unitLabel,
+      { label: '직전 제출 대비', value: lePrevTotal === null ? '-' : fmtDiff(leTotal - lePrevTotal) + ' ' + unitLabel,
         color: lePrevTotal === null ? '' : diffColor(leTotal - lePrevTotal),
         sub: lePrevVin ? lePrevVin + ' 제출본 ' + lePrevTotal.toFixed(2) : '직전 제출본 없음' },
     ] : [
@@ -834,7 +834,7 @@ Pages.KpiTarget = (() => {
         var d    = fmtActual(v);
         var isPast = i <= curMonIdx;
         var dim  = !isPast ? ';color:#BBB' : '';
-        return '<td style="' + TS.td + dim + '">' + (d !== null && parseFloat(d) !== 0 ? d : (isPast ? '—' : '')) + '</td>';
+        return '<td style="' + TS.td + dim + '">' + (d !== null && parseFloat(d) !== 0 ? d : (isPast ? '-' : '')) + '</td>';
       }).join('');
       var totalUsd  = MONTHS.reduce(function(s, _, i) { return s + (actByBizView[b][i] || 0); }, 0);
       var totalDisp = fmtActual(totalUsd);
@@ -842,7 +842,7 @@ Pages.KpiTarget = (() => {
         + '<td style="' + TS.tdL + ';font-weight:500">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
         + '<td style="' + TS.tdSub + '">' + actSubLabel + '</td>'
         + cells
-        + '<td style="' + TS.tdSum + '">' + (parseFloat(totalDisp) > 0 ? totalDisp : '—') + '</td>'
+        + '<td style="' + TS.tdSum + '">' + (parseFloat(totalDisp) > 0 ? totalDisp : '-') + '</td>'
         + '</tr>';
     }).join('');
 
@@ -855,9 +855,9 @@ Pages.KpiTarget = (() => {
       + '<td style="' + TS.tdSub + ';background:#F2F2F2">' + actSubLabel + '</td>'
       + MONTHS.map(function(_, i) {
           var d = actSumDispView[i];
-          return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '—' : '')) + '</td>';
+          return '<td style="' + TS.tdSum + '">' + (d !== null && parseFloat(d) !== 0 ? d : (i <= curMonIdx ? '-' : '')) + '</td>';
         }).join('')
-      + '<td style="' + TS.tdSum + '">' + (parseFloat(actTotalDispView) > 0 ? actTotalDispView : '—') + '</td>'
+      + '<td style="' + TS.tdSum + '">' + (parseFloat(actTotalDispView) > 0 ? actTotalDispView : '-') + '</td>'
       + '</tr>';
 
     var actCumRow = '<tr style="background:#E8E4D8">'
@@ -867,7 +867,7 @@ Pages.KpiTarget = (() => {
           var d = actCumDispView[i];
           return '<td style="' + TS.tdCum + '">' + (d !== null ? d : '') + '</td>';
         }).join('')
-      + '<td style="' + TS.tdCum + '">' + (actCumDispView[Math.max(0, curMonIdx)] || '—') + '</td>'
+      + '<td style="' + TS.tdCum + '">' + (actCumDispView[Math.max(0, curMonIdx)] || '-') + '</td>'
       + '</tr>';
 
     // ── 요약 3행 (선택된 뷰 기준) ──────────────────────────
@@ -951,7 +951,7 @@ Pages.KpiTarget = (() => {
           // 합계: pctCumForTable (raw USD 기반, 단위 무관)
           var p    = pctCumForTable;
           var pRnd = p !== null ? Math.round(p) : null;
-          var disp = p !== null ? fmtPctDiff(p) : '—';
+          var disp = p !== null ? fmtPctDiff(p) : '-';
           return '<td style="' + TS.tdSum + ';color:' + pctColor(pRnd) + ';background:' + pctBg(pRnd) + '">' + disp + '</td>';
         })()
       + '</tr>';
@@ -969,7 +969,7 @@ Pages.KpiTarget = (() => {
         return '<tr>'
           + '<td colspan="2" style="' + TS.tdL + ';font-weight:600">' + rowLabel + '</td>'
           + MONTHS.map(function() { return '<td style="' + TS.td + '"></td>'; }).join('')
-          + '<td style="' + TS.tdSum + '">—</td>'
+          + '<td style="' + TS.tdSum + '">-</td>'
           + '</tr>';
       }
 
@@ -1127,7 +1127,7 @@ Pages.KpiTarget = (() => {
         sum:    'padding:4px 6px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:600;border:1px solid #C7C7CC;background:#F5F5F7',
       };
       var edge = closedIdx >= 0 && closedIdx < 11 ? ';border-right:2px solid #8E8E93' : '';
-      var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '—'; };
+      var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '-'; };
 
       // 지표 행 하나
       var metricRow = function(label, vals, opt) {
@@ -1217,7 +1217,7 @@ Pages.KpiTarget = (() => {
         var ms = leByBiz[b];
         var cells = ms.map(function(m) {
           return '<td style="' + TS.td + ';background:' + SRC_BG[m.src] + '">'
-            + (m.v ? m.v.toFixed(2) : '—') + '</td>';
+            + (m.v ? m.v.toFixed(2) : '-') + '</td>';
         }).join('');
         var rowTotal = ms.reduce(function(s, m) { return s + m.v; }, 0);
         var baseTot  = (showEbit ? ebitByBiz[b] : revByBiz[b]).reduce(function(s, v) { return s + rawToDisp(v); }, 0);
@@ -1231,7 +1231,7 @@ Pages.KpiTarget = (() => {
           + '</tr>';
       }).join('');
       var leSumCells = leSum.map(function(v, i) {
-        return '<td style="' + TS.tdCum + '">' + (v ? v.toFixed(2) : '—') + '</td>';
+        return '<td style="' + TS.tdCum + '">' + (v ? v.toFixed(2) : '-') + '</td>';
       }).join('');
       leTableHtml = '<div style="margin-bottom:4px">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
@@ -1529,7 +1529,7 @@ Pages.KpiTarget = (() => {
       };
       // 사업별 실적 USD (이익 지표면 모드별 이익 계산 적용)
       const _bizActUsd = b => ctx.useEbit ? _getActualProfit(year, b, mode) : _getActual(year, b);
-      const _fmtN = n => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toFixed(2);
+      const _fmtN = n => (n===null||n===undefined||isNaN(n)) ? '-' : Number(n).toFixed(2);
 
       const bizRows = CONFIG.BIZ_LIST.map(b => {
         const tgtRaw  = _bizTgtRaw(b);
@@ -1549,8 +1549,8 @@ Pages.KpiTarget = (() => {
           : `<div style="font-weight:600">${_fmtN(tgtDisp)}</div>`;
         const fmtAct = () => actUsd>0
           ? `<div style="font-weight:600">${_fmtN(actDisp)}</div><div style="font-size:10px;color:#aaa">$${formatNumber(Math.round(actUsd))}</div>`
-          : '—';
-        const fmtRem = () => !tgtRaw ? '—' : _fmtN(remDisp);
+          : '-';
+        const fmtRem = () => !tgtRaw ? '-' : _fmtN(remDisp);
 
         return `<tr style="border-top:1px solid var(--tbl-row-bd)">
           <td style="padding:12px 14px;font-family:Pretendard,sans-serif;font-size:13px">
@@ -1721,7 +1721,7 @@ Pages.KpiTarget = (() => {
       let sum = 0; inputs.forEach(i => { sum += parseFloat(i.value) || 0; });
       const rt = row.querySelector('.rolling-rowtotal');
       const dp = _isUsdRaw(_rollingMode) ? 4 : 2;
-      if (rt) rt.textContent = sum > 0 ? (+sum.toFixed(dp)) + '' : '—';
+      if (rt) rt.textContent = sum > 0 ? (+sum.toFixed(dp)) + '' : '-';
       Pages.KpiTarget.calcRollingAll();
     },
 
@@ -1743,7 +1743,7 @@ Pages.KpiTarget = (() => {
           if (type === 'ec')   ebitSums[ci] += v; // EC는 ebit 셀에 표시
         });
         const rt = row.querySelector('.rolling-rowtotal');
-        if (rt) rt.textContent = rowSum > 0 ? (+rowSum.toFixed(rdp)) + '' : '—';
+        if (rt) rt.textContent = rowSum > 0 ? (+rowSum.toFixed(rdp)) + '' : '-';
       });
 
       // EBIT 합계 (rs0~rs11 + rstotal)
@@ -1802,7 +1802,7 @@ Pages.KpiTarget = (() => {
           + '<td style="padding:5px 8px;font-size:11px;font-weight:600;color:' + labelColor + ';border:1px solid var(--bd);white-space:nowrap;text-align:center;background:var(--tbl-sum-bg)">' + labelText + '</td>'
           + cells
           + '<td class="rolling-rowtotal" style="padding:5px 4px;text-align:right;font-size:12px;font-weight:500;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (rowSum > 0 ? (+rowSum.toFixed(dp)) : '—')
+          + (rowSum > 0 ? (+rowSum.toFixed(dp)) : '-')
           + '</td></tr>';
       }
 
@@ -2315,7 +2315,7 @@ Pages.KpiTarget = (() => {
           + '<td style="padding:5px 8px;font-size:11px;font-weight:600;color:' + color + ';border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + label + '</td>'
           + cells
           + '<td class="fc-rowtotal" style="padding:5px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (sum > 0 ? (+sum.toFixed(2)) : '—') + '</td></tr>';
+          + (sum > 0 ? (+sum.toFixed(2)) : '-') + '</td></tr>';
       }
 
       const rows = CONFIG.BIZ_LIST.map((b, i) =>
@@ -2347,7 +2347,7 @@ Pages.KpiTarget = (() => {
       const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
       const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       const cell = tr.querySelector('.fc-rowtotal');
-      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '—';
+      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '-';
     },
 
     saveForecast() {
@@ -2391,7 +2391,7 @@ Pages.KpiTarget = (() => {
           + '<td style="padding:5px 8px;font-size:12px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + (CONFIG.BIZ_LABELS[b] || b) + '</td>'
           + cells
           + '<td class="mc-rowtotal" style="padding:5px 6px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (sum > 0 ? (+sum.toFixed(4)) : '—') + '</td></tr>';
+          + (sum > 0 ? (+sum.toFixed(4)) : '-') + '</td></tr>';
       }).join('');
 
       wrap.innerHTML =
@@ -2419,7 +2419,7 @@ Pages.KpiTarget = (() => {
       const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
       const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       const cell = tr.querySelector('.mc-rowtotal');
-      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(4)) : '—';
+      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(4)) : '-';
     },
 
     /** MC 붙여넣기 — '사업명 + 12개월' 형태의 줄을 표에 채운다 */
