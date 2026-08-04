@@ -940,7 +940,7 @@ Pages.Progress = (() => {
                 <input type="date" id="dp-date-${lot.id}" value="${today()}" style="width:130px;padding:5px 8px">
               </div>
               <div class="fld" style="margin:0"><label style="font-size:11px">처리량</label>
-                <input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0"
+                <input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" step="any"
                   oninput="Pages.Progress.calcRem(${lot.id})"
                   style="width:80px;padding:5px 8px;text-align:right">
               </div>
@@ -1030,7 +1030,7 @@ Pages.Progress = (() => {
           <div class="fld" style="margin:0"><label style="font-size:11px;color:#dc2626">Abnormal</label>
             <input type="number" id="ed-abnormal-${r.id}" value="${parseNumber(r.abnormal) || ''}" min="0" oninput="Pages.Progress.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>` : ''}
           <div class="fld" style="margin:0"><label style="font-size:11px">처리량${isDram ? ' (자동)' : ''}</label>
-            <input type="number" id="ed-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
+            <input type="number" id="ed-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" step="any" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
           <div class="fld" style="margin:0;flex:1;min-width:150px"><label style="font-size:11px">비고</label>
             <input type="text" id="ed-note-${r.id}" value="${noteVal}" style="${inp};width:100%;font-family:'Pretendard',sans-serif"></div>
           <button class="btn pri sm" onclick="Pages.Progress.saveDailyEdit(${lot.id},${r.id})" style="height:30px;white-space:nowrap">저장</button>

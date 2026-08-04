@@ -197,7 +197,7 @@ Pages.DailyInput = (() => {
           </div>` : ''}
           <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
             <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">날짜</label><input type="date" id="dp-date-${lot.id}" value="${today()}" style="font-size:13px;padding:6px 8px;width:130px"></div>
-            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">처리량 합계</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" oninput="Pages.DailyInput.calcRemaining(${lot.id})" style="font-size:13px;padding:6px 8px;width:100px;text-align:right"></div>
+            <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">처리량 합계</label><input type="number" id="dp-proc-${lot.id}" placeholder="0" min="0" step="any" oninput="Pages.DailyInput.calcRemaining(${lot.id})" style="font-size:13px;padding:6px 8px;width:100px;text-align:right"></div>
             <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">잔량 (자동)</label><input type="number" id="dp-rem-${lot.id}" readonly value="${Math.max(0, parseNumber(lot.qty) - cum)}" style="font-size:13px;padding:6px 8px;width:100px;text-align:right;color:var(--tx2);background:var(--bg)"></div>
             <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">완료 여부</label>
               <select id="dp-done-${lot.id}" style="font-size:13px;padding:6px 8px;width:110px"><option value="0">진행 중</option><option value="1">완료 처리</option></select>
@@ -238,7 +238,7 @@ Pages.DailyInput = (() => {
           <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">Abnormal</label>
             <input type="number" id="dpe-abnormal-${r.id}" value="${parseNumber(r.abnormal) || ''}" min="0" oninput="Pages.DailyInput.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>` : ''}
           <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">처리량${isDram ? ' (자동)' : ''}</label>
-            <input type="number" id="dpe-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
+            <input type="number" id="dpe-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" step="any" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
           <div class="fld" style="margin:0;flex:1;min-width:150px"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">비고</label>
             <input type="text" id="dpe-note-${r.id}" value="${noteVal}" style="${inp};width:100%;font-family:Pretendard,sans-serif"></div>
           <button onclick="Pages.DailyInput.saveDailyEdit(${lot.id},${r.id})" style="padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px;white-space:nowrap">저장</button>

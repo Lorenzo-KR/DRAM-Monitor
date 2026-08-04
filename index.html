@@ -294,7 +294,7 @@
           <div class="fld"><label>고객사</label><input type="text" id="ep-cust"></div>
           <div class="fld"><label>입고일</label><input type="date" id="ep-indate" onchange="Pages.Progress.calcEditTgt()"></div>
           <div class="fld"><label>목표 완료일</label><input type="date" id="ep-tgt"></div>
-          <div class="fld"><label>수량</label><input type="number" id="ep-qty" min="0"></div>
+          <div class="fld"><label>수량</label><input type="number" id="ep-qty" min="0" step="any"></div>
           <div class="fld"><label>단가</label><input type="number" id="ep-price" min="0"></div>
           <div class="fld"><label>통화</label>
             <select id="ep-cur"><option value="USD">USD</option><option value="HKD">HKD</option><option value="SGD">SGD</option><option value="KRW">KRW</option></select>
@@ -351,7 +351,7 @@
           </div>
         </div>
         <div class="fg fg4">
-          <div class="fld"><label>수량</label><input type="number" id="lr-qty" placeholder="0" min="0"></div>
+          <div class="fld"><label>수량</label><input type="number" id="lr-qty" placeholder="0" min="0" step="any"></div>
           <div class="fld"><label>단위</label>
             <select id="lr-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
           </div>

@@ -73,7 +73,7 @@ const CONFIG = {
   COUNTRY_BIZ_MAP: {
     HK: ['DRAM', 'SCR', 'RMA', 'SUS', 'MOD'],
     SG: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
-    KR: ['MOD'],
+    KR: ['MOD', 'SCR'],
     JP: ['MOD'],
   },
 
@@ -90,7 +90,7 @@ const CONFIG = {
 /**
  * 해당 사업을 취급하는 판매 법인 목록.
  * biz가 비어 있으면(전체) 모든 법인을 반환합니다.
- * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국·일본TES는 MOD 전용)
+ * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국은 MOD·SCR, 일본TES는 MOD 전용)
  */
 function countriesForBiz(biz) {
   if (!biz) return CONFIG.COUNTRY_LIST;
