@@ -236,6 +236,15 @@ Pages.KpiTarget = (() => {
   // kpi7 → Material Profit (매출 − Material Cost) / 그 외 → EBIT (매출 × Factor)
   function _isMpMode(mode)   { return (mode || _rollingMode) === 'kpi7'; }
 
+  // KPI-7월 집계에서 빼는 사업 — 모듈 세일즈(MOD)는 이 KPI에 반영하지 않는다
+  const _KPI7_EXCLUDE = ['MOD'];
+  /** 기준별 집계 대상 사업 목록 */
+  function _kpiBizList(mode) {
+    return _isMpMode(mode)
+      ? CONFIG.BIZ_LIST.filter(b => _KPI7_EXCLUDE.indexOf(b) < 0)
+      : CONFIG.BIZ_LIST;
+  }
+
   // ── 롤링 raw 저장 단위 ────────────────────────────────────
   // EC·KPI-7월 = M USD / 그 외 KPI = 억원.
   // KPI-7월 계획은 달러로 확정된 값이라 원화로 저장하면 환율이 바뀔 때마다
@@ -311,7 +320,7 @@ Pages.KpiTarget = (() => {
     return _getRollingMonths(year, biz, mode).reduce((s,v)=>s+v, 0);
   }
   function _getTotalTarget(year, mode) {
-    return CONFIG.BIZ_LIST.reduce((s,b)=>s+_getTarget(year,b,mode), 0);
+    return _kpiBizList(mode).reduce((s,b)=>s+_getTarget(year,b,mode), 0);
   }
   function _getMonthlyTarget(year, biz, month, mode) {
     return _getRollingMonths(year, biz, mode)[month-1] || 0;
@@ -320,7 +329,7 @@ Pages.KpiTarget = (() => {
   // 매출 목표 (전 사업 × 12개월 합) — KPI 모드: 원, EC 모드: USD
   function _getTotalRevenueTarget(year, mode) {
     const store = _getRollingStore(mode);
-    const sum = CONFIG.BIZ_LIST.reduce((s, b) => {
+    const sum = _kpiBizList(mode).reduce((s, b) => {
       return s + _getRollingRevRaw(store, year, b).reduce((a,v)=>a+v, 0);
     }, 0);
     return _isUsdRaw(mode) ? sum * 1000000 : sum * 100000000;
@@ -466,7 +475,7 @@ Pages.KpiTarget = (() => {
 
     const MONTHS    = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
     const isAll     = _bizSet.has('all');
-    const bizList   = isAll ? CONFIG.BIZ_LIST : CONFIG.BIZ_LIST.filter(b => _bizSet.has(b));
+    const bizList   = _kpiBizList(mode).filter(b => isAll || _bizSet.has(b));
 
     // ── 단위 설정 ────────────────────────────────────────────
     // KPI: 롤링 입력값은 '억원' 단위 → 표시도 억원(소수2자리) or M USD
@@ -1550,7 +1559,7 @@ Pages.KpiTarget = (() => {
       const _bizActUsd = b => ctx.useEbit ? _getActualProfit(year, b, mode) : _getActual(year, b);
       const _fmtN = n => (n===null||n===undefined||isNaN(n)) ? '-' : Number(n).toFixed(2);
 
-      const bizRows = CONFIG.BIZ_LIST.map(b => {
+      const bizRows = _kpiBizList(mode).map(b => {
         const tgtRaw  = _bizTgtRaw(b);
         const actUsd  = _bizActUsd(b);
         const tgtDisp = _tgtToDisp(tgtRaw, ctx);
@@ -1587,8 +1596,8 @@ Pages.KpiTarget = (() => {
         </tr>`;
       }).join('');
 
-      const totalTgtRaw  = CONFIG.BIZ_LIST.reduce((s,b)=>s+_bizTgtRaw(b),0);
-      const totalActUsd  = CONFIG.BIZ_LIST.reduce((s,b)=>s+_bizActUsd(b),0);
+      const totalTgtRaw  = _kpiBizList(mode).reduce((s,b)=>s+_bizTgtRaw(b),0);
+      const totalActUsd  = _kpiBizList(mode).reduce((s,b)=>s+_bizActUsd(b),0);
       const totalTgtUsd  = _tgtToUsd(totalTgtRaw, ctx);
       const totalTgtDisp = _tgtToDisp(totalTgtRaw, ctx);
       const totalActDisp = _actToDisp(totalActUsd, ctx);
@@ -1607,7 +1616,7 @@ Pages.KpiTarget = (() => {
       const tgtHeader = `계획 ${basis} (${uLabel})`;
       const actHeader = `누적 ${basis} (${uLabel})`;
 
-      const bizBtns=[{key:'all',label:'전체',color:'#1B4F8A'},...CONFIG.BIZ_LIST.map(b=>({key:b,label:CONFIG.BIZ_LABELS[b],color:CONFIG.BIZ_COLORS[b]}))].map(({key,label,color})=>{
+      const bizBtns=[{key:'all',label:'전체',color:'#1B4F8A'},..._kpiBizList(mode).map(b=>({key:b,label:CONFIG.BIZ_LABELS[b],color:CONFIG.BIZ_COLORS[b]}))].map(({key,label,color})=>{
         const on=_bizSet.has(key);
         return `<button id="kpi-biz-${key}" onclick="Pages.KpiTarget.switchBiz('${key}')" style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid ${color};background:${on?color:'none'};color:${on?'#fff':color};transition:.15s">${label}</button>`;
       }).join('');
@@ -1821,6 +1830,7 @@ Pages.KpiTarget = (() => {
       const isMp  = _isMpMode(_rollingMode);                       // Material Cost 입력 + MP 자동계산
       const unitTxt = _isUsdRaw(_rollingMode) ? 'M USD' : '억원';
 
+      // KPI-7월 기준은 집계 대상 사업만 입력받는다 (모듈 세일즈 제외)
       const ROWS = [
         { key:'DRAM', label:'DRAM Test' },
         { key:'SSD',  label:'SSD Test' },
@@ -1829,7 +1839,7 @@ Pages.KpiTarget = (() => {
         { key:'RMA',  label:'RMA 운영' },
         { key:'SUS',  label:'Sustainability 컨설팅' },
         { key:'MOD',  label:'모듈 세일즈' },
-      ];
+      ].filter(r => _kpiBizList(_rollingMode).indexOf(r.key) >= 0);
       const MO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
       const thS  = 'padding:6px 4px;text-align:center;font-size:11px;font-weight:500;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap';
       const inpW = 'width:52px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
@@ -2378,7 +2388,7 @@ Pages.KpiTarget = (() => {
           + (sum > 0 ? (+sum.toFixed(2)) : '-') + '</td></tr>';
       }
 
-      const rows = CONFIG.BIZ_LIST.map((b, i) =>
+      const rows = _kpiBizList('kpi7').map((b, i) =>
         '<tr><td colspan="' + (MO.length + 2) + '" style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#EBEBEB;border:1px solid var(--bd)">'
         + (i + 1) + '. ' + (CONFIG.BIZ_LABELS[b] || b) + '</td></tr>'
         + row(b, 'rev',  '매출(M USD)', '#185FA5')
