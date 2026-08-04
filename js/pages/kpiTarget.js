@@ -1721,8 +1721,33 @@ Pages.KpiTarget = (() => {
 
     setRollingYear(y) { _rollingYear=parseInt(y); Pages.KpiTarget.renderRolling(); },
 
+    /** kpi7: 같은 사업의 매출/MC 값으로 MP 행을 다시 채운다 */
+    _recalcMpRow(biz) {
+      const body = document.getElementById('rolling-tbody'); if (!body) return;
+      const q = t => body.querySelector('tr[data-biz="' + biz + '"][data-type="' + t + '"]');
+      const revRow = q('rev'), mcRow = q('mc'), mpRow = q('ebit');
+      if (!revRow || !mpRow) return;
+      const rev = Array.from(revRow.querySelectorAll('input[type=number]')).map(i => parseFloat(i.value) || 0);
+      const mcv = mcRow ? Array.from(mcRow.querySelectorAll('input[type=number]')).map(i => parseFloat(i.value) || 0)
+                        : Array(12).fill(0);
+      const mps = mpRow.querySelectorAll('input[type=number]');
+      let sum = 0;
+      mps.forEach((inp, i) => {
+        const v = (rev[i] || 0) - (mcv[i] || 0);
+        inp.value = v ? +v.toFixed(4) : '';
+        sum += v;
+      });
+      const rt = mpRow.querySelector('.rolling-rowtotal');
+      const dp = _isUsdRaw(_rollingMode) ? 4 : 2;
+      if (rt) rt.textContent = sum ? (+sum.toFixed(dp)) + '' : '-';
+    },
+
     calcRollingRow(input) {
       const row    = input.closest('tr');
+      if (_isMpMode(_rollingMode)) {
+        const biz = row.getAttribute('data-biz');
+        if (biz) Pages.KpiTarget._recalcMpRow(biz);
+      }
       const inputs = row.querySelectorAll('input[type=number]');
       let sum = 0; inputs.forEach(i => { sum += parseFloat(i.value) || 0; });
       const rt = row.querySelector('.rolling-rowtotal');
@@ -1782,6 +1807,8 @@ Pages.KpiTarget = (() => {
       const isKpi = _isKpi(_rollingMode);
       const dp    = _isUsdRaw(_rollingMode) ? 4 : 2;
       const mc    = _modeColor(_rollingMode);
+      const isMp  = _isMpMode(_rollingMode);                       // Material Cost 입력 + MP 자동계산
+      const unitTxt = _isUsdRaw(_rollingMode) ? 'M USD' : '억원';
 
       const ROWS = [
         { key:'DRAM', label:'DRAM Test' },
@@ -1797,10 +1824,13 @@ Pages.KpiTarget = (() => {
       const inpW = 'width:52px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
 
       // 입력행 생성 (data-biz, data-type 속성 부여 → saveRolling에서 사용)
-      function makeInputRow(biz, type, vals, labelText, labelColor) {
+      function makeInputRow(biz, type, vals, labelText, labelColor, readOnly) {
         const cells = vals.map(v =>
           '<td style="padding:3px 3px;border:1px solid var(--bd)">'
-          + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.0001" style="' + inpW + '" oninput="Pages.KpiTarget.calcRollingRow(this)">'
+          + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.0001"'
+          + (readOnly ? ' readonly tabindex="-1" style="' + inpW + ';background:var(--bg);color:var(--tx2)"'
+                      : ' style="' + inpW + '" oninput="Pages.KpiTarget.calcRollingRow(this)"')
+          + '>'
           + '</td>'
         ).join('');
         const rowSum = vals.reduce((s, v) => s + (parseFloat(v) || 0), 0);
@@ -1835,8 +1865,9 @@ Pages.KpiTarget = (() => {
 
         if (isKpi) {
           return bizHeader
-            + makeInputRow(r.key, 'rev',  revVals,  '매출(' + (_isUsdRaw(_rollingMode) ? 'M USD' : '억원') + ')',  '#185FA5')
-            + makeInputRow(r.key, 'ebit', ebitVals, _profitLabel(_rollingMode) + '(' + (_isUsdRaw(_rollingMode) ? 'M USD' : '억원') + ')', '#0F6E56');
+            + makeInputRow(r.key, 'rev',  revVals,  '매출(' + unitTxt + ')',  '#185FA5')
+            + (isMp ? makeInputRow(r.key, 'mc', _getMcMonths(y, r.key), 'Material Cost(' + unitTxt + ')', '#8A6D3B') : '')
+            + makeInputRow(r.key, 'ebit', ebitVals, _profitLabel(_rollingMode) + '(' + unitTxt + ')', '#0F6E56', isMp);
         } else {
           // EC 모드: 매출(M USD) 단일 입력, data-type='ec'
           return bizHeader
@@ -1869,7 +1900,11 @@ Pages.KpiTarget = (() => {
       wrap.innerHTML = `
         <div style="font-size:12px;color:${mc};font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:16px">
           <span>단위: ${_isUsdRaw(_rollingMode) ? 'Million USD' : '억원'} &nbsp;·&nbsp; ${_modeLabel(_rollingMode)} · 저장하면 즉시 반영됩니다</span>
-          ${isKpi ? (u => '<span style="display:flex;gap:10px"><span style="color:#185FA5;font-size:11px">■ 매출(' + u + ')</span><span style="color:#0F6E56;font-size:11px">■ ' + _profitLabel(_rollingMode) + '(' + u + ')</span></span>')(_isUsdRaw(_rollingMode) ? 'M USD' : '억원') : ''}
+          ${isKpi ? (u => '<span style="display:flex;gap:10px">'
+              + '<span style="color:#185FA5;font-size:11px">■ 매출(' + u + ')</span>'
+              + (isMp ? '<span style="color:#8A6D3B;font-size:11px">■ Material Cost(' + u + ')</span>' : '')
+              + '<span style="color:#0F6E56;font-size:11px">■ ' + _profitLabel(_rollingMode) + '(' + u + ')'
+              + (isMp ? ' — 매출 − MC 자동계산' : '') + '</span></span>')(unitTxt) : ''}
         </div>
         <div style="margin-bottom:14px;background:#F8F8F8;border:1px solid #DDD;border-radius:6px;padding:12px">
           <div style="font-size:12px;font-weight:600;color:#333;margin-bottom:8px;font-family:Pretendard,sans-serif">📋 엑셀에서 붙여넣기</div>
@@ -1994,6 +2029,7 @@ Pages.KpiTarget = (() => {
         const t = typeStr.trim().toLowerCase().replace(/\s+/g, '');
         if (!isKpi) return 'ec';
         if (t === '매출' || t === 'rev' || t === 'revenue') return 'rev';
+        if (t === 'materialcost' || t === 'mc' || t === '자재비' || t === '재료비') return 'mc';
         if (t === '에빗' || t === 'ebit' || t === 'materialprofit' || t === 'mp' || t === '머티리얼프로핏') return 'ebit';
         return 'rev'; // 기본값: 매출
       }
@@ -2041,7 +2077,7 @@ Pages.KpiTarget = (() => {
             bizName = cols[0]; typeStr = cols[1]; numStart = 2;
           } else if (/^(매출|에빗|ebit|rev)$/i.test(cols[0].split(/\s+/).pop())) {
             // 사업명과 타입이 첫 컬럼에 붙어있는 경우
-            const parts = cols[0].match(/^(.*?)(매출|에빗|EBIT|Material\s*Profit|MP)$/i);
+            const parts = cols[0].match(/^(.*?)(매출|에빗|EBIT|Material\s*Profit|Material\s*Cost|MP|MC)$/i);
             bizName = parts ? parts[1] : cols[0]; typeStr = parts ? parts[2] : '매출'; numStart = 1;
           } else {
             bizName = cols[0]; typeStr = '매출'; numStart = 1;
@@ -2059,15 +2095,15 @@ Pages.KpiTarget = (() => {
           const converted = toOkwon(nums);
           const type = detectType(typeStr);
 
-          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null };
+          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null, mc: null };
           results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
           matched++;
         }
       } else {
         // ── 공백 붙은 방식: 사업명+타입+숫자 패턴 ─────────────
         // 사업명 키워드 기준으로 세그먼트 분리
-        const BIZ_SPLIT_PATTERN = /(?=[가-힣A-Za-z].*?(?:매출|에빗|EBIT|Material\s*Profit))/;
-        const TYPE_PATTERN = /^(.*?)(매출|에빗|EBIT|Material\s*Profit)([\d,\s\-—\u2013\u2014.]*?)$/;
+        const BIZ_SPLIT_PATTERN = /(?=[가-힣A-Za-z].*?(?:매출|에빗|EBIT|Material\s*Profit|Material\s*Cost))/;
+        const TYPE_PATTERN = /^(.*?)(매출|에빗|EBIT|Material\s*Profit|Material\s*Cost)([\d,\s\-—\u2013\u2014.]*?)$/;
 
         // 전체를 하나의 문자열로 보고, 사업명+타입 단위로 분리
         // 접근: 사업명 매핑 키워드로 직접 분리
@@ -2088,7 +2124,7 @@ Pages.KpiTarget = (() => {
 
         for (const seg of segments) {
           // 타입 키워드로 분리
-          const typeMatch = seg.match(/(매출|에빗|EBIT|Material\s*Profit)/i);
+          const typeMatch = seg.match(/(매출|에빗|EBIT|Material\s*Profit|Material\s*Cost)/i);
           if (!typeMatch) { skipped++; continue; }
 
           const typeIdx = seg.indexOf(typeMatch[0]);
@@ -2105,7 +2141,7 @@ Pages.KpiTarget = (() => {
           const converted = toOkwon(nums);
           const type = detectType(typeMatch[0]);
 
-          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null };
+          if (!results[bizKey]) results[bizKey] = { rev: null, ebit: null, mc: null };
           results[bizKey][type === 'ec' ? 'ebit' : type] = converted;
           matched++;
         }
@@ -2127,8 +2163,20 @@ Pages.KpiTarget = (() => {
           }
         }
 
+        // Material Cost 행 (kpi7)
+        if (vals.mc !== null && vals.mc !== undefined) {
+          const mcRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="mc"]');
+          if (mcRow) {
+            mcRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
+              inp.value = vals.mc[i] > 0 ? vals.mc[i] : '';
+            });
+            applied++;
+          }
+        }
+
         // ebit 행 — vals.ebit가 null이면 건드리지 않음 (기존값 유지)
-        if (vals.ebit !== null) {
+        // kpi7은 MP가 자동계산이므로 붙여넣기 값으로 덮지 않는다
+        if (vals.ebit !== null && !_isMpMode(_rollingMode)) {
           const ebitRow = body.querySelector('tr[data-biz="' + bizKey + '"][data-type="ebit"]');
           if (ebitRow) {
             ebitRow.querySelectorAll('input[type=number]').forEach((inp, i) => {
@@ -2147,6 +2195,9 @@ Pages.KpiTarget = (() => {
         }
       }
 
+      if (_isMpMode(_rollingMode)) {
+        Object.keys(results).forEach(function(b) { Pages.KpiTarget._recalcMpRow(b); });
+      }
       Pages.KpiTarget.calcRollingAll();
 
       if (msg) {
@@ -2168,9 +2219,12 @@ Pages.KpiTarget = (() => {
       const rows = body.querySelectorAll('tr[data-biz]');
       const newData = {};
 
+      const isMp   = _isMpMode(_rollingMode);
+      const mcData = {};
+
       rows.forEach(row => {
         const biz  = row.getAttribute('data-biz');
-        const type = row.getAttribute('data-type'); // 'rev', 'ebit', or 'ec'
+        const type = row.getAttribute('data-type'); // 'rev' | 'mc' | 'ebit' | 'ec'
         if (!biz || !type) return;
         const inputs = row.querySelectorAll('input[type=number]');
         const vals   = Array.from(inputs).map(i => parseFloat(i.value) || 0);
@@ -2178,12 +2232,24 @@ Pages.KpiTarget = (() => {
         if (isEc) {
           // EC: 배열 그대로 저장 (매출 단일값)
           newData[biz] = vals;
+        } else if (type === 'mc') {
+          mcData[biz] = vals;                       // Material Cost는 별도 저장소
         } else {
           // KPI: { rev, ebit } 구조
           if (!newData[biz]) newData[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
           newData[biz][type] = vals;
         }
       });
+
+      // kpi7: Material Profit = 매출 − Material Cost (입력값이 아니라 계산값을 저장)
+      if (isMp) {
+        Object.keys(newData).forEach(biz => {
+          const rev = newData[biz].rev || Array(12).fill(0);
+          const mcv = mcData[biz]      || Array(12).fill(0);
+          newData[biz].ebit = rev.map((v, i) => +(((v || 0) - (mcv[i] || 0)).toFixed(6)));
+        });
+        if (Object.keys(mcData).length) _saveMaterialCost(y, mcData);
+      }
 
       _saveRollingData(y, newData);
       Pages.KpiTarget.closeRolling();
