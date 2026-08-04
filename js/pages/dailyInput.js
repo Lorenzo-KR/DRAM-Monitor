@@ -10,6 +10,7 @@ Pages.DailyInput = (() => {
   let _co      = '';
   let _biz     = '';
   let _openId  = null;
+  let _editDailyId = null;   // 처리 이력 인라인 수정 대상 id
   let _parsedRows = [];
 
   // ── 필터 ────────────────────────────────────────────────────
@@ -134,10 +135,11 @@ Pages.DailyInput = (() => {
     }).join('');
 
     // ── 처리 이력 ──────────────────────────────────────────
-    const colGrid = isDram ? '90px 56px 56px 56px 70px 70px 70px 40px 1fr 30px' : '90px 70px 70px 70px 40px 1fr 30px';
+    const colGrid = isDram ? '90px 56px 56px 56px 70px 70px 70px 40px 1fr 58px' : '90px 70px 70px 70px 40px 1fr 58px';
     const histRows = hist.length === 0
       ? '<div style="font-size:12px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
       : hist.map(r => {
+          if (String(r.id) === String(_editDailyId)) return _renderDailyEditRow(r, lot, isDram);
           const tot = isDram ? (parseNumber(r.normal) + parseNumber(r.noBoot) + parseNumber(r.abnormal)) || parseNumber(r.proc) : parseNumber(r.proc);
           const moTag = r.moNo ? `<span style="display:inline-block;font-size:10px;padding:1px 5px;background:var(--bg);color:var(--tx2);border:1px solid var(--bd);border-radius:2px;font-family:var(--font-mono);margin-left:6px">${r.moNo}</span>` : '';
           return `
@@ -149,7 +151,10 @@ Pages.DailyInput = (() => {
               <span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.remain))}</span>
               <span style="text-align:center;font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">${r.done === '1' ? '완료' : ''}</span>
               <span style="color:var(--tx3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.note || ''}</span>
-              <button onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})" style="border:none;background:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:2px 4px">✕</button>
+              <span style="display:flex;gap:2px;justify-content:flex-end">
+                <button onclick="Pages.DailyInput.startEditDaily(${r.id})" title="수정" style="border:none;background:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:2px 4px">✎</button>
+                <button onclick="Pages.DailyInput.deleteRecord(${r.id},${lot.id})" title="삭제" style="border:none;background:none;cursor:pointer;color:var(--tx3);font-size:13px;padding:2px 4px">✕</button>
+              </span>
             </div>`;
         }).join('');
 
@@ -216,8 +221,103 @@ Pages.DailyInput = (() => {
       </div>`;
   }
 
+  // ── 처리 이력 인라인 수정 ────────────────────────────────────
+  function _renderDailyEditRow(r, lot, isDram) {
+    const inp = 'padding:5px 8px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:13px;font-family:var(--font-mono);background:var(--card);color:var(--tx)';
+    const noteVal = String(r.note || '').replace(/"/g, '&quot;');
+    return `
+      <div style="padding:10px 12px;border-bottom:1px solid var(--bd);background:var(--card);border-left:2px solid var(--tx)">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">날짜</label>
+            <input type="date" id="dpe-date-${r.id}" value="${r.date || ''}" style="${inp};width:140px"></div>
+          ${isDram ? `
+          <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">Normal</label>
+            <input type="number" id="dpe-normal-${r.id}" value="${parseNumber(r.normal) || ''}" min="0" oninput="Pages.DailyInput.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>
+          <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">No Boot</label>
+            <input type="number" id="dpe-noboot-${r.id}" value="${parseNumber(r.noBoot) || ''}" min="0" oninput="Pages.DailyInput.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>
+          <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">Abnormal</label>
+            <input type="number" id="dpe-abnormal-${r.id}" value="${parseNumber(r.abnormal) || ''}" min="0" oninput="Pages.DailyInput.calcEditDailyDram(${r.id})" style="${inp};width:74px;text-align:right"></div>` : ''}
+          <div class="fld" style="margin:0"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">처리량${isDram ? ' (자동)' : ''}</label>
+            <input type="number" id="dpe-proc-${r.id}" value="${parseNumber(r.proc) || ''}" min="0" ${isDram ? 'readonly' : ''} style="${inp};width:84px;text-align:right${isDram ? ';background:var(--bg);color:var(--tx2)' : ''}"></div>
+          <div class="fld" style="margin:0;flex:1;min-width:150px"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">비고</label>
+            <input type="text" id="dpe-note-${r.id}" value="${noteVal}" style="${inp};width:100%;font-family:Pretendard,sans-serif"></div>
+          <button onclick="Pages.DailyInput.saveDailyEdit(${lot.id},${r.id})" style="padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px;white-space:nowrap">저장</button>
+          <button onclick="Pages.DailyInput.cancelEditDaily()" style="padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--bd2);background:var(--card);color:var(--tx2);border-radius:var(--rs);cursor:pointer;height:30px;white-space:nowrap">취소</button>
+        </div>
+      </div>`;
+  }
+
+  function startEditDaily(id)  { _editDailyId = id;   render(); }
+  function cancelEditDaily()   { _editDailyId = null; render(); }
+
+  function calcEditDailyDram(id) {
+    const nm = parseNumber(document.getElementById('dpe-normal-' + id)?.value);
+    const nb = parseNumber(document.getElementById('dpe-noboot-' + id)?.value);
+    const ab = parseNumber(document.getElementById('dpe-abnormal-' + id)?.value);
+    const el = document.getElementById('dpe-proc-' + id);
+    if (el) el.value = (nm + nb + ab) || '';
+  }
+
+  // 한 LOT의 모든 일별 기록을 날짜순으로 누적/잔량 재계산 후 변경분만 저장
+  function _resequenceLot(lot) {
+    const rows = Store.getDailies()
+      .filter(d => String(d.lotId) === String(lot.id))
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.id).localeCompare(String(b.id)));
+    let run = 0;
+    rows.forEach(d => {
+      run += parseNumber(d.proc);
+      const remain = Math.max(0, parseNumber(lot.qty) - run);
+      if (parseNumber(d.cumul) !== run || parseNumber(d.remain) !== remain) {
+        const upd = { ...d, cumul: run, remain };
+        Store.upsertDaily(upd);
+        Api.update(CONFIG.SHEETS.DAILY, d.id, upd);
+      }
+    });
+    return run;
+  }
+
+  async function saveDailyEdit(lotId, dailyId) {
+    const lot = Store.getLotById(lotId); if (!lot) return;
+    const rec = Store.getDailies().find(d => String(d.id) === String(dailyId)); if (!rec) return;
+
+    const date     = document.getElementById('dpe-date-' + dailyId)?.value;
+    const isDram   = lot.biz === 'DRAM';
+    const normal   = isDram ? parseNumber(document.getElementById('dpe-normal-' + dailyId)?.value)   : parseNumber(rec.normal);
+    const noBoot   = isDram ? parseNumber(document.getElementById('dpe-noboot-' + dailyId)?.value)   : parseNumber(rec.noBoot);
+    const abnormal = isDram ? parseNumber(document.getElementById('dpe-abnormal-' + dailyId)?.value) : parseNumber(rec.abnormal);
+    const proc     = isDram ? (normal + noBoot + abnormal) : parseNumber(document.getElementById('dpe-proc-' + dailyId)?.value);
+    const note     = document.getElementById('dpe-note-' + dailyId)?.value || '';
+    if (!date || !proc) { UI.toast('날짜와 처리량은 필수입니다', true); return; }
+
+    const updated = { ...rec, date, proc, normal, noBoot, abnormal, note };
+    Store.upsertDaily(updated);
+
+    const saveBtn = document.querySelector(`[onclick="Pages.DailyInput.saveDailyEdit(${lotId},${dailyId})"]`);
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '저장 중...'; }
+    const result = await Api.update(CONFIG.SHEETS.DAILY, dailyId, updated);
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '저장'; }
+    if (result && result.success === false) return;
+
+    // 누적/잔량 재계산 + 전량 처리 시 LOT 자동 완료
+    const totalCum = _resequenceLot(lot);
+    if (parseNumber(lot.qty) > 0 && totalCum >= parseNumber(lot.qty) && lot.done !== '1') {
+      const lastDate = Store.getDailies()
+        .filter(d => String(d.lotId) === String(lot.id))
+        .reduce((mx, d) => String(d.date || '') > mx ? String(d.date || '') : mx, '');
+      const updLot = { ...lot, done: '1', actualDone: lot.actualDone || lastDate || date };
+      Store.upsertLot(updLot);
+      Api.update(CONFIG.SHEETS.LOTS, lot.id, updLot);
+    }
+
+    _editDailyId = null;
+    Api.log('일별처리', '수정', lot.lotNo || String(lotId), `${date} 처리 ${formatNumber(proc)}개${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''}`);
+    UI.toast('수정됨');
+    render();
+  }
+
   function toggleCard(lotId) {
     _openId = _openId === lotId ? null : lotId;
+    _editDailyId = null;
     render();
     if (_openId) {
       const el = document.getElementById('acc-' + lotId);
@@ -491,6 +591,8 @@ Pages.DailyInput = (() => {
     setTimeout(() => closePasteModal(), 1500);
   }
 
-  return { render, setFilter, toggleCard, calcDram, calcRemaining, saveRecord, deleteRecord, addMo, deleteMo, openPasteModal, closePasteModal, parsePaste, setParsedLot, savePaste };
+  return { render, setFilter, toggleCard, calcDram, calcRemaining, saveRecord, deleteRecord, addMo, deleteMo,
+           startEditDaily, cancelEditDaily, calcEditDailyDram, saveDailyEdit,
+           openPasteModal, closePasteModal, parsePaste, setParsedLot, savePaste };
 
 })();
