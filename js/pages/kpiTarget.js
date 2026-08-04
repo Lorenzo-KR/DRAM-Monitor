@@ -1112,69 +1112,57 @@ Pages.KpiTarget = (() => {
     };
 
     // ── 사업별 종합 표 (매출 · Material Cost · Material Profit) ──
-    // KPI-7월 전용. 한 사업 블록에 3개 지표를 붙여 한눈에 보이게 한다.
-    // 지난 달까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 경계에 세로선.
+    // KPI-7월 전용. 사업 한 칸(rowspan)에 3개 지표 행을 묶어 한눈에 보이게 한다.
+    // 표②③④와 같은 TS 스타일 상수·같은 열 너비를 써서 세로선이 일직선으로 맞는다.
+    // 지난 달까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 선 두께는 전부 동일.
     var comboTable = '';
     if (_isMpMode(mode)) {
-      var CB = {
-        wrap:   'border-collapse:collapse;table-layout:fixed;font-family:Pretendard,sans-serif',
-        thMon:  'padding:6px 4px;text-align:center;font-size:12px;font-weight:600;color:#3A3A3C;background:#E8E8ED;border:1px solid #C7C7CC;width:66px;white-space:nowrap',
-        thBiz:  'padding:6px 8px;text-align:left;font-size:12px;font-weight:600;color:#3A3A3C;background:#E8E8ED;border:1px solid #C7C7CC;width:132px;white-space:nowrap',
-        thSum:  'padding:6px 6px;text-align:center;font-size:12px;font-weight:600;color:#3A3A3C;background:#DCDCE1;border:1px solid #C7C7CC;width:82px;white-space:nowrap',
-        bizHd:  'padding:6px 10px;text-align:left;font-size:12.5px;font-weight:700;color:#1D1D1F;background:#F0F0F2;border:1px solid #C7C7CC;white-space:nowrap',
-        lbl:    'padding:4px 10px;text-align:left;font-size:12px;border:1px solid #D8D8DC;white-space:nowrap;color:#3A3A3C',
-        cell:   'padding:4px 5px;text-align:right;font-size:12px;font-family:var(--font-mono);border:1px solid #E3E3E6',
-        sum:    'padding:4px 6px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:600;border:1px solid #C7C7CC;background:#F5F5F7',
-      };
-      var edge = closedIdx >= 0 && closedIdx < 11 ? ';border-right:2px solid #8E8E93' : '';
       var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '-'; };
+      var dimFuture = function(i) { return i > curMonIdx ? ';color:#AAA' : ''; };
 
-      // 지표 행 하나
-      var metricRow = function(label, vals, opt) {
+      // 지표 행 — 첫 열(사업명)은 블록의 첫 행에서만 rowspan으로 출력
+      var metricRow = function(label, vals, opt, firstCell) {
         opt = opt || {};
+        var rowBg = opt.bg ? ';background:' + opt.bg : '';
+        var bold  = opt.strong ? ';font-weight:600' : '';
         var cells = vals.map(function(v, i) {
-          var isAct = i <= curMonIdx;
-          var style = CB.cell
-            + (i === closedIdx ? edge : '')
-            + (isAct ? ';color:#1D1D1F' : ';color:#A1A1A6')
-            + (opt.strong ? ';font-weight:700' : '')
-            + (opt.bg ? ';background:' + opt.bg : '');
-          return '<td style="' + style + '">' + (opt.minus && v ? '−' : '') + fmtCell(v) + '</td>';
+          return '<td style="' + TS.td + dimFuture(i) + bold + rowBg + '">'
+               + (opt.minus && v ? '-' : '') + fmtCell(v) + '</td>';
         }).join('');
-        var total = vals.reduce(function(s, v) { return s + (v || 0); }, 0);
+        var total = opt.total !== undefined ? opt.total : vals.reduce(function(s, v) { return s + (v || 0); }, 0);
         return '<tr>'
-          + '<td style="' + CB.lbl + (opt.strong ? ';font-weight:700;color:#1D1D1F' : '')
-          + (opt.bg ? ';background:' + opt.bg : '') + '">' + label + '</td>'
+          + (firstCell || '')
+          + '<td style="' + TS.tdSub + bold + rowBg + '">' + label + '</td>'
           + cells
-          + '<td style="' + CB.sum + (opt.strong ? ';font-weight:700' : '') + '">' + (opt.minus && total ? '−' : '') + fmtCell(total) + '</td>'
-          + '<td style="' + CB.sum + '">' + (opt.plan === undefined ? '' : fmtCell(opt.plan)) + '</td>'
-          + '<td style="' + CB.sum + (opt.diff !== undefined && opt.diff ? ';color:' + diffColor(opt.diff) : '') + '">'
+          + '<td style="' + TS.tdSum + bold + '">' + (opt.minus && total ? '-' : '') + fmtCell(total) + '</td>'
+          + '<td style="' + TS.tdSum + '">' + (opt.plan === undefined ? '' : fmtCell(opt.plan)) + '</td>'
+          + '<td style="' + TS.tdSum + (opt.diff ? ';color:' + diffColor(opt.diff) : '') + '">'
           + (opt.diff === undefined ? '' : fmtDiff(opt.diff)) + '</td>'
           + '</tr>';
       };
 
+      var monthsOf = function(b, act, plan) {
+        return MONTHS.map(function(_, i) {
+          return i <= curMonIdx ? actToDispNum(act[b][i] || 0) : rawToDisp(plan[b][i]);
+        });
+      };
+
       // 사업별 블록 — 매출 / Material Cost / Material Profit
       var comboBody = bizList.map(function(b) {
-        var revVals = MONTHS.map(function(_, i) {
-          return i <= curMonIdx ? actToDispNum(actRevByBiz[b][i] || 0) : rawToDisp(revByBiz[b][i]);
-        });
+        var revVals = monthsOf(b, actRevByBiz,  revByBiz);
+        var mpVals  = monthsOf(b, actEbitByBiz, ebitByBiz);
         var mcVals  = _getMcMonths(year, b).map(function(v) { return rawToDisp(v); });
-        var mpVals  = MONTHS.map(function(_, i) {
-          return i <= curMonIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]);
-        });
         var revPlan = revByBiz[b].reduce(function(s, v) { return s + rawToDisp(v); }, 0);
         var mpPlan  = ebitByBiz[b].reduce(function(s, v) { return s + rawToDisp(v); }, 0);
         var revTot  = revVals.reduce(function(s, v) { return s + v; }, 0);
         var mpTot   = mpVals.reduce(function(s, v) { return s + v; }, 0);
         if (!revTot && !mpTot && !revPlan && !mpPlan) return '';   // 실적·계획 모두 없는 사업은 숨김
 
-        return '<tr><td colspan="' + (MONTHS.length + 4) + '" style="' + CB.bizHd + '">'
-             + (CONFIG.BIZ_LABELS[b] || b)
-             + '<span style="font-weight:400;color:#86868B;font-size:11.5px;margin-left:8px">MP ' + fmtCell(mpTot) + ' / 계획 ' + fmtCell(mpPlan) + ' ' + unitLabel + '</span>'
-             + '</td></tr>'
-          + metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan })
-          + metricRow('Material Cost', mcVals, { minus: true })
-          + metricRow('Material Profit', mpVals, { strong: true, bg: '#F7F7F9', plan: mpPlan, diff: mpTot - mpPlan });
+        var bizCell = '<td rowspan="3" style="' + TS.tdL + ';font-weight:600;vertical-align:middle">'
+                    + (CONFIG.BIZ_LABELS[b] || b) + '</td>';
+        return metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan }, bizCell)
+             + metricRow('Material Cost', mcVals, { minus: true })
+             + metricRow('Material Profit', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan });
       }).join('');
 
       // 전체 합계 블록
@@ -1187,24 +1175,33 @@ Pages.KpiTarget = (() => {
       var tRevTot  = tRev.reduce(function(s, v) { return s + v; }, 0);
       var tMpTot   = tMp.reduce(function(s, v) { return s + v; }, 0);
 
-      comboBody += '<tr><td colspan="' + (MONTHS.length + 4) + '" style="' + CB.bizHd + ';background:#DCDCE1">전체 합계</td></tr>'
-        + metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#FAFAFC' })
-        + metricRow('Material Cost', tMc, { minus: true, bg: '#FAFAFC' })
-        + metricRow('Material Profit', tMp, { strong: true, bg: '#EFEFF4', plan: tMpPlan, diff: tMpTot - tMpPlan });
+      // 월별 누적 (실적 구간 + 잔여 계획을 이어서 누적)
+      var runCum = function(arr) { var r = 0; return arr.map(function(v) { r += (v || 0); return r; }); };
+      var totalCell = '<td rowspan="5" style="' + TS.tdCumL + ';font-weight:600;vertical-align:middle">전체 합계</td>';
+      comboBody += metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#F7F7F7' }, totalCell)
+                 + metricRow('Material Cost', tMc, { minus: true, bg: '#F7F7F7' })
+                 + metricRow('Material Profit', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan })
+                 + metricRow('누적 매출', runCum(tRev), { total: tRevTot, plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#EFEFEF' })
+                 + metricRow('누적 Material Profit', runCum(tMp), { strong: true, total: tMpTot, plan: tMpPlan, diff: tMpTot - tMpPlan, bg: '#E8E4D8' });
+
+      var comboColgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
+        + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
+        + '<col style="width:74px"><col style="width:74px"><col style="width:74px"></colgroup>';
 
       comboTable = '<div style="margin-bottom:14px">'
-        + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+        + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
         + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
         + '① 사업별 종합 — 매출 · Material Cost · Material Profit (' + unitLabel + ')</div>'
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (curMonIdx >= 0 ? (curMonIdx + 1) + '월' : '없음') + '까지) · '
-        + '<span style="color:#A1A1A6">흐린 값</span> = 계획 · 합계는 실적+잔여계획</span>'
+        + '<span style="color:#AAA">흐린 값</span> = 계획 · 합계는 실적+잔여계획</span>'
         + '</div>'
-        + '<div style="overflow-x:auto;border:1px solid #C7C7CC;border-radius:4px">'
-        + '<table style="' + CB.wrap + '"><thead><tr>'
-        + '<th style="' + CB.thBiz + '">사업 / 지표</th>'
-        + MONTHS.map(function(m, i) { return '<th style="' + CB.thMon + (i === closedIdx ? edge : '') + '">' + m + '</th>'; }).join('')
-        + '<th style="' + CB.thSum + '">합계</th><th style="' + CB.thSum + '">연간계획</th><th style="' + CB.thSum + '">차이</th>'
+        + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
+        + '<table style="border-collapse:collapse;table-layout:fixed">' + comboColgroup
+        + '<thead><tr>'
+        + '<th style="' + TS.thBiz + '">Biz</th><th style="' + TS.thSub + '">구분</th>'
+        + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
+        + '<th style="' + TS.thSum + '">합계</th><th style="' + TS.thSum + '">연간계획</th><th style="' + TS.thSum + '">차이</th>'
         + '</tr></thead><tbody>' + comboBody + '</tbody></table></div></div>';
     }
 
