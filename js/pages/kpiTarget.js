@@ -762,6 +762,11 @@ Pages.KpiTarget = (() => {
 
     // 표/차트 레이블: EC=매출, KPI=EBIT or 매출
     var profitLabel = _profitLabel(mode);   // kpi7 → 'Material Profit' / 그 외 → 'EBIT'
+    // 표의 '구분' 열은 폭이 좁아 약어를 쓰고, 약어 설명은 표 아래에 둔다
+    var profitAbbr  = _isMpMode(mode) ? 'MP' : 'EBIT';
+    var abbrNote    = _isMpMode(mode)
+      ? '<div style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif;padding:3px 2px 0">MP = Material Profit · MC = Material Cost</div>'
+      : '';
     var planLabel  = isEcMode ? '매출(계획)' : (showEbit ? profitLabel + '(계획)' : '매출(계획)');
     var actLabel   = isEcMode ? '매출(실적)' : (showEbit ? profitLabel + '(실적)' : '매출(실적)');
     var chartLabel = isEcMode ? '매출' : (showEbit ? profitLabel : '매출');
@@ -783,7 +788,7 @@ Pages.KpiTarget = (() => {
     // 계획 표 데이터 행
     var tgtDataRows = bizList.map(function(b) {
       var vals    = showEbit ? ebitByBiz[b] : revByBiz[b];
-      var subLabel = showEbit ? profitLabel + '(계획)' : '매출(계획)';
+      var subLabel = showEbit ? profitAbbr + '(계획)' : '매출(계획)';
       var subColor = showEbit ? '#0F6E56'    : '#185FA5';
       var cells = MONTHS.map(function(_, i) {
         var v   = vals[i];
@@ -803,7 +808,7 @@ Pages.KpiTarget = (() => {
     var tgtVals     = isEcMode ? revSumRaw  : (showEbit ? ebitSumRaw  : revSumRaw);
     var tgtCumVals  = isEcMode ? revCumRaw  : (showEbit ? ebitCumRaw  : revCumRaw);
     var tgtTotalAll = tgtVals.reduce(function(s, v) { return s + v; }, 0);
-    var tgtSubLabel = isEcMode ? '매출' : (showEbit ? profitLabel : '매출');
+    var tgtSubLabel = isEcMode ? '매출' : (showEbit ? profitAbbr : '매출');
     var tgtSubColor = isEcMode ? '#0F6E56' : (showEbit ? '#0F6E56' : '#185FA5');
 
     var tgtSumRow = '<tr style="background:#F2F2F2">'
@@ -825,7 +830,7 @@ Pages.KpiTarget = (() => {
     var actByBizView   = (isEcMode || !showEbit) ? actRevByBiz  : actEbitByBiz;
     var actSumUsdView  = (isEcMode || !showEbit) ? actRevSumUsd  : actEbitSumUsd;
     var actCumUsdView  = (isEcMode || !showEbit) ? actRevCumUsd  : actEbitCumUsd;
-    var actSubLabel    = isEcMode ? '매출(실적)' : (showEbit ? profitLabel + '(실적)' : '매출(실적)');
+    var actSubLabel    = isEcMode ? '매출(실적)' : (showEbit ? profitAbbr + '(실적)' : '매출(실적)');
     var actSubColor    = isEcMode ? '#6A3D7C' : (showEbit ? '#085041' : '#6A3D7C');
 
     var actDataRows = bizList.map(function(b) {
@@ -989,15 +994,15 @@ Pages.KpiTarget = (() => {
         + cells + sumCell + '</tr>';
     })();
 
-        const colgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
+    const colgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
       + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
       + '<col style="width:74px"></colgroup>';
 
-    const tgtTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+    const tgtTable = '<table style="border-collapse:collapse;table-layout:fixed">'
       + colgroup + buildHeader()
       + '<tbody>' + tgtDataRows + tgtSumRow + tgtCumRow + '</tbody></table>';
 
-    const actTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+    const actTable = '<table style="border-collapse:collapse;table-layout:fixed">'
       + colgroup + buildHeader()
       + '<tbody>' + actDataRows + actSumRow + actCumRow + diffMonRow + diffCumRow + pctCumRow + annualPctRow + '</tbody></table>';
 
@@ -1078,7 +1083,8 @@ Pages.KpiTarget = (() => {
       + _paceCell(totalPaceDiff)
       + '</tr>';
 
-    const progressColgroup = '<colgroup><col style="width:100px">'
+    // 첫 열을 표①②③의 (Biz 100 + 구분 80) 폭에 맞춰 월 컬럼 시작 위치를 일치시킨다
+    const progressColgroup = '<colgroup><col style="width:180px">'
       + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
       + '<col style="width:150px"><col style="width:74px"><col style="width:130px"></colgroup>';
 
@@ -1090,7 +1096,7 @@ Pages.KpiTarget = (() => {
       + '<th style="' + TS.thSum + ';width:130px">달성률 Gap(실적-계획)</th>'
       + '</tr></thead>';
 
-    const progressTable = '<table style="border-collapse:collapse;width:100%;table-layout:fixed">'
+    const progressTable = '<table style="border-collapse:collapse;table-layout:fixed">'
       + progressColgroup + progressHeader
       + '<tbody>' + progressRows + progressSumRow + '</tbody></table>';
 
@@ -1161,8 +1167,8 @@ Pages.KpiTarget = (() => {
         var bizCell = '<td rowspan="3" style="' + TS.tdL + ';font-weight:600;vertical-align:middle">'
                     + (CONFIG.BIZ_LABELS[b] || b) + '</td>';
         return metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan }, bizCell)
-             + metricRow('Material Cost', mcVals, { minus: true })
-             + metricRow('Material Profit', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan });
+             + metricRow('MC', mcVals, { minus: true })
+             + metricRow('MP', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan });
       }).join('');
 
       // 전체 합계 블록
@@ -1179,10 +1185,10 @@ Pages.KpiTarget = (() => {
       var runCum = function(arr) { var r = 0; return arr.map(function(v) { r += (v || 0); return r; }); };
       var totalCell = '<td rowspan="5" style="' + TS.tdCumL + ';font-weight:600;vertical-align:middle">전체 합계</td>';
       comboBody += metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#F7F7F7' }, totalCell)
-                 + metricRow('Material Cost', tMc, { minus: true, bg: '#F7F7F7' })
-                 + metricRow('Material Profit', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan })
+                 + metricRow('MC', tMc, { minus: true, bg: '#F7F7F7' })
+                 + metricRow('MP', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan })
                  + metricRow('누적 매출', runCum(tRev), { total: tRevTot, plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#EFEFEF' })
-                 + metricRow('누적 Material Profit', runCum(tMp), { strong: true, total: tMpTot, plan: tMpPlan, diff: tMpTot - tMpPlan, bg: '#E8E4D8' });
+                 + metricRow('누적 MP', runCum(tMp), { strong: true, total: tMpTot, plan: tMpPlan, diff: tMpTot - tMpPlan, bg: '#E8E4D8' });
 
       var comboColgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
         + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
@@ -1202,7 +1208,8 @@ Pages.KpiTarget = (() => {
         + '<th style="' + TS.thBiz + '">Biz</th><th style="' + TS.thSub + '">구분</th>'
         + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
         + '<th style="' + TS.thSum + '">합계</th><th style="' + TS.thSum + '">연간계획</th><th style="' + TS.thSum + '">차이</th>'
-        + '</tr></thead><tbody>' + comboBody + '</tbody></table></div></div>';
+        + '</tr></thead><tbody>' + comboBody + '</tbody></table></div>'
+        + abbrNote + '</div>';
     }
 
     // ── 연말 추정(LE) 표 ─────────────────────────────────────
@@ -1275,13 +1282,15 @@ Pages.KpiTarget = (() => {
       + '</div>'
       + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
       + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:2px;border:1px solid #999;border-radius:4px">' + tgtTable + '</div>'
+      + abbrNote
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
       + secN() + (showEbit ? profitLabel + ' 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
       + '</div>'
-      + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
+      + '<div style="overflow-x:auto;margin-bottom:2px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
+      + abbrNote
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
