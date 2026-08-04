@@ -895,9 +895,8 @@ Pages.KpiTarget = (() => {
     // ── 달성률 전용: raw USD 기준으로 직접 계산 (단위 변환 오차 없음) ──
     // KPI: tgtCumRawCur = 억원 → USD 변환
     // EC:  tgtCumRawCur = M USD → USD 변환
-    var tgtCumUsd = isEcMode
-      ? tgtCumRawCur * 1000000              // EC: M USD → USD
-      : (hasRate ? tgtCumRawCur * 100000000 / _exchangeRate : 0); // KPI: 억원 → USD
+    // 기준별 저장 단위(M USD | 억원)를 한 곳에서 USD로 변환 — 달성률 왜곡 방지
+    var tgtCumUsd = _rawToUsd(tgtCumRawCur, mode);
     var pctCumForTable = (tgtCumUsd > 0 && actCumRawCur > 0)
       ? actCumRawCur / tgtCumUsd * 100
       : null;
@@ -937,9 +936,7 @@ Pages.KpiTarget = (() => {
       + MONTHS.map(function(_, i) {
           if (i > curMonIdx || !tgtCumVals[i]) return '<td style="' + TS.td + '"></td>';
           // 목표 → USD, 실적 raw(USD) 직접 비율
-          var tgtUsd = isEcMode
-            ? tgtCumVals[i] * 1000000                                  // EC: M USD → USD
-            : (hasRate ? tgtCumVals[i] * 100000000 / _exchangeRate : null); // KPI: 억원 → USD
+          var tgtUsd = _rawToUsd(tgtCumVals[i], mode);
           var actUsd = actCumUsdView[i] || 0;
           if (!tgtUsd || tgtUsd <= 0) return '<td style="' + TS.td + '"></td>';
           var p    = actUsd / tgtUsd * 100;
@@ -960,9 +957,7 @@ Pages.KpiTarget = (() => {
     // 연간 총 계획 대비 현재까지 실적 (현재 뷰: showEbit=EBIT, !showEbit=매출)
     var annualPctRow = (function() {
       var tgtAnnualRaw = (showEbit ? ebitSumRaw : revSumRaw).reduce(function(s, v) { return s + v; }, 0);
-      var tgtAnnualUsd = isEcMode
-        ? tgtAnnualRaw * 1000000
-        : (hasRate ? tgtAnnualRaw * 100000000 / _exchangeRate : null);
+      var tgtAnnualUsd = _rawToUsd(tgtAnnualRaw, mode);
       var actCumArr  = showEbit ? actEbitCumUsd : actRevCumUsd;
       var actAnnualUsd = curMonIdx >= 0 ? (actCumArr[curMonIdx] || 0) : 0;
       var rowLabel = isEcMode ? '연간 달성률 (매출 계획대비)' : (showEbit ? '연간 달성률 (' + profitLabel + ' 계획대비)' : '연간 달성률 (매출 계획대비)');
@@ -1009,10 +1004,7 @@ Pages.KpiTarget = (() => {
     // 계획대비 = 진척률 - 계획진척률(현재월까지 누적계획/연간계획). 신호등 ±2%p
     // 누적/연간목표금액 = 표시 단위(억원/M USD/M SGD)로 변환된 누적 실적 / 연간 목표
     const tgtByBizView = (isEcMode || !showEbit) ? revByBiz : ebitByBiz;
-    function _tgtRawToUsd(raw) {
-      if (isEcMode) return raw * 1000000;
-      return hasRate ? raw * 100000000 / _exchangeRate : 0;
-    }
+    function _tgtRawToUsd(raw) { return _rawToUsd(raw, mode); }
     var bizTgtAnnualRaw = {}, bizTgtAnnualUsd = {}, bizActCumUsd = {}, bizTgtCumUsd = {};
     var totalTgtAnnualRaw = 0, totalTgtAnnualUsd = 0, totalActCumUsd = 0, totalTgtCumUsd = 0;
     bizList.forEach(function(b) {
