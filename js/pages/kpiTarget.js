@@ -1108,6 +1108,103 @@ Pages.KpiTarget = (() => {
       actRevCumUsd,  actEbitCumUsd,
     };
 
+    // ── 사업별 종합 표 (매출 · Material Cost · Material Profit) ──
+    // KPI-7월 전용. 한 사업 블록에 3개 지표를 붙여 한눈에 보이게 한다.
+    // 지난 달까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 경계에 세로선.
+    var comboTable = '';
+    if (_isMpMode(mode)) {
+      var CB = {
+        wrap:   'border-collapse:collapse;table-layout:fixed;font-family:Pretendard,sans-serif',
+        thMon:  'padding:6px 4px;text-align:center;font-size:12px;font-weight:600;color:#3A3A3C;background:#E8E8ED;border:1px solid #C7C7CC;width:66px;white-space:nowrap',
+        thBiz:  'padding:6px 8px;text-align:left;font-size:12px;font-weight:600;color:#3A3A3C;background:#E8E8ED;border:1px solid #C7C7CC;width:132px;white-space:nowrap',
+        thSum:  'padding:6px 6px;text-align:center;font-size:12px;font-weight:600;color:#3A3A3C;background:#DCDCE1;border:1px solid #C7C7CC;width:82px;white-space:nowrap',
+        bizHd:  'padding:6px 10px;text-align:left;font-size:12.5px;font-weight:700;color:#1D1D1F;background:#F0F0F2;border:1px solid #C7C7CC;white-space:nowrap',
+        lbl:    'padding:4px 10px;text-align:left;font-size:12px;border:1px solid #D8D8DC;white-space:nowrap;color:#3A3A3C',
+        cell:   'padding:4px 5px;text-align:right;font-size:12px;font-family:var(--font-mono);border:1px solid #E3E3E6',
+        sum:    'padding:4px 6px;text-align:right;font-size:12px;font-family:var(--font-mono);font-weight:600;border:1px solid #C7C7CC;background:#F5F5F7',
+      };
+      var edge = closedIdx >= 0 && closedIdx < 11 ? ';border-right:2px solid #8E8E93' : '';
+      var fmtCell = function(v) { return v ? (Math.abs(v) < 0.005 ? '0.01' : v.toFixed(2)) : '—'; };
+
+      // 지표 행 하나
+      var metricRow = function(label, vals, opt) {
+        opt = opt || {};
+        var cells = vals.map(function(v, i) {
+          var isAct = i <= curMonIdx;
+          var style = CB.cell
+            + (i === closedIdx ? edge : '')
+            + (isAct ? ';color:#1D1D1F' : ';color:#A1A1A6')
+            + (opt.strong ? ';font-weight:700' : '')
+            + (opt.bg ? ';background:' + opt.bg : '');
+          return '<td style="' + style + '">' + (opt.minus && v ? '−' : '') + fmtCell(v) + '</td>';
+        }).join('');
+        var total = vals.reduce(function(s, v) { return s + (v || 0); }, 0);
+        return '<tr>'
+          + '<td style="' + CB.lbl + (opt.strong ? ';font-weight:700;color:#1D1D1F' : '')
+          + (opt.bg ? ';background:' + opt.bg : '') + '">' + label + '</td>'
+          + cells
+          + '<td style="' + CB.sum + (opt.strong ? ';font-weight:700' : '') + '">' + (opt.minus && total ? '−' : '') + fmtCell(total) + '</td>'
+          + '<td style="' + CB.sum + '">' + (opt.plan === undefined ? '' : fmtCell(opt.plan)) + '</td>'
+          + '<td style="' + CB.sum + (opt.diff !== undefined && opt.diff ? ';color:' + diffColor(opt.diff) : '') + '">'
+          + (opt.diff === undefined ? '' : fmtDiff(opt.diff)) + '</td>'
+          + '</tr>';
+      };
+
+      // 사업별 블록 — 매출 / Material Cost / Material Profit
+      var comboBody = bizList.map(function(b) {
+        var revVals = MONTHS.map(function(_, i) {
+          return i <= curMonIdx ? actToDispNum(actRevByBiz[b][i] || 0) : rawToDisp(revByBiz[b][i]);
+        });
+        var mcVals  = _getMcMonths(year, b).map(function(v) { return rawToDisp(v); });
+        var mpVals  = MONTHS.map(function(_, i) {
+          return i <= curMonIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]);
+        });
+        var revPlan = revByBiz[b].reduce(function(s, v) { return s + rawToDisp(v); }, 0);
+        var mpPlan  = ebitByBiz[b].reduce(function(s, v) { return s + rawToDisp(v); }, 0);
+        var revTot  = revVals.reduce(function(s, v) { return s + v; }, 0);
+        var mpTot   = mpVals.reduce(function(s, v) { return s + v; }, 0);
+        if (!revTot && !mpTot && !revPlan && !mpPlan) return '';   // 실적·계획 모두 없는 사업은 숨김
+
+        return '<tr><td colspan="' + (MONTHS.length + 4) + '" style="' + CB.bizHd + '">'
+             + (CONFIG.BIZ_LABELS[b] || b)
+             + '<span style="font-weight:400;color:#86868B;font-size:11.5px;margin-left:8px">MP ' + fmtCell(mpTot) + ' / 계획 ' + fmtCell(mpPlan) + ' ' + unitLabel + '</span>'
+             + '</td></tr>'
+          + metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan })
+          + metricRow('Material Cost', mcVals, { minus: true })
+          + metricRow('Material Profit', mpVals, { strong: true, bg: '#F7F7F9', plan: mpPlan, diff: mpTot - mpPlan });
+      }).join('');
+
+      // 전체 합계 블록
+      var sumOf = function(fn) { return MONTHS.map(function(_, i) { return bizList.reduce(function(s, b) { return s + fn(b, i); }, 0); }); };
+      var tRev = sumOf(function(b, i) { return i <= curMonIdx ? actToDispNum(actRevByBiz[b][i] || 0) : rawToDisp(revByBiz[b][i]); });
+      var tMc  = sumOf(function(b, i) { return rawToDisp(_getMcMonths(year, b)[i]); });
+      var tMp  = sumOf(function(b, i) { return i <= curMonIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]); });
+      var tRevPlan = bizList.reduce(function(s, b) { return s + revByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
+      var tMpPlan  = bizList.reduce(function(s, b) { return s + ebitByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
+      var tRevTot  = tRev.reduce(function(s, v) { return s + v; }, 0);
+      var tMpTot   = tMp.reduce(function(s, v) { return s + v; }, 0);
+
+      comboBody += '<tr><td colspan="' + (MONTHS.length + 4) + '" style="' + CB.bizHd + ';background:#DCDCE1">전체 합계</td></tr>'
+        + metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#FAFAFC' })
+        + metricRow('Material Cost', tMc, { minus: true, bg: '#FAFAFC' })
+        + metricRow('Material Profit', tMp, { strong: true, bg: '#EFEFF4', plan: tMpPlan, diff: tMpTot - tMpPlan });
+
+      comboTable = '<div style="margin-bottom:14px">'
+        + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;flex-wrap:wrap">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
+        + '① 사업별 종합 — 매출 · Material Cost · Material Profit (' + unitLabel + ')</div>'
+        + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+        + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (curMonIdx >= 0 ? (curMonIdx + 1) + '월' : '없음') + '까지) · '
+        + '<span style="color:#A1A1A6">흐린 값</span> = 계획 · 합계는 실적+잔여계획</span>'
+        + '</div>'
+        + '<div style="overflow-x:auto;border:1px solid #C7C7CC;border-radius:4px">'
+        + '<table style="' + CB.wrap + '"><thead><tr>'
+        + '<th style="' + CB.thBiz + '">사업 / 지표</th>'
+        + MONTHS.map(function(m, i) { return '<th style="' + CB.thMon + (i === closedIdx ? edge : '') + '">' + m + '</th>'; }).join('')
+        + '<th style="' + CB.thSum + '">합계</th><th style="' + CB.thSum + '">연간계획</th><th style="' + CB.thSum + '">차이</th>'
+        + '</tr></thead><tbody>' + comboBody + '</tbody></table></div></div>';
+    }
+
     // ── 연말 추정(LE) 표 ─────────────────────────────────────
     // 마감월까지 실적 / 이후 전망(없으면 베이스라인) — 출처를 셀 배경으로 구분
     var leTableHtml = '';
@@ -1136,7 +1233,7 @@ Pages.KpiTarget = (() => {
       leTableHtml = '<div style="margin-bottom:4px">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
         + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-        + '① 연말 추정 — 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망 (' + unitLabel + ')'
+        + '§LE§ 연말 추정 — 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망 (' + unitLabel + ')'
         + '</div>'
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '<span style="display:inline-block;width:9px;height:9px;background:#FFFFFF;border:1px solid #BFBFBF;vertical-align:-1px"></span> 실적 '
@@ -1161,13 +1258,20 @@ Pages.KpiTarget = (() => {
     }
 
     // ── 최종 렌더 ────────────────────────────────────────────
+    // 표 번호는 표시되는 표 순서대로 자동 부여
+    var _secNo = 0;
+    var secN = function() { _secNo++; return ['①','②','③','④','⑤'][_secNo - 1] + ' '; };
+    if (comboTable) secN();       // 종합표가 ① 을 이미 사용
+    if (leTableHtml) secN();      // 연말 추정 표가 그 다음 번호 사용
+    leTableHtml = leTableHtml.replace('§LE§', comboTable ? '②' : '①');
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
+      + comboTable
       + leTableHtml
       + '<div style="margin-bottom:4px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + (isLe ? '② ' : '① ') + (showEbit ? profitLabel + ' 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
+      + secN() + (showEbit ? profitLabel + ' 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
       + '</div>'
       + '<button onclick="Pages.KpiTarget.downloadTracking()" style="font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
       + '</div>'
@@ -1175,13 +1279,13 @@ Pages.KpiTarget = (() => {
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + (isLe ? '③ ' : '② ') + (showEbit ? profitLabel + ' 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
+      + secN() + (showEbit ? profitLabel + ' 실적 표' : '매출 실적 표') + ' (실적 · 달성률 포함)'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">' + actTable + '</div>'
       + '</div>'
       + '<div style="margin-bottom:4px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-      + (isLe ? '④ ' : '③ ') + '사업별 월 실적 — ' + (showEbit ? profitLabel : '매출') + ' 기준 (' + unitLabel + ')'
+      + secN() + '사업별 월 실적 — ' + (showEbit ? profitLabel : '매출') + ' 기준 (' + unitLabel + ')'
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + progressTable + '</div>'
       + '</div>';
