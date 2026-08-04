@@ -793,13 +793,13 @@
       </div>
     </div>
 
-    <!-- 전망(LE) 입력 패널 — KPI-7월 기준 전용 -->
+    <!-- 잔여기간 전망 입력 패널 — KPI-7월 기준 전용 -->
     <div id="kpi-fc-panel"
       style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;width:min(96vw,1100px);max-height:90vh;overflow-y:auto;background:var(--card);border:0.5px solid var(--bd);border-radius:var(--r)">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:0.5px solid var(--bd);position:sticky;top:0;background:var(--card);z-index:1">
         <div>
           <div style="font-size:17px;font-weight:600;font-family:Pretendard,sans-serif">잔여기간 전망 입력 (연말 추정용)</div>
-          <div style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif;margin-top:2px">베이스라인 계획은 그대로 유지되고, 이 값은 제출 회차별로 따로 보관됩니다</div>
+          <div style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif;margin-top:2px">계획(기준)은 그대로 유지되고, 이 값은 제출 회차별로 따로 보관됩니다 · 실적은 시스템 인보이스 기준</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <select id="kpi-fc-year" onchange="Pages.KpiTarget.setFcYear(this.value)"
@@ -904,7 +904,7 @@
 <script src="js/pages/shipment.js"></script>
 <script src="js/pages/invoice.js"></script>
 <script src="js/pages/revenue.js"></script>
-<script src="js/pages/kpiTarget.js?v=87"></script>
+<script src="js/pages/kpiTarget.js?v=88"></script>
 <script src="js/pages/customers.js"></script>
 <script src="js/pages/verify.js"></script>
 <script src="js/pages/report.js?v=2"></script>

@@ -662,10 +662,10 @@ Pages.KpiTarget = (() => {
     const mc = _modeColor(mode);
     const cards = isLe ? [
       { label: '연말 추정 (' + (leVintage || '전망 미입력') + ')', value: leTotal.toFixed(2) + ' ' + unitLabel,
-        sub: '실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망' },
-      { label: '베이스라인 (' + _modeLabel(mode) + ')', value: leBaseTotal.toFixed(2) + ' ' + unitLabel,
+        sub: '시스템 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망' },
+      { label: '계획 (' + _modeLabel(mode) + ')', value: leBaseTotal.toFixed(2) + ' ' + unitLabel,
         sub: (showEbit ? _profitLabel(mode) : '매출') + ' 계획 · 고정' },
-      { label: '베이스라인 대비', value: fmtDiff(leDiff) + ' ' + unitLabel, color: diffColor(leDiff),
+      { label: '계획 대비', value: fmtDiff(leDiff) + ' ' + unitLabel, color: diffColor(leDiff),
         sub: lePct === null ? '계획 미입력' : '추정 달성률 ' + lePct.toFixed(1) + '%' },
       { label: '직전 제출 대비', value: lePrevTotal === null ? '—' : fmtDiff(leTotal - lePrevTotal) + ' ' + unitLabel,
         color: lePrevTotal === null ? '' : diffColor(leTotal - lePrevTotal),
@@ -1097,12 +1097,12 @@ Pages.KpiTarget = (() => {
       leTableHtml = '<div style="margin-bottom:4px">'
         + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
         + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
-        + '① 연말 추정 (LE) — 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망 (' + unitLabel + ')'
+        + '① 연말 추정 — 실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 + 잔여월 전망 (' + unitLabel + ')'
         + '</div>'
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '<span style="display:inline-block;width:9px;height:9px;background:#FFFFFF;border:1px solid #BFBFBF;vertical-align:-1px"></span> 실적 '
         + '<span style="display:inline-block;width:9px;height:9px;background:#EEF4FB;border:1px solid #BFBFBF;vertical-align:-1px;margin-left:8px"></span> 전망 '
-        + '<span style="display:inline-block;width:9px;height:9px;background:#F7F7F7;border:1px solid #BFBFBF;vertical-align:-1px;margin-left:8px"></span> 베이스라인 폴백</span>'
+        + '<span style="display:inline-block;width:9px;height:9px;background:#F7F7F7;border:1px solid #BFBFBF;vertical-align:-1px;margin-left:8px"></span> 전망 미입력(계획값 사용)</span>'
         + (leVintage
             ? '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">제출 회차 ' + leVintage + '</span>'
             : '<span style="font-size:11px;color:#B45309;font-family:Pretendard,sans-serif">전망 미입력 — 잔여월은 베이스라인 계획으로 표시됩니다</span>')
@@ -1111,7 +1111,7 @@ Pages.KpiTarget = (() => {
         + '<table style="border-collapse:collapse;table-layout:fixed"><thead><tr>'
         + '<th style="' + TS.thBiz + '">Biz</th><th style="' + TS.thSub + '">구분</th>'
         + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
-        + '<th style="' + TS.thSum + '">연말 추정</th><th style="' + TS.thSum + '">베이스라인</th><th style="' + TS.thSum + '">차이</th>'
+        + '<th style="' + TS.thSum + '">연말 추정</th><th style="' + TS.thSum + '">계획(기준)</th><th style="' + TS.thSum + '">차이</th>'
         + '</tr></thead><tbody>' + leRows
         + '<tr><td style="' + TS.tdCumL + ';font-weight:600">합계</td><td style="' + TS.tdCumL + '">연말 추정</td>'
         + leSumCells
@@ -1472,7 +1472,7 @@ Pages.KpiTarget = (() => {
             </div>
             ${_isMpMode(mode)?`<div style="display:flex;border:1px solid #CCC;border-radius:6px;overflow:hidden">
               <button onclick="Pages.KpiTarget.setLeView(false)" style="padding:6px 14px;border:none;border-right:1px solid #CCC;font-size:12px;font-weight:${_leView?'400':'700'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#fff':'#1D1D1F'};color:${_leView?'#333':'#fff'}">계획 대비</button>
-              <button onclick="Pages.KpiTarget.setLeView(true)" style="padding:6px 14px;border:none;font-size:12px;font-weight:${_leView?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#1D1D1F':'#fff'};color:${_leView?'#fff':'#333'}">연말 추정(LE)</button>
+              <button onclick="Pages.KpiTarget.setLeView(true)" style="padding:6px 14px;border:none;font-size:12px;font-weight:${_leView?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#1D1D1F':'#fff'};color:${_leView?'#fff':'#333'}">연말 추정</button>
             </div>`:''}
             ${isKpiM?`<div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:12px;color:var(--tx2);font-weight:400;font-family:Pretendard,sans-serif">기준환율 $1 =</span>
@@ -2188,7 +2188,7 @@ Pages.KpiTarget = (() => {
         + '<select onchange="Pages.KpiTarget.setFcEditVintage(this.value)" style="padding:4px 8px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;background:var(--bg);color:var(--tx)">' + vintOptions + '</select>'
         + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '단위 M USD · ' + (closed >= 0 ? (closed + 1) + '월까지는 실적 확정이라 입력하지 않습니다' : '전 기간 입력 대상입니다')
-        + (prevVin ? ' · 초기값은 ' + prevVin + ' 제출본에서 복사' : ' · 초기값은 베이스라인 계획에서 복사') + '</span>'
+        + (prevVin ? ' · 초기값은 ' + prevVin + ' 제출본에서 복사' : ' · 초기값은 계획에서 복사') + '</span>'
         + '</div>'
         + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
         + '<thead><tr><th style="' + thS + '">구분</th>'
