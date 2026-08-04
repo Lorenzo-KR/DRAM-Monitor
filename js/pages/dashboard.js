@@ -62,8 +62,9 @@ Pages.Dashboard = (() => {
     const shipments = Store.getShipments();
     const activeLots = lots.filter(l => getLotStatus(l) !== 'done');
     const doneLots   = lots.filter(l => getLotStatus(l) === 'done');
-    const totalUnits = lots.reduce((s, l) => s + parseNumber(l.qty), 0);
-    const totalProc  = lots.reduce((s, l) => s + getLotCumulative(l.id, dailies), 0);
+    // 사업마다 단위가 달라(SCR=톤) 단순 합산 불가 — { 단위: 수량 } 맵으로 집계
+    const totalUnits = unitsOf(lots, 'qty');
+    const totalProc  = lots.reduce((m, l) => unitsAdd(m, l.biz, getLotCumulative(l.id, dailies)), {});
 
     // 매출 = 올해 인보이스 합 (USD). fallback 없음 — 매출은 인보이스 발행 기준
     const curYear = String(new Date().getFullYear());
@@ -190,16 +191,19 @@ Pages.Dashboard = (() => {
     const periodDailies  = dailies.filter(function(d){ return inRange(d.date); });
     const periodInvoices = invoices.filter(function(i){ return inRange(i.date); });
 
-    const totalIn   = periodLots.reduce(function(s, l){ return s + parseNumber(l.qty); }, 0);
-    const totalProc = periodDailies.reduce(function(s, d){ return s + parseNumber(d.proc); }, 0);
+    const totalIn   = unitsOf(periodLots, 'qty');
+    const totalProc = unitsOf(periodDailies, 'proc');
     const totalRev  = periodInvoices.reduce(function(s, i){ return s + parseNumber(i.total || i.amount); }, 0);
 
     // 기말 WIP = (입고일 ≤ end의 총 qty) − (date ≤ end의 총 proc)
-    const wipQty  = lots.filter(function(l){ return l.inDate && l.inDate <= end; })
-                        .reduce(function(s, l){ return s + parseNumber(l.qty); }, 0);
-    const wipProc = dailies.filter(function(d){ return d.date && d.date <= end; })
-                           .reduce(function(s, d){ return s + parseNumber(d.proc); }, 0);
-    const wip     = Math.max(0, wipQty - wipProc);
+    const wipQty  = unitsOf(lots.filter(function(l){ return l.inDate && l.inDate <= end; }), 'qty');
+    const wipProc = unitsOf(dailies.filter(function(d){ return d.date && d.date <= end; }), 'proc');
+    // 단위별로 (입고 − 처리) — 개와 톤을 섞어 빼면 안 됨
+    const wip     = Object.keys(wipQty).reduce(function(m, u){
+      const v = wipQty[u] - (wipProc[u] || 0);
+      if (v > 0) m[u] = v;
+      return m;
+    }, {});
 
     // 이번 사이클에 결제(인보이스 발행)된 LOT들의 lead time (입고일 → 인보이스일)
     const ltDays      = [];
@@ -251,10 +255,10 @@ Pages.Dashboard = (() => {
           return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px">'
                + '<span style="width:6px;height:6px;border-radius:50%;background:' + c + '"></span>'
                + '<span style="color:var(--tx2)">' + (CONFIG.BIZ_LABELS[b] || b) + '</span>'
-               + '<span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + formatNumber(p.byBiz[b].in) + '</span>'
+               + '<span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + formatQty(p.byBiz[b].in, b) + '</span>'
                + '</span>';
         }).join('')
-        + '<span style="color:var(--tx3);font-size:11px;margin-left:4px">계 ' + formatNumber(p.totalIn) + '</span>'
+        + '<span style="color:var(--tx3);font-size:11px;margin-left:4px">계 ' + formatUnits(p.totalIn) + '</span>'
       : '<span style="font-size:12px;color:var(--tx3)">입고 없음</span>';
 
     // 인보이스 상세 (어떤 LOT, 언제 입고된 건)
@@ -459,7 +463,7 @@ Pages.Dashboard = (() => {
         const dispMD  = d.slice(5).replace('-', '/');
         const tipBase = (isToday ? '오늘 (' + dispMD + ')' : dispMD) + (isWknd ? ' · 주말' : '') + (isHoli ? ' · ' + lot.country + ' 휴무' : '');
         const tip     = tipBase + (
-          v > 0    ? ' · ' + formatNumber(v) + '개'
+          v > 0    ? ' · ' + formatQty(v, lot.biz)
           : isHoli ? ''
           : isToday ? ' · 입력 전 (클릭 입력)'
           : isWknd  ? ' · (클릭 입력)'
@@ -746,11 +750,11 @@ Pages.Dashboard = (() => {
       +       '<div style="font-size:14px;font-weight:600;color:#1D1D1F;font-family:var(--font-mono)">' + dispDate + '</div>'
       +     '</div>'
       +     (existing
-          ? '<div style="padding:8px 10px;background:#FFFBEB;border:1px solid #F59E0B;border-radius:4px;font-size:11px;color:#92400E;margin-bottom:10px">이미 ' + formatNumber(parseNumber(existing.proc)) + '개 입력됨. 새 값으로 추가 저장됩니다 (합산이 아닌 별도 기록).</div>'
+          ? '<div style="padding:8px 10px;background:#FFFBEB;border:1px solid #F59E0B;border-radius:4px;font-size:11px;color:#92400E;margin-bottom:10px">이미 ' + formatQty(parseNumber(existing.proc), lot.biz) + ' 입력됨. 새 값으로 추가 저장됩니다 (합산이 아닌 별도 기록).</div>'
           : '')
       +     '<div style="display:flex;justify-content:space-between;font-size:11px;color:#86868B;margin-bottom:6px">'
-      +       '<span>총 ' + formatNumber(qty) + '개</span>'
-      +       '<span>누적 처리 ' + formatNumber(cum) + ' · 잔량 ' + formatNumber(rem) + '</span>'
+      +       '<span>총 ' + formatQty(qty, lot.biz) + '</span>'
+      +       '<span>누적 처리 ' + formatQty(cum, lot.biz) + ' · 잔량 ' + formatQty(rem, lot.biz) + '</span>'
       +     '</div>'
       +     inputHtml
       +     '<div id="dash-quick-after" style="font-size:11px;color:#86868B;margin-top:6px;text-align:right">&nbsp;</div>'
@@ -860,8 +864,8 @@ Pages.Dashboard = (() => {
       Store.upsertLot(updated);
       Api.update(CONFIG.SHEETS.LOTS, lot.id, updated);
     }
-    Api.log('일별처리', '등록(빠른입력)', lot.lotNo || String(lot.id), dateStr + ' 처리 ' + formatNumber(proc) + '개 (N:' + formatNumber(normal) + ' / NB:' + formatNumber(noBoot) + ' / AB:' + formatNumber(abnormal) + ') | 누적 ' + formatNumber(cumNew) + ' / 잔량 ' + formatNumber(remNew));
-    UI.toast(isDone ? lot.lotNo + ' 완료!' : '저장됨 (' + dateStr.slice(5) + ' · ' + formatNumber(proc) + '개)');
+    Api.log('일별처리', '등록(빠른입력)', lot.lotNo || String(lot.id), dateStr + ' 처리 ' + formatQty(proc, lot.biz) + ' (N:' + formatNumber(normal) + ' / NB:' + formatNumber(noBoot) + ' / AB:' + formatNumber(abnormal) + ') | 누적 ' + formatNumber(cumNew) + ' / 잔량 ' + formatNumber(remNew));
+    UI.toast(isDone ? lot.lotNo + ' 완료!' : '저장됨 (' + dateStr.slice(5) + ' · ' + formatQty(proc, lot.biz) + ')');
     _closeQuickInput();
     Pages.Dashboard.render();
   }

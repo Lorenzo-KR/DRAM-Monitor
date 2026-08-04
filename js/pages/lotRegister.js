@@ -17,6 +17,9 @@ Pages.LotRegister = (() => {
       document.querySelectorAll('#pg-lotreg [data-biz]').forEach(e => e.classList.remove('on'));
       el.classList.add('on');
       _biz = el.dataset.biz;
+      // 사업이 바뀌면 단위도 그 사업의 기본 단위로 (SCR → 톤)
+      const unitEl = document.getElementById('lr-unit');
+      if (unitEl) unitEl.value = bizUnit(_biz);
     }
     render();
   }
@@ -31,6 +34,16 @@ Pages.LotRegister = (() => {
       form.style.display = 'none';
       tableWrap.style.display = 'none';
       document.getElementById('lr-sub').textContent = '국가와 사업을 선택하세요';
+      return;
+    }
+
+    // 법인이 취급하지 않는 사업 조합은 등록을 막는다 (CONFIG.COUNTRY_BIZ_MAP 기준)
+    if (!countriesForBiz(_biz).includes(_co)) {
+      empty.style.display = 'block';
+      form.style.display = 'none';
+      tableWrap.style.display = 'none';
+      document.getElementById('lr-sub').textContent =
+        (CONFIG.COUNTRY_LABELS[_co] || _co) + ' 법인은 ' + (CONFIG.BIZ_LABELS[_biz] || _biz) + ' 를 취급하지 않습니다';
       return;
     }
 
@@ -78,7 +91,7 @@ Pages.LotRegister = (() => {
           <td><input class="ec" value="${escapeAttr(l.targetDate)}" type="date" readonly style="color:var(--tx2)"></td>
           <td style="padding:10px 13px;color:#166534;font-size:14px">${l.actualDone || '-'}</td>
           ${makeEditableCell(l.qty, 'num', `Pages.LotRegister.saveCell(this,'qty',${l.id})`, 'type="number" min="0"')}
-          ${makeEditableSelect(l.unit || '개', [['개','개'],['Wafer','Wafer'],['Tray','Tray'],['EA','EA']], '', `Pages.LotRegister.saveCell(this,'unit',${l.id})`)}
+          ${makeEditableSelect(l.unit || '개', [['개','개'],['톤','톤'],['Wafer','Wafer'],['Tray','Tray'],['EA','EA']], '', `Pages.LotRegister.saveCell(this,'unit',${l.id})`)}
           ${makeEditableCell(l.price, 'num', `Pages.LotRegister.saveCell(this,'price',${l.id})`, 'type="number" min="0"')}
           ${makeEditableSelect(l.currency || 'USD', [['USD','USD'],['HKD','HKD'],['SGD','SGD'],['KRW','KRW']], '', `Pages.LotRegister.saveCell(this,'currency',${l.id})`)}
           ${makeEditableCell(l.product, '', `Pages.LotRegister.saveCell(this,'product',${l.id})`)}
@@ -147,7 +160,7 @@ Pages.LotRegister = (() => {
     ok.style.display = 'inline';
     setTimeout(() => ok.style.display = 'none', 1500);
     UI.toast(CONFIG.BIZ_LABELS[_biz] + ' LOT 등록');
-    Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}개 · 입고 ${record.inDate}`);
+    Api.log('LOT', '등록', record.lotNo || String(record.id), `${CONFIG.BIZ_LABELS[record.biz]||record.biz} · ${CONFIG.COUNTRY_LABELS[record.country]||record.country} · ${record.customerName||''} · ${record.qty}${record.unit||bizUnit(record.biz)} · 입고 ${record.inDate}`);
   }
 
   function clearForm() {

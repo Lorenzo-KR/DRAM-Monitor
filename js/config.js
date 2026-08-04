@@ -69,6 +69,13 @@ const CONFIG = {
     JP: '#6A3D7C',
   },
 
+  // 사업별 물량 단위 — 여기에 없는 사업은 DEFAULT_UNIT('개')
+  // 단위가 다른 사업은 합계에서 섞이지 않도록 단위별로 나눠 집계됩니다.
+  BIZ_UNITS: {
+    SCR: '톤',
+  },
+  DEFAULT_UNIT: '개',
+
   // 국가별 취급 사업
   COUNTRY_BIZ_MAP: {
     HK: ['DRAM', 'SCR', 'RMA', 'SUS', 'MOD'],
@@ -92,6 +99,11 @@ const CONFIG = {
  * biz가 비어 있으면(전체) 모든 법인을 반환합니다.
  * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국은 MOD·SCR, 일본TES는 MOD 전용)
  */
+/** 사업의 물량 단위 (예: SCR → '톤', 그 외 → '개') */
+function bizUnit(biz) {
+  return CONFIG.BIZ_UNITS[biz] || CONFIG.DEFAULT_UNIT;
+}
+
 function countriesForBiz(biz) {
   if (!biz) return CONFIG.COUNTRY_LIST;
   return CONFIG.COUNTRY_LIST.filter(c => (CONFIG.COUNTRY_BIZ_MAP[c] || []).includes(biz));

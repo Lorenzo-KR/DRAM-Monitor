@@ -75,9 +75,9 @@ Pages.DailyInput = (() => {
               <span style="font-size:13px;font-weight:600;font-family:var(--font-mono);color:var(--tx);flex-shrink:0">${lot.lotNo || lot.id}</span>
               ${tag ? `<span style="font-size:11px;color:var(--tx3);flex-shrink:0;white-space:nowrap">${tag}</span>` : ''}
               <div style="display:flex;gap:18px;font-size:12px;color:var(--tx2)">
-                <span>입고 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(parseNumber(lot.qty))}</span></span>
-                <span>처리 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatNumber(cum)}</span></span>
-                <span>잔량 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:${rem > 0 ? 500 : 400}">${formatNumber(rem)}</span></span>
+                <span>입고 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatQty(lot.qty, lot.biz)}</span></span>
+                <span>처리 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:500">${formatQty(cum, lot.biz)}</span></span>
+                <span>잔량 <span style="color:var(--tx);font-family:var(--font-mono);font-weight:${rem > 0 ? 500 : 400}">${formatQty(rem, lot.biz)}</span></span>
               </div>
               <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
                 <div style="width:70px;height:4px;background:var(--bd);border-radius:2px;overflow:hidden">
@@ -310,7 +310,7 @@ Pages.DailyInput = (() => {
     }
 
     _editDailyId = null;
-    Api.log('일별처리', '수정', lot.lotNo || String(lotId), `${date} 처리 ${formatNumber(proc)}개${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''}`);
+    Api.log('일별처리', '수정', lot.lotNo || String(lotId), `${date} 처리 ${formatQty(proc, lot.biz)}${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''}`);
     UI.toast('수정됨');
     render();
   }
@@ -380,7 +380,7 @@ Pages.DailyInput = (() => {
     if (ok) { ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 1500); }
     UI.toast('저장됨');
     render();
-    Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date}${moNo ? ` [MO ${moNo}]` : ''} 처리 ${formatNumber(proc)}개${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''} | 누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)}`);
+    Api.log('일별처리', '등록', lot.lotNo || String(lot.id), `${date}${moNo ? ` [MO ${moNo}]` : ''} 처리 ${formatQty(proc, lot.biz)}${isDram ? ` (N:${formatNumber(normal)} / NB:${formatNumber(noBoot)} / AB:${formatNumber(abnormal)})` : ''} | 누적 ${formatNumber(cumNew)} / 잔량 ${formatNumber(remNew)}`);
   }
 
   // ── MO 추가 / 삭제 ──────────────────────────────────────────
@@ -434,7 +434,7 @@ Pages.DailyInput = (() => {
     render();
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
-    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리 ${formatNumber(parseNumber(rec?.proc))}개${rec?.biz==='DRAM' ? ` (N:${formatNumber(parseNumber(rec?.normal))} / NB:${formatNumber(parseNumber(rec?.noBoot))} / AB:${formatNumber(parseNumber(rec?.abnormal))})` : ''} 삭제`);
+    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리 ${formatQty(parseNumber(rec?.proc), lot?.biz)}${rec?.biz==='DRAM' ? ` (N:${formatNumber(parseNumber(rec?.normal))} / NB:${formatNumber(parseNumber(rec?.noBoot))} / AB:${formatNumber(parseNumber(rec?.abnormal))})` : ''} 삭제`);
   }
 
   // ── 엑셀 붙여넣기 팝업 ──────────────────────────────────────

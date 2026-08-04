@@ -331,10 +331,12 @@
       <div class="fb" style="margin-bottom:16px">
         <button class="pill phk" id="lr-hk" data-co="HK" onclick="Pages.LotRegister.setFilter(this,'co')">홍콩</button>
         <button class="pill psg" id="lr-sg" data-co="SG" onclick="Pages.LotRegister.setFilter(this,'co')">싱가포르</button>
+        <button class="pill" id="lr-kr" data-co="KR" onclick="Pages.LotRegister.setFilter(this,'co')">한국</button>
         <span class="sep"></span>
         <button class="pill pd" data-biz="DRAM" onclick="Pages.LotRegister.setFilter(this,'biz')">DRAM Test</button>
         <button class="pill ps" data-biz="SSD" onclick="Pages.LotRegister.setFilter(this,'biz')">SSD Test</button>
         <button class="pill pm" data-biz="MID" onclick="Pages.LotRegister.setFilter(this,'biz')">Mobile Ink Die</button>
+        <button class="pill" data-biz="SCR" onclick="Pages.LotRegister.setFilter(this,'biz')">Scrap 자재</button>
       </div>
       <!-- LOT 등록 폼 -->
       <div class="fw" id="lr-form" style="display:none">
@@ -353,7 +355,7 @@
         <div class="fg fg4">
           <div class="fld"><label>수량</label><input type="number" id="lr-qty" placeholder="0" min="0" step="any"></div>
           <div class="fld"><label>단위</label>
-            <select id="lr-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
+            <select id="lr-unit"><option value="개">개</option><option value="톤">톤</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
           </div>
           <div class="fld"><label>단가</label><input type="number" id="lr-price" placeholder="0"></div>
           <div class="fld"><label>통화</label>
@@ -426,7 +428,7 @@
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
             <div class="fld"><label>예정 수량</label><input type="number" id="sp-qty" placeholder="0" min="0"></div>
             <div class="fld"><label>단위</label>
-              <select id="sp-unit"><option value="개">개</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
+              <select id="sp-unit"><option value="개">개</option><option value="톤">톤</option><option value="Wafer">Wafer</option><option value="Tray">Tray</option><option value="EA">EA</option></select>
             </div>
           </div>
           <div class="fld"><label>입고 예정일</label><input type="date" id="sp-date"></div>
@@ -825,9 +827,9 @@
      ═══════════════════════════════════════════════════════════ -->
 
 <!-- Core -->
-<script src="js/config.js"></script>
+<script src="js/config.js?v=2"></script>
 <script src="js/store.js"></script>
-<script src="js/utils.js"></script>
+<script src="js/utils.js?v=2"></script>
 <script src="js/api.js"></script>
 <script src="js/dataLoader.js"></script>
 <script src="js/auth.js"></script>
@@ -843,20 +845,20 @@
 </script>
 
 <!-- Page modules -->
-<script src="js/pages/dashboard.js"></script>
-<script src="js/pages/biweekly.js"></script>
+<script src="js/pages/dashboard.js?v=2"></script>
+<script src="js/pages/biweekly.js?v=2"></script>
 <script src="js/pages/opsDashboard.js"></script>
-<script src="js/pages/progress.js"></script>
-<script src="js/pages/bizHistory.js"></script>
-<script src="js/pages/lotRegister.js"></script>
-<script src="js/pages/dailyInput.js?v=3"></script>
+<script src="js/pages/progress.js?v=2"></script>
+<script src="js/pages/bizHistory.js?v=2"></script>
+<script src="js/pages/lotRegister.js?v=2"></script>
+<script src="js/pages/dailyInput.js?v=4"></script>
 <script src="js/pages/shipment.js"></script>
 <script src="js/pages/invoice.js"></script>
 <script src="js/pages/revenue.js"></script>
 <script src="js/pages/kpiTarget.js?v=84"></script>
 <script src="js/pages/customers.js"></script>
 <script src="js/pages/verify.js"></script>
-<script src="js/pages/report.js"></script>
+<script src="js/pages/report.js?v=2"></script>
 <script src="js/pages/changelog.js"></script>
 
 <!-- App entry point -->

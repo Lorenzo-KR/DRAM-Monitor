@@ -106,17 +106,17 @@ Pages.Report = (() => {
           return { ...l, invDate: inv?.date || '', amount: amt, qty, avg: qty > 0 ? amt/qty : 0 };
         }), t1s.col, t1s.asc
       );
-      let totalQty = 0, totalAmt = 0;
+      let totalQty = {}, totalAmt = 0;
       const rows1 = inv1Sorted.map(l => {
         const qty = parseNumber(l.qty);
         const amt = l.amount || 0;
         const avg = qty > 0 && amt > 0 ? (amt / qty).toFixed(1) : '—';
-        totalQty += qty; totalAmt += amt;
+        unitsAdd(totalQty, l.biz, qty); totalAmt += amt;
         const rowBg1 = inv1Sorted.indexOf(l) % 2 === 1 ? 'background:#FAFAFA' : '';
         return `<tr style="${rowBg1}">
           ${TDM(l.lotNo || l.id, 'left', 'word-break:break-all;overflow-wrap:anywhere')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
-          ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
+          ${TDM(formatQty(qty, l.biz), 'right', 'white-space:nowrap')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div>${l.actualDone || l.targetDate || '—'}</div>
@@ -129,7 +129,7 @@ Pages.Report = (() => {
       const sumRow = `<tr style="background:#F0F0F0">
         <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:left">합계</td>
         <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
-        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:right;white-space:nowrap">${formatNumber(totalQty)}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:right;white-space:nowrap">${formatUnits(totalQty)}</td>
         <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
         <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;font-size:12px;font-weight:700;color:#111;background:#F0F0F0;font-family:'Pretendard',-apple-system,sans-serif;text-align:right;white-space:nowrap">$${formatNumber(Math.round(totalAmt))}</td>
         <td style="padding:7px 10px;border-bottom:1px solid #CCC;border-right:1px solid #DDD;background:#F0F0F0"></td>
@@ -177,7 +177,7 @@ Pages.Report = (() => {
         return `<tr style="background:${isThisMonth ? rowBg2 : '#FFF8F0'}">
           ${TDM(l.lotNo || l.id, 'left', '')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
-          ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
+          ${TDM(formatQty(qty, l.biz), 'right', 'white-space:nowrap')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div style="color:${isThisMonth?'#333':'#B45309'};font-weight:${isThisMonth?'400':'600'}">${doneDate}</div>
@@ -225,14 +225,14 @@ Pages.Report = (() => {
         return `<tr style="background:${rowBg3}">
           ${TDM(l.lotNo || l.id, 'left', 'font-weight:600')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:center">${_bizBadge(l.biz)}</td>
-          ${TDM(formatNumber(qty), 'right', 'white-space:nowrap')}
+          ${TDM(formatQty(qty, l.biz), 'right', 'white-space:nowrap')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;font-size:12px;color:#333;line-height:1.8;font-family:'Pretendard',-apple-system,sans-serif;text-align:center">
             <div>${l.inDate || '—'}</div>
             <div style="color:#999">—</div>
             <div style="color:#999">—</div>
           </td>
-          ${TDM(formatNumber(cum), 'right', 'white-space:nowrap')}
-          ${TDM(formatNumber(rem), 'right', 'white-space:nowrap')}
+          ${TDM(formatQty(cum, l.biz), 'right', 'white-space:nowrap')}
+          ${TDM(formatQty(rem, l.biz), 'right', 'white-space:nowrap')}
           <td style="padding:7px 10px;border-bottom:1px solid #E8E8E8;border-right:1px solid #E8E8E8;text-align:right;font-size:12px;font-family:'Pretendard',-apple-system,sans-serif;color:${barColor};font-weight:600;white-space:nowrap">${pct}%</td>
         </tr>`;
       }).join('');

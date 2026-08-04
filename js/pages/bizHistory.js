@@ -226,8 +226,8 @@ Pages.BizHistory = (() => {
       : 'KPI 인정 실적이 아직 없습니다.';
 
     // 처리량 카드
-    const procVal = formatNumber(s.totalProc);
-    const procTgt = `입고 ${formatNumber(s.totalQty)} · 잔량 ${formatNumber(Math.max(0, s.totalQty - s.totalProc))}`;
+    const procVal = formatQty(s.totalProc, _biz);
+    const procTgt = `입고 ${formatQty(s.totalQty, _biz)} · 잔량 ${formatQty(Math.max(0, s.totalQty - s.totalProc), _biz)}`;
     const procRate = s.totalQty > 0 ? Math.round(s.totalProc / s.totalQty * 100) : 0;
     const procMean = `누적 입고 대비 ${procRate}% 처리 완료.`;
 

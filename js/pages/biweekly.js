@@ -132,17 +132,26 @@ Pages.Biweekly = (() => {
         if (bizList.length === 0) return '';
 
         // 처리량(위) + 매출액·평균단가(중) + 미청구(아래) 3줄 셀
+        // proc/unbilled 는 { 단위: 수량 } 맵 — 사업마다 단위가 달라 합계에서 섞이면 안 됨
+        const _unitCell = (map, cls) => Object.keys(map).filter(u => map[u])
+          .sort((a, b) => (a === CONFIG.DEFAULT_UNIT ? -1 : 1))
+          .map(u => formatNumber(map[u]) + `<span style="${cls}"> ${u}</span>`)
+          .join(' · ');
         const DC = (proc, rev, unbilled, bg='#FFFFFF', isTotal=false) => {
-          const procDisp  = proc > 0 ? formatNumber(proc) + '<span style="font-size:10px;color:#A1A1A6;font-weight:400"> 개</span>' : '—';
-          const procColor = proc > 0 ? (isTotal ? STX : VTX) : ETX;
-          const avg       = proc > 0 && rev > 0 ? (rev / proc) : 0;
-          const avgDisp   = avg > 0 ? ` <span style="font-size:10.5px;font-weight:400;color:#A1A1A6">($${avg.toFixed(1)})</span>` : '';
+          const procTotal = Object.keys(proc).reduce((s, u) => s + proc[u], 0);
+          const procDisp  = procTotal > 0 ? _unitCell(proc, 'font-size:10px;color:#A1A1A6;font-weight:400') : '—';
+          const procColor = procTotal > 0 ? (isTotal ? STX : VTX) : ETX;
+          // 평균단가는 단위가 하나일 때만 의미가 있음 (개와 톤이 섞인 합계 셀에서는 생략)
+          const pUnit     = soleUnit(proc);
+          const avg       = pUnit && rev > 0 ? (rev / proc[pUnit]) : 0;
+          const avgDisp   = avg > 0 ? ` <span style="font-size:10.5px;font-weight:400;color:#A1A1A6">($${avg.toFixed(1)}/${pUnit})</span>` : '';
           const revDisp   = rev  > 0 ? '$' + formatNumber(Math.round(rev)) + avgDisp : '—';
           const revColor  = rev  > 0 ? (isTotal ? '#3A3A3C' : '#86868B')   : ETX;
           const fwProc    = isTotal ? '700' : '500';
           const fwRev     = isTotal ? '600' : '400';
-          const unbDisp   = unbilled > 0
-            ? `<div style="font-size:10.5px;font-weight:${isTotal?'600':'500'};color:#D70015">미청구 ${formatNumber(unbilled)}<span style="font-size:10px;font-weight:400;color:#E08080"> 개</span></div>`
+          const unbTotal  = Object.keys(unbilled).reduce((s, u) => s + unbilled[u], 0);
+          const unbDisp   = unbTotal > 0
+            ? `<div style="font-size:10.5px;font-weight:${isTotal?'600':'500'};color:#D70015">미청구 ${_unitCell(unbilled, 'font-size:10px;font-weight:400;color:#E08080')}</div>`
             : '';
           return `<td style="padding:3px 8px;text-align:right;font-family:var(--font-mono);background:${bg};border:1px solid ${BD};white-space:nowrap;line-height:1.25">
             <div style="font-size:12px;font-weight:${fwProc};color:${procColor}">${procDisp}</div>
@@ -174,38 +183,39 @@ Pages.Biweekly = (() => {
 
         // 데이터 행 — 월별
         // 컬럼 합계는 사업마다 법인 수가 다르므로 `사업|법인` 키로 누적 (소계는 '|__sub')
+        // 처리량·미청구는 { 단위: 수량 } 맵으로 누적 (매출은 USD 단일 통화라 숫자 그대로)
         const colTotalsP = {};
         const colTotalsR = {};
         const colTotalsU = {};
         const addCol = (key, p, r, u) => {
-          colTotalsP[key] = (colTotalsP[key] || 0) + p;
+          colTotalsP[key] = unitsMerge(colTotalsP[key] || {}, p);
           colTotalsR[key] = (colTotalsR[key] || 0) + r;
-          colTotalsU[key] = (colTotalsU[key] || 0) + u;
+          colTotalsU[key] = unitsMerge(colTotalsU[key] || {}, u);
         };
-        let grandP = 0, grandR = 0, grandU = 0;
+        let grandP = {}, grandR = 0, grandU = {};
 
         const dataRows = MONTHS.map(m => {
           const isCur = m === curMonth;
           const rowBg = isCur ? '#EAEAF2' : '#FFFFFF';
           const subBg = isCur ? '#DCDCE6' : SBG;
-          let rowTotalP = 0, rowTotalR = 0, rowTotalU = 0;
+          let rowTotalP = {}, rowTotalR = 0, rowTotalU = {};
 
           const cells = bizList.map(biz => {
-            let bizSubP = 0, bizSubR = 0, bizSubU = 0;
+            let bizSubP = {}, bizSubR = 0, bizSubU = {};
             const coCells = coOf(biz).map(co => {
-              const p = _procByBizCo(biz, co, curYear, m);
+              const p = unitsAdd({}, biz, _procByBizCo(biz, co, curYear, m));
               const r = _revByBizCo(biz, co, curYear, m);
-              const u = _unbilledByBizCo(biz, co, curYear, m);
-              bizSubP += p; bizSubR += r; bizSubU += u;
+              const u = unitsAdd({}, biz, _unbilledByBizCo(biz, co, curYear, m));
+              unitsMerge(bizSubP, p); bizSubR += r; unitsMerge(bizSubU, u);
               addCol(`${biz}|${co}`, p, r, u);
               return DC(p, r, u, rowBg, false);
             }).join('');
-            rowTotalP += bizSubP; rowTotalR += bizSubR; rowTotalU += bizSubU;
+            unitsMerge(rowTotalP, bizSubP); rowTotalR += bizSubR; unitsMerge(rowTotalU, bizSubU);
             addCol(`${biz}|__sub`, bizSubP, bizSubR, bizSubU);
             return coCells + DC(bizSubP, bizSubR, bizSubU, subBg, true);
           }).join('');
 
-          grandP += rowTotalP; grandR += rowTotalR; grandU += rowTotalU;
+          unitsMerge(grandP, rowTotalP); grandR += rowTotalR; unitsMerge(grandU, rowTotalU);
 
           const monthCellBg = isCur ? HBG2 : HBG;
           const monthCellFw = isCur ? '700' : '600';
@@ -218,10 +228,10 @@ Pages.Biweekly = (() => {
         const totalCells = bizList.map(biz => {
           const coTotals = coOf(biz).map(co => {
             const k = `${biz}|${co}`;
-            return DC(colTotalsP[k] || 0, colTotalsR[k] || 0, colTotalsU[k] || 0, SBG, true);
+            return DC(colTotalsP[k] || {}, colTotalsR[k] || 0, colTotalsU[k] || {}, SBG, true);
           }).join('');
           const sk = `${biz}|__sub`;
-          return coTotals + DC(colTotalsP[sk] || 0, colTotalsR[sk] || 0, colTotalsU[sk] || 0, SBG, true);
+          return coTotals + DC(colTotalsP[sk] || {}, colTotalsR[sk] || 0, colTotalsU[sk] || {}, SBG, true);
         }).join('');
 
         const cols = `
@@ -233,7 +243,7 @@ Pages.Biweekly = (() => {
           <col style="width:${W_TOTAL}px">`;
 
         const legend = showLegend
-          ? `<div style="font-size:12px;color:#86868B">상단: 처리량(ea) · 중단: 매출액 USD (괄호: 평균단가 $/ea) · 하단: <span style="color:#D70015">미청구 수량</span> (완료월 기준 현시점 미청구)</div>`
+          ? `<div style="font-size:12px;color:#86868B">상단: 처리량 (사업별 단위 — Scrap 자재는 톤) · 중단: 매출액 USD (괄호: 평균단가 $/단위) · 하단: <span style="color:#D70015">미청구 수량</span> (완료월 기준 현시점 미청구)</div>`
           : '';
         return `
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">

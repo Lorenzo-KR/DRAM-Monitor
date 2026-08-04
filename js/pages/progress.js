@@ -245,7 +245,7 @@ Pages.Progress = (() => {
       const yearProc    = dailies_co.filter(r => r.biz===b && String(r.date||'').startsWith(yearStr)).reduce((s,r)=>s+parseNumber(r.proc), 0);
       const monthInflow = lots_co.filter(l => l.biz===b && String(l.inDate||'').startsWith(curM)).reduce((s,l)=>s+parseNumber(l.qty), 0);
       const monthProc   = dailies_co.filter(r => r.biz===b && String(r.date||'').startsWith(curM)).reduce((s,r)=>s+parseNumber(r.proc), 0);
-      return { label: CONFIG.BIZ_LABELS[b], color: CONFIG.BIZ_COLORS[b], yearInflow, yearProc, monthInflow, monthProc };
+      return { biz: b, label: CONFIG.BIZ_LABELS[b], color: CONFIG.BIZ_COLORS[b], yearInflow, yearProc, monthInflow, monthProc };
     });
 
     const totEl = document.getElementById('monthly-totals');
@@ -263,8 +263,8 @@ Pages.Progress = (() => {
             <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:${it.color};margin-bottom:6px">${it.label}</div>
             <div style="display:grid;grid-template-columns:32px 1fr 1fr;column-gap:8px;align-items:baseline">
               <span></span><span style="${lab}">입고</span><span style="${lab}">처리</span>
-              <span style="${row}">${mLabel}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthInflow)}</span><span style="${cell};color:var(--tx);font-weight:600">${formatNumber(it.monthProc)}</span>
-              <span style="${row}">연간</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearInflow)}</span><span style="${cell};color:var(--tx2)">${formatNumber(it.yearProc)}</span>
+              <span style="${row}">${mLabel}</span><span style="${cell};color:var(--tx);font-weight:600">${formatQty(it.monthInflow, it.biz)}</span><span style="${cell};color:var(--tx);font-weight:600">${formatQty(it.monthProc, it.biz)}</span>
+              <span style="${row}">연간</span><span style="${cell};color:var(--tx2)">${formatQty(it.yearInflow, it.biz)}</span><span style="${cell};color:var(--tx2)">${formatQty(it.yearProc, it.biz)}</span>
             </div>
           </div>`).join('');
       }
@@ -383,12 +383,14 @@ Pages.Progress = (() => {
     const manual = document.getElementById('nl-cust-manual');
     const custName = sel?.value === '__manual__' ? manual?.value.trim() : sel?.value || '';
 
+    const biz = document.getElementById('nl-biz')?.value || 'DRAM';
     const record = {
-      id: Date.now(), biz: document.getElementById('nl-biz')?.value || 'DRAM',
+      id: Date.now(), biz,
       country: document.getElementById('nl-co')?.value || 'HK',
       customerName: custName, lotNo,
       inDate, targetDate: document.getElementById('nl-tgt')?.value || addDays(inDate, CONFIG.LOT_DEFAULT_TARGET_DAYS),
-      qty, unit: '개', price: 0, currency: 'USD', product: '', note: '', done: '0', actualDone: '', shipDate: '',
+      // 단위는 사업별 기본값 (SCR → 톤)
+      qty, unit: bizUnit(biz), price: 0, currency: 'USD', product: '', note: '', done: '0', actualDone: '', shipDate: '',
     };
 
     const regBtn = document.querySelector('#new-lot-row button');
@@ -527,8 +529,8 @@ Pages.Progress = (() => {
           <td class="td-c">${_badge(lot.biz, BIZ_STYLE[lot.biz]||'')}</td>
           <td class="td-l td-ellipsis" style="font-family:'DM Mono',monospace;font-weight:${rowBold?'600':'400'};color:#000">${lot.lotNo||lot.id}</td>
           <td class="td-l td-ellipsis" style="color:#000;font-weight:${rowBold?'600':'400'}">${lot.customerName||'—'}</td>
-          <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:#000">${formatNumber(qty)}</td>
-          <td class="td-num" style="color:#000">${st==='upcoming'?'—':formatNumber(cum)}</td>
+          <td class="td-num" style="font-weight:${rowBold?'600':'400'};color:#000">${formatQty(qty, lot.biz)}</td>
+          <td class="td-num" style="color:#000">${st==='upcoming'?'—':formatQty(cum, lot.biz)}</td>
           <td class="td-c">
             ${st==='upcoming'
               ? `<span style="font-size:11px;color:#888">입고예정</span>`
@@ -790,7 +792,7 @@ Pages.Progress = (() => {
     const bizColor = (CONFIG.BIZ_COLORS && CONFIG.BIZ_COLORS[lot.biz]) || '#888';
     const evenBg = rowIdx % 2 === 1 ? '#FBFBFC' : '#fff';
     const custLabel = lot.customerName || '—';
-    const qtyLabel  = formatNumber(qty);
+    const qtyLabel  = formatQty(qty, lot.biz);
 
     // 바 위 라벨 (LOT번호 · 진행률) — 바가 충분히 넓을 때만
     const onBarLabel = barW > 80

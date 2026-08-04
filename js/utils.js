@@ -42,6 +42,53 @@ function sumField(array, field) {
   return array.reduce((total, row) => total + parseNumber(row[field]), 0);
 }
 
+// ── 물량 단위 ────────────────────────────────────────────────
+// 사업마다 단위가 다르므로(예: SCR은 톤) 여러 사업을 합칠 때는
+// 단순 합산 대신 { 단위: 수량 } 맵으로 모아 단위별로 표시합니다.
+
+/** 수량 + 사업 단위 (예: formatQty(3.04,'SCR') → '3.04톤') */
+function formatQty(value, biz) {
+  return formatNumber(parseNumber(value)) + bizUnit(biz);
+}
+
+/** 단위 맵에 값 누적 — unitsAdd(map, 'SCR', 3.04) */
+function unitsAdd(map, biz, value) {
+  const v = parseNumber(value);
+  if (v) {
+    const u = bizUnit(biz);
+    map[u] = (map[u] || 0) + v;
+  }
+  return map;
+}
+
+/** 단위 맵끼리 병합 */
+function unitsMerge(target, source) {
+  Object.keys(source || {}).forEach(u => {
+    if (source[u]) target[u] = (target[u] || 0) + source[u];
+  });
+  return target;
+}
+
+/** 행 배열을 단위 맵으로 집계 — unitsOf(lots, 'qty') */
+function unitsOf(rows, field, bizField = 'biz') {
+  return (rows || []).reduce((m, r) => unitsAdd(m, r[bizField], r[field]), {});
+}
+
+/** 단위 맵 합계 표기 (예: '1,234개 · 3.04톤'). 값이 없으면 '0' + 기본 단위 */
+function formatUnits(map, sep = ' · ') {
+  const parts = Object.keys(map || {})
+    .filter(u => map[u])
+    .sort((a, b) => (a === CONFIG.DEFAULT_UNIT ? -1 : b === CONFIG.DEFAULT_UNIT ? 1 : a.localeCompare(b)))
+    .map(u => formatNumber(map[u]) + u);
+  return parts.length ? parts.join(sep) : '0' + CONFIG.DEFAULT_UNIT;
+}
+
+/** 단위 맵에 단위가 하나뿐이면 그 단위, 아니면 null (평균단가 등 단위 의존 계산용) */
+function soleUnit(map) {
+  const used = Object.keys(map || {}).filter(u => map[u]);
+  return used.length === 1 ? used[0] : null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // 2. 날짜
 // ─────────────────────────────────────────────────────────────
