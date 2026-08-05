@@ -41,7 +41,7 @@ Pages.KpiTarget = (() => {
 
   // ── Factor ────────────────────────────────────────────────
   let _factors = JSON.parse(localStorage.getItem('kpi_factors') || 'null') || {
-    DRAM:1.0, SSD:1.0, MID:1.0, SCR:1.0, RMA:1.0, SUS:1.0, MOD:1.0,
+    DRAM:1.0, SSD:1.0, MID:1.0, SCR:1.0, RMA:1.0, SUS:1.0,
   };
   function _getFactor(biz) { return parseFloat(_factors[biz] ?? 1.0); }
   function _saveFactors(data) {
@@ -315,14 +315,8 @@ Pages.KpiTarget = (() => {
   // kpi7 → Material Profit (매출 − Material Cost) / 그 외 → EBIT (매출 × Factor)
   function _isMpMode(mode)   { return (mode || _rollingMode) === 'kpi7'; }
 
-  // KPI-7월 집계에서 빼는 사업 — 모듈 세일즈(MOD)는 이 KPI에 반영하지 않는다
-  const _KPI7_EXCLUDE = ['MOD'];
   /** 기준별 집계 대상 사업 목록 */
-  function _kpiBizList(mode) {
-    return _isMpMode(mode)
-      ? CONFIG.BIZ_LIST.filter(b => _KPI7_EXCLUDE.indexOf(b) < 0)
-      : CONFIG.BIZ_LIST;
-  }
+  function _kpiBizList(mode) { return CONFIG.BIZ_LIST; }
 
   // ── 롤링 raw 저장 단위 ────────────────────────────────────
   // EC·KPI-7월 = M USD / 그 외 KPI = 억원.
@@ -1944,7 +1938,6 @@ Pages.KpiTarget = (() => {
       const isMp  = _isMpMode(_rollingMode);                       // Material Cost 입력 + MP 자동계산
       const unitTxt = _isUsdRaw(_rollingMode) ? 'M USD' : '억원';
 
-      // KPI-7월 기준은 집계 대상 사업만 입력받는다 (모듈 세일즈 제외)
       const ROWS = [
         { key:'DRAM', label:'DRAM Test' },
         { key:'SSD',  label:'SSD Test' },
@@ -1952,7 +1945,6 @@ Pages.KpiTarget = (() => {
         { key:'SCR',  label:'Scrap 자재 공급' },
         { key:'RMA',  label:'RMA 운영' },
         { key:'SUS',  label:'Sustainability 컨설팅' },
-        { key:'MOD',  label:'모듈 세일즈' },
       ].filter(r => _kpiBizList(_rollingMode).indexOf(r.key) >= 0);
       const MO   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
       const thS  = 'padding:6px 4px;text-align:center;font-size:11px;font-weight:500;color:var(--tbl-tx-body);background:var(--tbl-sum-bg);border:1px solid var(--bd);white-space:nowrap';
@@ -2177,7 +2169,6 @@ Pages.KpiTarget = (() => {
         { key:'SCR',  kw:['scr','scrap','스크랩','자재'] },
         { key:'RMA',  kw:['rma','klew','rma 센터'] },
         { key:'SUS',  kw:['sus','sustainability','컨설팅','지속','itad'] },
-        { key:'MOD',  kw:['mod','모듈','module'] },
       ];
       function matchBiz(name) {
         const lower = name.toLowerCase().replace(/\s+/g,' ').trim();
@@ -2193,7 +2184,7 @@ Pages.KpiTarget = (() => {
 
       const results = {}; // { BIZ: { rev:[12], ebit:[12] } }
       let matched = 0, skipped = 0;
-      const BIZES = ['DRAM','SSD','MID','SCR','RMA','SUS','MOD'];
+      const BIZES = ['DRAM','SSD','MID','SCR','RMA','SUS'];
 
       if (raw.includes('\t')) {
         // ── 탭 구분 방식 ─────────────────────────────────────
@@ -2242,7 +2233,7 @@ Pages.KpiTarget = (() => {
 
         // 전체를 하나의 문자열로 보고, 사업명+타입 단위로 분리
         // 접근: 사업명 매핑 키워드로 직접 분리
-        const splitParts = raw.split(/(비정품\s+DRAM|비정품\s+SSD|DRAM Test|SSD Test|D-Die|Scrap|KLEW|RMA\s*센터|컨설팅|ITAD|Mobile Ink|모듈)/i);
+        const splitParts = raw.split(/(비정품\s+DRAM|비정품\s+SSD|DRAM Test|SSD Test|D-Die|Scrap|KLEW|RMA\s*센터|컨설팅|ITAD|Mobile Ink)/i);
 
         let currentBizRaw = '';
         const segments = [];

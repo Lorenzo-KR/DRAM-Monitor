@@ -113,7 +113,6 @@ Pages.Dashboard = (() => {
     const krwSub = revKrw > 0 ? '≈ ₩' + formatNumber(Math.round(revKrw)) : '';
 
     // ── Material Profit: KPI-7월 기준(매출 − Material Cost, USD) ──
-    // 집계 대상 사업은 KPI-7월과 동일 — 모듈 세일즈(MOD)는 빠진다.
     const mpUsd = Pages.KpiTarget?.getTotalActualProfit
       ? Pages.KpiTarget.getTotalActualProfit(year, 'kpi7')
       : 0;

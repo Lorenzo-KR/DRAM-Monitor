@@ -6,7 +6,6 @@
 Pages.Biweekly = (() => {
 
   // 표 그룹 정의 (상단/하단)
-  // 모듈 세일즈(MOD)는 이 표에서 제외한다
   const TOP_BIZ    = ['DRAM', 'SSD', 'MID'];
   const BOTTOM_BIZ = ['SCR', 'RMA'];
 

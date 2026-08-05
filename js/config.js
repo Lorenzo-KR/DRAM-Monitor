@@ -26,7 +26,7 @@ const CONFIG = {
   },
 
   // 사업 목록
-  BIZ_LIST: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
+  BIZ_LIST: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS'],
 
   // 사업 표시명
   BIZ_LABELS: {
@@ -36,7 +36,6 @@ const CONFIG = {
     SCR:  'Scrap 자재',
     RMA:  'RMA 운영',
     SUS:  'Sustainability',
-    MOD:  '모듈 세일즈',
   },
 
   // 사업 색상
@@ -47,7 +46,6 @@ const CONFIG = {
     SCR:  '#B45309',
     RMA:  '#0C6B8A',
     SUS:  '#2D7D46',
-    MOD:  '#8B3A3A',
   },
 
   // 국가(판매 법인) 목록
@@ -78,10 +76,10 @@ const CONFIG = {
 
   // 국가별 취급 사업
   COUNTRY_BIZ_MAP: {
-    HK: ['DRAM', 'SCR', 'RMA', 'SUS', 'MOD'],
-    SG: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS', 'MOD'],
-    KR: ['MOD', 'SCR'],
-    JP: ['MOD'],
+    HK: ['DRAM', 'SCR', 'RMA', 'SUS'],
+    SG: ['DRAM', 'SSD', 'MID', 'SCR', 'RMA', 'SUS'],
+    KR: ['SCR'],
+    JP: [],                       // 모듈 세일즈 폐지로 현재 취급 사업 없음
   },
 
   // KPI 차트 시작 연도
@@ -97,7 +95,7 @@ const CONFIG = {
 /**
  * 해당 사업을 취급하는 판매 법인 목록.
  * biz가 비어 있으면(전체) 모든 법인을 반환합니다.
- * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국은 MOD·SCR, 일본TES는 MOD 전용)
+ * 예) countriesForBiz('DRAM') → ['HK','SG']  (한국은 SCR만 취급)
  */
 /** 사업의 물량 단위 (예: SCR → '톤', 그 외 → '개') */
 function bizUnit(biz) {

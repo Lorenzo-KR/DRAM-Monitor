@@ -430,7 +430,7 @@ function countryOptionLabel(co, mode) {
 
 /**
  * 사업 select에 맞춰 법인 select의 옵션을 다시 채운다.
- * 한국(KR)·일본TES(JP)는 모듈 세일즈(MOD) 전용이므로 다른 사업에서는 노출되지 않는다.
+ * 법인마다 취급 사업이 달라 해당 사업을 다루지 않는 법인은 노출되지 않는다.
  * 폼의 사업 select에 onchange로 걸어 두고, 값을 채워 넣을 때도 직접 호출한다.
  *
  * @param {string} bizSelectId 사업 select element id
