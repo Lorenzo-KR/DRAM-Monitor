@@ -239,6 +239,40 @@ Pages.KpiTarget = (() => {
     } catch(e) {}
   }
 
+  /**
+   * 격자선 끈 xlsx 저장.
+   * xlsx-js-style(0.18.5) 작성기는 ws['!views']를 읽지 않아 showGridLines를 못 넣는다.
+   * 그래서 한 번 쓴 뒤 zip 안의 시트 XML만 고쳐 다시 묶는다.
+   * 도중에 실패하면 원본 그대로 내려받는다 — 격자선만 남고 내용은 멀쩡하다.
+   */
+  function _saveXlsxNoGrid(wb, filename) {
+    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    let out = buf;
+    try {
+      const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
+      const dec = new TextDecoder('utf-8'), enc = new TextEncoder();
+      cfb.FileIndex.forEach(f => {
+        if (!/sheet\d+\.xml$/.test(f.name || '')) return;
+        const xml   = dec.decode(new Uint8Array(f.content));
+        const fixed = xml.replace(/<sheetView /g, '<sheetView showGridLines="0" ');
+        if (fixed === xml) return;
+        f.content = enc.encode(fixed);
+        f.size    = f.content.length;
+      });
+      out = XLSX.CFB.write(cfb, { type: 'array', fileType: 'zip' });
+    } catch (e) {
+      out = buf;
+    }
+    const url = URL.createObjectURL(new Blob([new Uint8Array(out)], { type: 'application/octet-stream' }));
+    const a   = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   /** 표① 아래 노트 입력칸 (모노톤 · 표와 같은 테두리) */
   function _noteBox(year) {
     const body = String(_getNote(year))
@@ -2745,6 +2779,7 @@ Pages.KpiTarget = (() => {
       ws['!cols']   = Array.from({ length: NC }, (_, c) =>
         ({ wch: c === 0 ? 2 : c === 1 ? 4.17 : c === 2 ? 21.83 : c === SUMC ? 10 : 8.43 }));
       ws['!rows']   = Array.from({ length: T2_CUM + 1 }, () => ({ hpt: 16 }));
+      ws['!views']  = [{ showGridLines: false }];           // 격자선 끄기 — 실제 반영은 _saveXlsxNoGrid
 
       const wb = XLSX.utils.book_new();
       wb.Workbook = { CalcPr: { fullCalcOnLoad: true } };   // 열 때 수식 재계산
@@ -2753,7 +2788,7 @@ Pages.KpiTarget = (() => {
       // 파일명 — 받은 날짜(YYYYMMDD) + 언더바 + 이름
       const d0 = new Date(), p2 = n => String(n).padStart(2, '0');
       const stamp = d0.getFullYear() + p2(d0.getMonth() + 1) + p2(d0.getDate());
-      XLSX.writeFile(wb, stamp + '_반도체 Value Chain 협업과제 실적.xlsx');
+      _saveXlsxNoGrid(wb, stamp + '_반도체 Value Chain 협업과제 실적.xlsx');
     },
     downloadTracking() {
       if (!_exportCache) { alert('데이터를 먼저 불러오세요.'); return; }
