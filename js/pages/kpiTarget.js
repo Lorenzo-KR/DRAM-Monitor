@@ -1264,7 +1264,7 @@ Pages.KpiTarget = (() => {
 
       _comboCache = {
         year: year, unitLabel: unitLabel, modeLabel: _modeLabel(mode),
-        closedIdx: closedIdx, rows: comboData,
+        closedIdx: closedIdx, curMonIdx: curMonIdx, rows: comboData,
         tRev: tRev, tMc: tMc, tMp: tMp, tRevPlan: tRevPlan, tMpPlan: tMpPlan,
       };
 
@@ -2546,7 +2546,7 @@ Pages.KpiTarget = (() => {
     //   월 셀을 고치면 그대로 다시 계산되게 한다.
     downloadCombo() {
       if (!_comboCache) { alert('데이터를 먼저 불러오세요.'); return; }
-      const { year, unitLabel, modeLabel, closedIdx, rows: data,
+      const { year, unitLabel, modeLabel, closedIdx, curMonIdx, rows: data,
               tRev, tMc, tMp, tRevPlan, tMpPlan } = _comboCache;
 
       const MONS   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -2558,6 +2558,7 @@ Pages.KpiTarget = (() => {
       // 모노톤 팔레트 (AARRGGBB)
       const C = {
         white: 'FFFFFFFF', hdr: 'FFE9E9E9', mp: 'FFF4F4F4', tot: 'FFEFEFEF', cum: 'FFE4E4E4',
+        band:  'FFDCDCDC', cur: 'FFCFCFCF',
         tx:    'FF222222', dim: 'FF999999', bd:  'FFCCCCCC',
       };
       const thin = { style: 'thin', color: { rgb: C.bd } };
@@ -2569,7 +2570,7 @@ Pages.KpiTarget = (() => {
         const s = {
           fill:      { patternType: 'solid', fgColor: { rgb: o.bg || C.white } },
           font:      { name: 'Malgun Gothic', sz: 9, bold: !!o.bold, color: { rgb: o.fg || C.tx } },
-          alignment: { horizontal: o.align || 'left', vertical: 'center' },
+          alignment: { horizontal: o.align || 'left', vertical: 'center', wrapText: !!o.wrap },
           border:    bdr,
         };
         if (v && typeof v === 'object') {
@@ -2597,14 +2598,39 @@ Pages.KpiTarget = (() => {
                       { bold: true, bg: C.hdr }), { bg: C.hdr }));
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: NC - 1 } }); r++;
 
-      put(r, pad(cell('실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 · 이후는 계획(회색) · 합계 = 실적 + 잔여계획 · MC는 음수 표기',
+      const curMon = (curMonIdx >= 0 && curMonIdx < 12) ? curMonIdx : null;
+      put(r, pad(cell('실적 ' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지 · '
+                    + (closedIdx < 11 ? (closedIdx + 2) + '월부터 Rolling 계획 · ' : '')
+                    + (curMon !== null ? '현재 ' + (curMon + 1) + '월 · ' : '')
+                    + '합계 = 실적 + 잔여 Rolling 계획 · MC는 음수 표기',
                       { fg: C.dim })));
       merges.push({ s: { r: r, c: 0 }, e: { r: r, c: NC - 1 } }); r++;
 
-      // 머리글
-      put(r, ['Biz', '구분'].concat(MONS).concat(['합계', '연간계획', '차이'])
-        .map((h, i) => cell(h, { bg: C.hdr, bold: true, align: i <= 1 ? 'left' : 'center' })));
-      r++;
+      // 구간 띠 — 어디까지가 실적이고 어디부터 Rolling 계획인지 월 머리글 위에 표시
+      const band = [cell('구간', { bg: C.band, bold: true }), cell('', { bg: C.band })];
+      for (let i = 0; i < 12; i++) band.push(cell('', { bg: C.band, align: 'center', bold: true }));
+      band.push(cell('', { bg: C.band }), cell('', { bg: C.band }), cell('', { bg: C.band }));
+      const span = (from, to, label) => {                  // from~to: 0-based 월 index
+        if (from > to) return;
+        band[from + 2] = cell(label, { bg: C.band, align: 'center', bold: true });
+        merges.push({ s: { r: r, c: from + 2 }, e: { r: r, c: to + 2 } });
+      };
+      span(0, closedIdx, '실적 (1~' + (closedIdx + 1) + '월)');
+      span(closedIdx + 1, 11, 'Rolling 계획 (' + (closedIdx + 2) + '~12월)');
+      merges.push({ s: { r: r, c: 0 }, e: { r: r, c: 1 } });
+      put(r, band); r++;
+
+      // 머리글 — 합계/연간계획은 어떤 기준값인지 두 번째 줄에 적는다
+      put(r, ['Biz', '구분']
+        .concat(MONS.map((m, i) => i === curMon ? m + '\n(현재월)' : m))
+        .concat(['합계\n(Rolling 계획 기준)', '연간계획\n(7월 셋팅 기준)', '차이'])
+        .map((h, i) => cell(h, {
+          bg:    (i - 2) === curMon ? C.cur : C.hdr,
+          bold:  true,
+          wrap:  true,
+          align: i <= 1 ? 'left' : 'center',
+        })));
+      const hdrRow = r; r++;
 
       // 지표 한 줄 — 월 12칸 + 합계(수식) + 연간계획 + 차이(수식)
       // opt.minus: MC처럼 비용이라 음수로 적는 행 / opt.cumOf: 누적 행이 참조할 원본 엑셀 행번호
@@ -2613,7 +2639,7 @@ Pages.KpiTarget = (() => {
         const er   = r + 1;
         const bg   = opt.bg;
         const mv   = vals.map(v => opt.minus ? -(v || 0) : (v || 0));
-        const line = [opt.bizCell || cell('', { bg: bg }), cell(label, { bg: bg, fg: C.dim, bold: opt.bold })];
+        const line = [opt.bizCell || cell('', { bg: bg }), cell(label, { bg: bg, bold: opt.bold })];
 
         mv.forEach((v, i) => {
           const f = opt.cumOf ? (i === 0 ? 'C' + opt.cumOf
@@ -2665,8 +2691,8 @@ Pages.KpiTarget = (() => {
       ws['!ref']    = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: r - 1, c: NC - 1 } });
       ws['!merges'] = merges;
       ws['!cols']   = Array.from({ length: NC }, (_, c) =>
-        ({ wch: c === 0 ? 16 : c === 1 ? 10 : c >= 14 ? 12 : 8.5 }));
-      ws['!rows']   = Array.from({ length: r }, () => ({ hpt: 16 }));
+        ({ wch: c === 0 ? 16 : c === 1 ? 10 : c >= 14 ? 14 : 8.5 }));
+      ws['!rows']   = Array.from({ length: r }, (_, i) => ({ hpt: i === hdrRow ? 40 : 16 }));
 
       const wb = XLSX.utils.book_new();
       wb.Workbook = { CalcPr: { fullCalcOnLoad: true } };   // 열 때 수식 재계산
