@@ -1159,6 +1159,9 @@ Pages.KpiTarget = (() => {
           + '<td style="' + TS.tdSub + bold + rowBg + '">' + label + '</td>'
           + cells
           + '<td style="' + TS.tdSum + bold + '">' + (opt.minus && total ? '-' : '') + fmtCell(total) + '</td>'
+          + '<td style="' + TS.tdSum + '">' + (opt.plan === undefined ? '' : fmtCell(opt.plan)) + '</td>'
+          + '<td style="' + TS.tdSum + (opt.diff ? ';color:' + diffColor(opt.diff) : '') + '">'
+          + (opt.diff === undefined ? '' : fmtDiff(opt.diff)) + '</td>'
           + '</tr>';
       };
 
@@ -1185,9 +1188,9 @@ Pages.KpiTarget = (() => {
 
         var bizCell = '<td rowspan="3" style="' + TS.tdL + ';font-weight:600;vertical-align:middle">'
                     + (CONFIG.BIZ_LABELS[b] || b) + '</td>';
-        return metricRow('매출', revVals, { cur: curAct(b, actRevByBiz) }, bizCell)
+        return metricRow('매출', revVals, { plan: revPlan, diff: revTot - revPlan, cur: curAct(b, actRevByBiz) }, bizCell)
              + metricRow('MC', mcVals, { minus: true })
-             + metricRow('MP', mpVals, { strong: true, bg: '#F2F2F2', cur: curAct(b, actEbitByBiz) });
+             + metricRow('MP', mpVals, { strong: true, bg: '#F2F2F2', plan: mpPlan, diff: mpTot - mpPlan, cur: curAct(b, actEbitByBiz) });
       }).join('');
 
       // 전체 합계 블록
@@ -1197,21 +1200,23 @@ Pages.KpiTarget = (() => {
       var tMp  = sumOf(function(b, i) { return i <= closedIdx ? actToDispNum(actEbitByBiz[b][i] || 0) : rawToDisp(ebitByBiz[b][i]); });
       var tCurRev = bizList.reduce(function(s, b) { return s + (curAct(b, actRevByBiz)  || 0); }, 0);
       var tCurMp  = bizList.reduce(function(s, b) { return s + (curAct(b, actEbitByBiz) || 0); }, 0);
+      var tRevPlan = bizList.reduce(function(s, b) { return s + revByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
+      var tMpPlan  = bizList.reduce(function(s, b) { return s + ebitByBiz[b].reduce(function(a, v) { return a + rawToDisp(v); }, 0); }, 0);
       var tRevTot  = tRev.reduce(function(s, v) { return s + v; }, 0);
       var tMpTot   = tMp.reduce(function(s, v) { return s + v; }, 0);
 
       // 월별 누적 (실적 구간 + 잔여 계획을 이어서 누적)
       var runCum = function(arr) { var r = 0; return arr.map(function(v) { r += (v || 0); return r; }); };
       var totalCell = '<td rowspan="5" style="' + TS.tdCumL + ';font-weight:600;vertical-align:middle">전체 합계</td>';
-      comboBody += metricRow('매출', tRev, { bg: '#F7F7F7', cur: tCurRev }, totalCell)
+      comboBody += metricRow('매출', tRev, { plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#F7F7F7', cur: tCurRev }, totalCell)
                  + metricRow('MC', tMc, { minus: true, bg: '#F7F7F7' })
-                 + metricRow('MP', tMp, { strong: true, bg: '#E8E4D8', cur: tCurMp })
-                 + metricRow('누적 매출', runCum(tRev), { total: tRevTot, bg: '#EFEFEF' })
-                 + metricRow('누적 MP', runCum(tMp), { strong: true, total: tMpTot, bg: '#E8E4D8' });
+                 + metricRow('MP', tMp, { strong: true, bg: '#E8E4D8', plan: tMpPlan, diff: tMpTot - tMpPlan, cur: tCurMp })
+                 + metricRow('누적 매출', runCum(tRev), { total: tRevTot, plan: tRevPlan, diff: tRevTot - tRevPlan, bg: '#EFEFEF' })
+                 + metricRow('누적 MP', runCum(tMp), { strong: true, total: tMpTot, plan: tMpPlan, diff: tMpTot - tMpPlan, bg: '#E8E4D8' });
 
       var comboColgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
         + MONTHS.map(function() { return '<col style="width:65px">'; }).join('')
-        + '<col style="width:74px"></colgroup>';
+        + '<col style="width:74px"><col style="width:74px"><col style="width:74px"></colgroup>';
 
       comboTable = '<div style="margin-bottom:14px">'
         + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
@@ -1229,7 +1234,7 @@ Pages.KpiTarget = (() => {
         + '<thead><tr>'
         + '<th style="' + TS.thBiz + '">Biz</th><th style="' + TS.thSub + '">구분</th>'
         + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
-        + '<th style="' + TS.thSum + '">합계</th>'
+        + '<th style="' + TS.thSum + '">합계</th><th style="' + TS.thSum + '">연간계획</th><th style="' + TS.thSum + '">차이</th>'
         + '</tr></thead><tbody>' + comboBody + '</tbody></table></div>'
         + abbrNote + '</div>';
     }
