@@ -2549,7 +2549,7 @@ Pages.KpiTarget = (() => {
     // 합계·누적·전체 블록은 값이 아니라 수식으로 남겨 월 셀을 고치면 재계산된다.
     downloadCombo() {
       if (!_comboCache) { alert('데이터를 먼저 불러오세요.'); return; }
-      const { year, unitLabel, closedIdx, curMonIdx, rows: data, tMpPlan } = _comboCache;
+      const { unitLabel, closedIdx, curMonIdx, rows: data, tMpPlan } = _comboCache;
 
       const N    = data.length;
       const NC   = 16;                                     // A(여백) ~ P(합계)
@@ -2750,9 +2750,10 @@ Pages.KpiTarget = (() => {
       wb.Workbook = { CalcPr: { fullCalcOnLoad: true } };   // 열 때 수식 재계산
       XLSX.utils.book_append_sheet(wb, ws, 'Summary');
 
+      // 파일명 — 받은 날짜(YYYYMMDD) + 언더바 + 이름
       const d0 = new Date(), p2 = n => String(n).padStart(2, '0');
-      XLSX.writeFile(wb, '반도체 Value Chain 협업과제_' + year + '_'
-        + d0.getFullYear() + p2(d0.getMonth() + 1) + p2(d0.getDate()) + '.xlsx');
+      const stamp = d0.getFullYear() + p2(d0.getMonth() + 1) + p2(d0.getDate());
+      XLSX.writeFile(wb, stamp + '_반도체 Value Chain 협업과제 실적.xlsx');
     },
     downloadTracking() {
       if (!_exportCache) { alert('데이터를 먼저 불러오세요.'); return; }
