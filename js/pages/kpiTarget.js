@@ -214,6 +214,50 @@ Pages.KpiTarget = (() => {
   function _getMcUsdMonth(year, biz, month) { return _getMcMonth(year, biz, month) * 1000000; }
   function _getMcUsdYear(year, biz)         { return _getMcYear(year, biz) * 1000000; }
 
+  // ── 표① 아래 노트 ────────────────────────────────────────
+  // 연도별 자유 메모. 입력 중 자동 저장(디바운스) + 포커스가 빠질 때 즉시 저장.
+  // 저장 후 render()를 부르지 않는다 — 표를 다시 그리면 입력 중인 칸이 날아간다.
+  let _kpiNote   = JSON.parse(localStorage.getItem('kpi_note') || 'null') || {};
+  let _noteTimer = null;
+
+  function _getNote(year)        { return _kpiNote[year] || ''; }
+  function _saveNote(year, text) {
+    if (_kpiNote[year] === text) return false;
+    _kpiNote[year] = text;
+    Store.setSetting('kpi_note', JSON.stringify(_kpiNote));
+    return true;
+  }
+  function _loadNote() {
+    const raw = Store.getSetting('kpi_note');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(_kpiNote, parsed);          // 공유 시트 값이 최신
+        localStorage.setItem('kpi_note', JSON.stringify(_kpiNote));
+      }
+    } catch(e) {}
+  }
+
+  /** 표① 아래 노트 입력칸 (모노톤 · 표와 같은 테두리) */
+  function _noteBox(year) {
+    const body = String(_getNote(year))
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<div style="margin-top:10px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding:0 2px">'
+      + '<span style="font-size:12px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;letter-spacing:.05em">노트</span>'
+      + '<span id="kpi-note-state" style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif"></span>'
+      + '</div>'
+      + '<textarea id="kpi-combo-note" rows="4"'
+      + ' placeholder="특이사항 · 가정 · 후속 조치 등을 적어두세요 (자동 저장)"'
+      + ' oninput="Pages.KpiTarget.noteChanged()" onblur="Pages.KpiTarget.saveNote()"'
+      + ' style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #999;border-radius:4px;'
+      + 'font-family:Pretendard,sans-serif;font-size:12px;line-height:1.7;color:var(--tx);'
+      + 'background:var(--tbl-bg);resize:vertical;min-height:78px;outline:none">'
+      + body + '</textarea>'
+      + '</div>';
+  }
+
   function _saveMaterialCost(year, data) {
     if (!_materialCost[year]) _materialCost[year] = {};
     Object.assign(_materialCost[year], data);
@@ -387,6 +431,7 @@ Pages.KpiTarget = (() => {
     _loadMaterialCost();
     _loadForecast();
     _loadExchangeRate();
+    _loadNote();
     _seedKpi7Baseline();   // 서버 값 병합 후, 비어 있는 사업만 기준 문서 값으로 채움
   }
 
@@ -1255,7 +1300,9 @@ Pages.KpiTarget = (() => {
         + MONTHS.map(function(m) { return '<th style="' + TS.thMon + '">' + m + '</th>'; }).join('')
         + '<th style="' + TS.thSum + '">합계</th><th style="' + TS.thSum + '">연간계획</th><th style="' + TS.thSum + '">차이</th>'
         + '</tr></thead><tbody>' + comboBody + '</tbody></table></div>'
-        + abbrNote + '</div>';
+        + abbrNote
+        + _noteBox(year)
+        + '</div>';
     }
 
     // ── 연말 추정(LE) 표 ─────────────────────────────────────
@@ -2471,6 +2518,26 @@ Pages.KpiTarget = (() => {
       Pages.KpiTarget.closeForecastPanel();
       UI.toast(vintage + ' 전망 저장됨');
       Pages.KpiTarget.render();
+    },
+
+    // ── 표① 노트 ──────────────────────────────────────────
+    noteChanged() {
+      const st = document.getElementById('kpi-note-state');
+      if (st) { st.textContent = '입력 중…'; st.style.color = 'var(--tx3)'; }
+      clearTimeout(_noteTimer);
+      _noteTimer = setTimeout(() => Pages.KpiTarget.saveNote(), 800);
+    },
+
+    saveNote() {
+      clearTimeout(_noteTimer);
+      const ta = document.getElementById('kpi-combo-note');
+      if (!ta) return;
+      const changed = _saveNote(_year, ta.value);
+      const st = document.getElementById('kpi-note-state');
+      if (!st) return;
+      st.textContent = changed ? '저장됨' : '';
+      st.style.color = 'var(--tx3)';
+      if (changed) setTimeout(() => { if (st.textContent === '저장됨') st.textContent = ''; }, 2000);
     },
 
     // 표① 사업별 종합 — 화면 표를 그대로 한 장으로 뽑는다.
