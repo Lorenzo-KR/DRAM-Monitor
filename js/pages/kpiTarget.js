@@ -1228,6 +1228,7 @@ Pages.KpiTarget = (() => {
         + (curMonIdx >= 0 && curMonIdx < 12
             ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 계획값으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
         + '합계는 실적+잔여계획</span>'
+        + '<button onclick="Pages.KpiTarget.downloadTracking()" style="margin-left:auto;font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
         + '</div>'
         + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
         + '<table style="border-collapse:collapse;table-layout:fixed">' + comboColgroup
@@ -1298,11 +1299,11 @@ Pages.KpiTarget = (() => {
     if (comboTable) secN();       // 종합표가 ① 을 이미 사용
     if (leTableHtml) secN();      // 연말 추정 표가 그 다음 번호 사용
     leTableHtml = leTableHtml.replace('§LE§', comboTable ? '②' : '①');
-    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
-      + chart1Html
-      + comboTable
-      + leTableHtml
-      + '<div style="margin-bottom:4px">'
+
+    // 계획 표·실적 표·사업별 월 실적 표는 종합표가 같은 내용을 다 담고 있는
+    // KPI-7월 탭에서는 숨긴다. (다른 기준 탭은 종합표가 없으므로 그대로 표시)
+    var detailTables = _isMpMode(mode) ? '' :
+      '<div style="margin-bottom:4px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
       + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
       + secN() + (showEbit ? profitLabel + ' 계획 표' : '매출 계획 표') + ' — ' + _modeLabel(mode)
@@ -1325,6 +1326,12 @@ Pages.KpiTarget = (() => {
       + '</div>'
       + '<div style="overflow-x:auto;margin-bottom:4px;border:1px solid #999;border-radius:4px">' + progressTable + '</div>'
       + '</div>';
+
+    el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
+      + chart1Html
+      + comboTable
+      + leTableHtml
+      + detailTables;
 
     // ================================================================
     // 차트 렌더 — EBIT 누적 1개
