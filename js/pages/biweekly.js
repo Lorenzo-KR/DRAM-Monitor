@@ -6,8 +6,9 @@
 Pages.Biweekly = (() => {
 
   // 표 그룹 정의 (상단/하단)
+  // 모듈 세일즈(MOD)는 이 표에서 제외한다
   const TOP_BIZ    = ['DRAM', 'SSD', 'MID'];
-  const BOTTOM_BIZ = ['SCR', 'RMA', 'MOD'];
+  const BOTTOM_BIZ = ['SCR', 'RMA'];
 
   function _getMonthPrefix(year, month) {
     return `${year}-${String(month).padStart(2,'0')}`;
@@ -160,7 +161,7 @@ Pages.Biweekly = (() => {
           </td>`;
         };
 
-        // 사업별 취급 법인 (예: 한국·일본TES는 MOD 전용)
+        // 사업별 취급 법인 (예: 한국은 SCR도 취급)
         // 취급 법인이 아니더라도 실제 실적이 있으면 컬럼을 남긴다 —
         // 잘못 입력된 조합을 조용히 숨겨 소계에서 누락시키지 않기 위함.
         // 월 행마다 반복 호출되므로 사업별로 1회만 계산
