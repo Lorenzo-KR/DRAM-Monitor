@@ -1619,6 +1619,9 @@ Pages.KpiTarget = (() => {
     getExchangeRate:  ()                             => _exchangeRate,
     getFactor:        (biz)                          => _getFactor(biz),
     getActualProfit:  (year,biz,mode)                => _getActualProfit(year,biz,mode),
+    /** 집계 대상 사업 전체의 실적 이익 합 (KPI-7월 = Material Profit, USD) */
+    getTotalActualProfit: (year, mode='kpi7')        =>
+      _kpiBizList(mode).reduce((s,b) => s + _getActualProfit(year, b, mode), 0),
     loadFromSettings: ()                             => _loadFromSettings(),
 
     getBizSummary(year, biz, mode='kpi67') {

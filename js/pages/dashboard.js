@@ -111,6 +111,13 @@ Pages.Dashboard = (() => {
     const fxRate = parseFloat(Store.getSetting('usd_krw') || localStorage.getItem('usd_krw') || '1350');
     const revKrw = kpi.revenue.total > 0 ? kpi.revenue.total * fxRate : 0;
     const krwSub = revKrw > 0 ? '≈ ₩' + formatNumber(Math.round(revKrw)) : '';
+
+    // ── Material Profit: KPI-7월 기준(매출 − Material Cost, USD) ──
+    // 집계 대상 사업은 KPI-7월과 동일 — 모듈 세일즈(MOD)는 빠진다.
+    const mpUsd = Pages.KpiTarget?.getTotalActualProfit
+      ? Pages.KpiTarget.getTotalActualProfit(year, 'kpi7')
+      : 0;
+    const mpKrwSub = mpUsd > 0 ? '≈ ₩' + formatNumber(Math.round(mpUsd * fxRate)) : '';
     const fxInputHtml = '<input type="number" id="fx-rate-input" value="' + fxRate + '" min="1" step="1" style="width:70px;padding:3px 7px;border:1px solid var(--bd2);border-radius:5px;font-size:12px;font-family:var(--font-mono);background:var(--card);color:var(--tx);text-align:right" onkeydown="if(event.key===\'Enter\'){Store.setSetting(\'usd_krw\',this.value);Pages.Dashboard.render();}"><button onclick="Store.setSetting(\'usd_krw\',document.getElementById(\'fx-rate-input\').value);Pages.Dashboard.render();" style="padding:3px 8px;font-size:11px;font-weight:500;border:1px solid var(--bd2);border-radius:5px;background:var(--tx);color:#fff;cursor:pointer;white-space:nowrap;font-family:\'Pretendard\',sans-serif">적용</button>';
 
     // ── Job Orders: 국가별 진행중 + 완료 숫자 ──────────────────
@@ -126,14 +133,14 @@ Pages.Dashboard = (() => {
       + '<div style="font-size:12px;color:var(--tx2);margin-top:4px">완료 ' + kpi.doneLots.length + '</div>'
       + '</div>';
 
-    // ── KPI 달성률: KPI103 매출 목표 기준 (롤링 입력값) ──────────
-    const tgtKrw = Pages.KpiTarget?.getTotalRevenueTarget
-      ? Pages.KpiTarget.getTotalRevenueTarget(year, 'kpi103')
+    // ── KPI 달성률: KPI-7월 Material Profit 목표 기준 (롤링 입력값) ──
+    // 목표·실적 모두 USD라 환율 없이 바로 비교된다.
+    const tgtUsd = Pages.KpiTarget?.getTotalTarget
+      ? Pages.KpiTarget.getTotalTarget(year, 'kpi7')
       : 0;
-    const actKrw = kpi.revenue.total * fxRate;
-    const tgtEok = tgtKrw / 100000000;
-    const actEok = actKrw / 100000000;
-    const pct    = tgtKrw > 0 ? (actKrw / tgtKrw * 100) : 0;
+    const tgtM = tgtUsd / 1000000;
+    const actM = mpUsd  / 1000000;
+    const pct  = tgtUsd > 0 ? (mpUsd / tgtUsd * 100) : 0;
     // 연간 기준 pace
     const yStart = new Date(year, 0, 1);
     const yEnd   = new Date(year + 1, 0, 1);
@@ -150,10 +157,10 @@ Pages.Dashboard = (() => {
     const barFill     = Math.max(0, Math.min(100, pct));
     const paceMark    = Math.max(0, Math.min(100, pacePct));
 
-    const kpiCardHtml = tgtKrw <= 0
+    const kpiCardHtml = tgtUsd <= 0
       ? '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
         + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
-        + '<div style="font-size:13px;color:var(--tx3);margin-top:8px">KPI 목표 페이지에서 ' + year + '년 매출(rev)을 먼저 입력하세요.</div>'
+        + '<div style="font-size:13px;color:var(--tx3);margin-top:8px">KPI 페이지 롤링(7월)에서 ' + year + '년 Material Profit을 먼저 입력하세요.</div>'
         + '</div>'
       : '<div style="background:var(--bg);border-radius:var(--rs);padding:10px 14px">'
         + '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:4px">KPI 달성률</div>'
@@ -166,15 +173,16 @@ Pages.Dashboard = (() => {
           + '<div style="position:absolute;left:' + paceMark + '%;top:-2px;width:1px;height:10px;background:var(--tx2)" title="pace ' + pacePct.toFixed(1) + '%"></div>'
         + '</div>'
         + '<div style="font-size:12px;color:var(--tx2);margin-top:6px">'
-          + '실적 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + actEok.toFixed(2) + '</span>'
-          + ' / 목표 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + tgtEok.toFixed(2) + '</span> 억원'
+          + '실적 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + actM.toFixed(2) + '</span>'
+          + ' / 목표 <span style="font-family:var(--font-mono);font-weight:600;color:var(--tx)">' + tgtM.toFixed(2) + '</span> M USD'
         + '</div>'
-        + '<div style="font-size:11px;color:var(--tx3);margin-top:2px">pace ' + pacePct.toFixed(1) + '% · ' + year + '년</div>'
+        + '<div style="font-size:11px;color:var(--tx3);margin-top:2px">pace ' + pacePct.toFixed(1) + '% · ' + year + '년 · KPI-7월 Material Profit</div>'
         + '</div>';
 
-    return '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px">'
+    return '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px">'
       + joCardHtml
       + kpiCard('Total Revenue', kpi.revenue.total > 0 ? '$' + formatNumber(Math.round(kpi.revenue.total)) : '—', year + '년 인보이스', 'var(--tx)', krwSub, fxInputHtml)
+      + kpiCard('Total Material Profit', mpUsd > 0 ? '$' + formatNumber(Math.round(mpUsd)) : '—', year + '년 · 매출 − Material Cost', 'var(--tx)', mpKrwSub)
       + kpiCardHtml
       + '</div>';
   }
