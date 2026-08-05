@@ -2543,8 +2543,9 @@ Pages.KpiTarget = (() => {
     // 표① 사업별 종합 — "반도체 Value Chain 협업과제" 보고 양식 그대로 뽑는다.
     //   표1: 사업별 매출 · Material Cost · Material Profit (+ 전체 블록 · 매출 누적)
     //   표2: 사업별 Material Profit 만 모아 합계 · 누적
-    // 열 구성은 참조 양식과 동일 — B: 사업명 / C: 지표 / D~O: 1~12월 / P: 합계
-    // 단위는 각 표 오른쪽 위 끝(P열 띠 칸)에 한 번만 적는다.
+    // 열 구성 — B:C 병합(사업명·지표) / D~O: 1~12월 / P: 합계
+    // 단위는 각 표 오른쪽 위 끝, 띠보다 한 줄 위에 한 번만 적는다.
+    // 예상 구간(마감월 이후)은 합계까지 띠로 묶고 값도 회색으로 톤다운한다.
     // 합계·누적·전체 블록은 값이 아니라 수식으로 남겨 월 셀을 고치면 재계산된다.
     downloadCombo() {
       if (!_comboCache) { alert('데이터를 먼저 불러오세요.'); return; }
@@ -2553,7 +2554,7 @@ Pages.KpiTarget = (() => {
       const N    = data.length;
       const NC   = 16;                                     // A(여백) ~ P(합계)
       const CO   = c => XLSX.utils.encode_col(c);
-      const M0   = 3, M1 = 14, SUMC = 15;                  // D~O = 1~12월, P = 합계
+      const M0   = 3, SUMC = 15;                           // D~O = 1~12월, P = 합계
       const Z    = '0.00_);[Red]\\(0.00\\)';               // 참조 양식의 숫자 서식
       const UNIT = unitLabel === 'M USD' ? 'U$M' : unitLabel === 'M SGD' ? 'S$M' : unitLabel;
       const curMon = (curMonIdx >= 0 && curMonIdx < 12) ? curMonIdx : null;
@@ -2567,6 +2568,7 @@ Pages.KpiTarget = (() => {
         cur:  'FFBFBFBF',   // 현재월 (머리글 한 톤 진하게)
         white:'FFFFFFFF',
         tx:   'FF000000',
+        estTx:'FF808080',   // 예상 구간 값 — 톤다운
       };
       const LINE = st => ({ style: st, color: { rgb: 'FF000000' } });
       const MED  = 'medium';
@@ -2577,8 +2579,8 @@ Pages.KpiTarget = (() => {
         o = o || {};
         const s = {
           fill:      { patternType: 'solid', fgColor: { rgb: o.bg || C.white } },
-          font:      { name: 'Aptos Narrow', sz: 11, bold: !!o.bold, color: { rgb: C.tx } },
-          alignment: { horizontal: o.align || 'left', vertical: 'center' },
+          font:      { name: 'Aptos Narrow', sz: 11, bold: !!o.bold, color: { rgb: o.fg || C.tx } },
+          alignment: { horizontal: o.align || 'left', vertical: 'center', indent: o.indent || 0 },
           border:    o.plain ? {}
                              : { top: LINE('thin'), right: LINE('thin'), bottom: LINE('thin'), left: LINE('thin') },
         };
@@ -2607,22 +2609,26 @@ Pages.KpiTarget = (() => {
         }
       };
 
-      // 실적 / 예상 띠 — 오른쪽 끝 칸에 단위를 한 번 적는다
+      // 실적 / 예상 띠 — 예상은 합계 칸까지 이어진다 (합계도 잔여월 계획이 섞인 값)
+      // 단위는 띠보다 한 줄 위, 합계 열 자리에 적는다.
       const bandRow = (r) => {
-        const arr = [null, cell('', { plain: true }), cell('', { plain: true })];
+        const est0 = closedIdx + 1;                        // 예상 시작 월 (12면 예상 구간 없음)
+        const arr  = [null, cell('', { plain: true }), cell('', { plain: true })];
         for (let i = 0; i < 12; i++) {
           arr.push(cell('', { bg: i <= closedIdx ? C.act : C.est, align: 'center', bold: true, plain: true }));
         }
-        arr.push(cell('(' + UNIT + ')', { align: 'center', bold: true, plain: true }));
+        arr.push(cell('', { bg: est0 <= 11 ? C.est : C.act, align: 'center', bold: true, plain: true }));
         if (closedIdx >= 0) {
           arr[M0] = cell('실적', { bg: C.act, align: 'center', bold: true, plain: true });
-          merges.push({ s: { r: r, c: M0 }, e: { r: r, c: closedIdx + M0 } });
+          merges.push({ s: { r: r, c: M0 }, e: { r: r, c: est0 > 11 ? SUMC : closedIdx + M0 } });
         }
-        if (closedIdx < 11) {
-          arr[closedIdx + 1 + M0] = cell('예상', { bg: C.est, align: 'center', bold: true, plain: true });
-          merges.push({ s: { r: r, c: closedIdx + 1 + M0 }, e: { r: r, c: M1 } });
+        if (est0 <= 11) {
+          arr[est0 + M0] = cell('예상', { bg: C.est, align: 'center', bold: true, plain: true });
+          merges.push({ s: { r: r, c: est0 + M0 }, e: { r: r, c: SUMC } });
         }
         put(r, arr);
+        ws[XLSX.utils.encode_cell({ r: r - 1, c: SUMC })] =
+          cell('(' + UNIT + ')', { align: 'right', bold: true, plain: true });
       };
 
       // 표 가운데 비는 줄 — 좌우 외곽선만 이어지고 격자선은 없다
@@ -2640,13 +2646,21 @@ Pages.KpiTarget = (() => {
           .concat([cell('합계', { bg: C.hdr, bold: true, align: 'center', plain: true })]));
       };
 
-      // 월 12칸 + 합계 한 줄. mon(i) → 셀 값(없으면 null=빈 칸), sum → 합계 칸.
-      const dataRow = (r, bLbl, cLbl, mon, sum, o) => {
+      // 월 12칸 + 합계 한 줄. 라벨은 B:C 병합 칸(B에 적는다).
+      // mon(i) → 셀 값(없으면 null=빈 칸), sum → 합계 칸. 마감월 이후는 회색.
+      const dataRow = (r, label, mon, sum, o) => {
         o = o || {};
-        const arr = [null, cell(bLbl, { bg: o.bg, bold: o.bold }), cell(cLbl, { bg: o.bg, bold: o.bold })];
-        for (let i = 0; i < 12; i++) arr.push(cell(mon(i), { bg: o.bg, align: 'right' }));
+        const arr = [null, cell(label, { bg: o.bg, bold: o.bold, indent: o.indent }), cell('', { bg: o.bg })];
+        for (let i = 0; i < 12; i++) {
+          arr.push(cell(mon(i), { bg: o.bg, align: 'right', fg: i > closedIdx ? C.estTx : C.tx }));
+        }
         arr.push(cell(sum, { bg: o.bg, align: 'right' }));
         put(r, arr);
+      };
+
+      // 라벨 열은 B:C 한 칸으로 쓴다
+      const mergeLabel = (r0, r1) => {
+        for (let r = r0; r <= r1; r++) merges.push({ s: { r: r, c: 1 }, e: { r: r, c: 2 } });
       };
 
       const blank  = v => (v ? { v: v } : null);           // 0은 참조 양식처럼 빈 칸
@@ -2666,21 +2680,20 @@ Pages.KpiTarget = (() => {
       bandRow(T1_BAND);
       headRow(T1_HDR, '0. 반도체 Value Chain 협업');
 
-      // 전체 블록 — 같은 지표끼리 세로 합
+      // 전체 블록 — 같은 지표끼리 세로 합 (라벨이 B로 옮겨져 SUMIF 기준도 B열)
       METRIC.forEach((label, k) => {
         const rIdx = T1_REV + k, er = rIdx + 1;
-        dataRow(rIdx, '', label,
-          i => ({ f: 'SUMIF($C$' + bizR0 + ':$C$' + bizR1 + ',$C' + er + ',' + CO(i + M0) + '$' + bizR0 + ':' + CO(i + M0) + '$' + bizR1 + ')',
+        dataRow(rIdx, label,
+          i => ({ f: 'SUMIF($B$' + bizR0 + ':$B$' + bizR1 + ',$B' + er + ',' + CO(i + M0) + '$' + bizR0 + ':' + CO(i + M0) + '$' + bizR1 + ')',
                   v: data.reduce((s, d) => s + (d[KEY[k]][i] || 0), 0) }),
-          sumF(er, data.reduce((s, d) => s + sum12(d[KEY[k]]), 0)));
+          sumF(er, data.reduce((s, d) => s + sum12(d[KEY[k]]), 0)), { indent: 1 });
       });
 
-      // 매출 누적 — B:C 병합, 합계 칸은 참조 양식처럼 비운다
+      // 매출 누적 — 합계 칸은 참조 양식처럼 비운다
       (function () {
         const er = T1_CUM + 1, src = T1_REV + 1;
         const cum = runCum(data.reduce((acc, d) => acc.map((v, i) => v + (d.rev[i] || 0)), Array(12).fill(0)));
-        dataRow(T1_CUM, '매출 누적', '', i => Object.assign(cumF(i, er, src), { v: cum[i] }), null);
-        merges.push({ s: { r: T1_CUM, c: 1 }, e: { r: T1_CUM, c: 2 } });
+        dataRow(T1_CUM, '매출 누적', i => Object.assign(cumF(i, er, src), { v: cum[i] }), null);
       })();
 
       gapRow(T1_BIZ0 - 1);                                 // 매출 누적과 사업별 블록 사이
@@ -2688,12 +2701,13 @@ Pages.KpiTarget = (() => {
       // 사업별 블록 — 사업명 줄(회색) + Revenue / Material Cost / Material Profit
       data.forEach((d, k) => {
         const top = T1_BIZ0 + 4 * k;
-        dataRow(top, (k + 1) + '. ' + d.label, '', () => null, null, { bg: C.biz });
+        dataRow(top, (k + 1) + '. ' + d.label, () => null, null, { bg: C.biz, bold: true });
         METRIC.forEach((label, j) => {
           const rIdx = top + 1 + j, er = rIdx + 1;
-          dataRow(rIdx, '', label, i => blank(d[KEY[j]][i]), sumF(er, sum12(d[KEY[j]])));
+          dataRow(rIdx, label, i => blank(d[KEY[j]][i]), sumF(er, sum12(d[KEY[j]])), { indent: 1 });
         });
       });
+      mergeLabel(T1_BAND, T1_BOT);
       outline(T1_BAND, T1_BOT);
 
       // ══ 표2 — 사업별 Material Profit ══════════════════
@@ -2708,22 +2722,22 @@ Pages.KpiTarget = (() => {
       data.forEach((d, k) => {
         const rIdx = T2_BIZ0 + k, er = rIdx + 1;
         const srcEr = T1_BIZ0 + 4 * k + 3 + 1;             // 표1의 해당 사업 Material Profit 행
-        dataRow(rIdx, (k + 1) + '. ' + d.label, '',
+        dataRow(rIdx, (k + 1) + '. ' + d.label,
           i => ({ f: CO(i + M0) + srcEr, v: d.mp[i] || 0 }), sumF(er, sum12(d.mp)));
       });
 
       (function () {
         const er = T2_SUM + 1, b0 = T2_BIZ0 + 1, b1 = T2_SUM;
         const tot = Array.from({ length: 12 }, (_, i) => data.reduce((s, d) => s + (d.mp[i] || 0), 0));
-        dataRow(T2_SUM, 'Material Profit 합계', '',
-          i => ({ f: 'SUM(' + CO(i + M0) + b0 + ':' + CO(i + M0) + b1 + ')', v: tot[i] }), sumF(er, sum12(tot)));
-        merges.push({ s: { r: T2_SUM, c: 1 }, e: { r: T2_SUM, c: 2 } });
+        dataRow(T2_SUM, 'Material Profit 합계',
+          i => ({ f: 'SUM(' + CO(i + M0) + b0 + ':' + CO(i + M0) + b1 + ')', v: tot[i] }),
+          sumF(er, sum12(tot)), { bold: true });
 
         const cum = runCum(tot);
-        dataRow(T2_CUM, 'Material Profit 누적', '',
+        dataRow(T2_CUM, 'Material Profit 누적',
           i => Object.assign(cumF(i, T2_CUM + 1, er), { v: cum[i] }), null);
-        merges.push({ s: { r: T2_CUM, c: 1 }, e: { r: T2_CUM, c: 2 } });
       })();
+      mergeLabel(T2_BAND, T2_CUM);
       outline(T2_BAND, T2_CUM);
 
       ws['!ref']    = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: T2_CUM, c: NC - 1 } });
