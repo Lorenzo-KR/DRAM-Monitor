@@ -165,7 +165,7 @@ Pages.Invoice = (() => {
       if (!r) { console.error('[Invoice] Invoice not found, id:', id); return; }
       document.getElementById('ip-no').value        = r.no           || '';
       document.getElementById('ip-date').value      = r.date         || '';
-      document.getElementById('ip-biz').value       = r.biz          || 'DRAM';
+      setBizValue('ip-biz', r.biz);
       syncCountryOptions('ip-biz', 'ip-co', 'name');
       document.getElementById('ip-co').value        = r.country      || 'HK';
       document.getElementById('ip-cust').value      = r.customerName || '';
@@ -208,7 +208,7 @@ Pages.Invoice = (() => {
 
   function fillFromLot(lotId) {
     const lot = Store.getLots().find(l => String(l.id) === lotId); if (!lot) return;
-    document.getElementById('ip-biz').value       = lot.biz          || 'DRAM';
+    setBizValue('ip-biz', lot.biz);
     syncCountryOptions('ip-biz', 'ip-co', 'name');
     document.getElementById('ip-co').value        = lot.country      || 'HK';
     document.getElementById('ip-cust').value      = lot.customerName || '';

@@ -1359,7 +1359,7 @@ Pages.Progress = (() => {
     _editLotId = lotId;
 
     document.getElementById('ep-lot').value          = lot.lotNo       || '';
-    document.getElementById('ep-biz').value          = lot.biz         || 'DRAM';
+    setBizValue('ep-biz', lot.biz);
     syncCountryOptions('ep-biz', 'ep-co');   // 사업에 맞는 법인 목록으로 갱신 후 값 지정
     document.getElementById('ep-co').value           = lot.country     || 'HK';
     document.getElementById('ep-cust').value         = lot.customerName|| '';

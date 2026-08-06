@@ -462,6 +462,30 @@ function syncCountryOptions(bizSelectId, coSelectId, mode = 'full') {
  * @param {string} bizSelectId 사업 select element id
  * @param {'label'|'code'} [mode='label'] 옵션 표시 형식 (좁은 표 셀은 'code')
  */
+/**
+ * 사업 select에 값을 넣는다. 목록에 없는 값(폐지된 사업이 남아 있는 과거 기록)이면
+ * 임시 옵션을 만들어 붙인다.
+ *
+ * select.value 에 없는 값을 대입하면 브라우저는 조용히 ''로 만들어 버린다.
+ * 그대로 저장하면 기존 기록의 사업 구분이 빈 값으로 덮여 사라지므로, 값을 살려 둔다.
+ *
+ * @param {string} bizSelectId 사업 select element id
+ * @param {string} biz         넣을 사업 코드
+ */
+function setBizValue(bizSelectId, biz) {
+  const el = document.getElementById(bizSelectId);
+  if (!el) return;
+  const val = biz || 'DRAM';
+  const has = Array.from(el.options).some(o => o.value === val);
+  if (!has) {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = (CONFIG.BIZ_LABELS[val] || val) + ' (지원 종료)';
+    el.appendChild(opt);
+  }
+  el.value = val;
+}
+
 function syncBizOptions(coSelectId, bizSelectId, mode = 'label') {
   const coEl  = document.getElementById(coSelectId);
   const bizEl = document.getElementById(bizSelectId);

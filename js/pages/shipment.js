@@ -47,7 +47,7 @@ Pages.Shipment = (() => {
     document.getElementById('ship-panel-title').textContent = id ? 'Shipment 수정' : '새 Shipment';
     if (id) {
       const s = Store.getShipmentById(id); if (!s) return;
-      document.getElementById('sp-biz').value     = s.biz     || 'DRAM';
+      setBizValue('sp-biz', s.biz);
       syncCountryOptions('sp-biz', 'sp-country', 'name');
       document.getElementById('sp-country').value = s.country || 'HK';
       document.getElementById('sp-cust').value    = s.customerName || '';
