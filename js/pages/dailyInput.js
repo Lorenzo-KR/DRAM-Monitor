@@ -11,6 +11,7 @@ Pages.DailyInput = (() => {
   let _biz     = '';
   let _openId  = null;
   let _editDailyId = null;   // 처리 이력 인라인 수정 대상 id
+  let _selDaily = new Set(); // 처리 이력 다중 선택 대상 id (문자열)
   let _parsedRows = [];
 
   // ── 필터 ────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ Pages.DailyInput = (() => {
     else              _biz = val;
 
     _openId = null;
+    _selDaily.clear();
     render();
   }
 
@@ -95,6 +97,8 @@ Pages.DailyInput = (() => {
           ${isOpen ? _renderCardBody(lot, dailies) : ''}
         </div>`;
     }).join('');
+
+    if (_openId) _syncSelUI(_openId);   // 선택 상태(전체선택 체크박스 포함) 재동기화
   }
 
   function _renderCardBody(lot, dailies) {
@@ -135,7 +139,9 @@ Pages.DailyInput = (() => {
     }).join('');
 
     // ── 처리 이력 ──────────────────────────────────────────
-    const colGrid = isDram ? '90px 56px 56px 56px 70px 70px 70px 40px 1fr 58px' : '90px 70px 70px 70px 40px 1fr 58px';
+    const colGrid  = isDram ? '24px 90px 56px 56px 56px 70px 70px 70px 40px 1fr 58px' : '24px 90px 70px 70px 70px 40px 1fr 58px';
+    const selCount = hist.filter(r => _selDaily.has(String(r.id))).length;
+    const cbStyle  = 'width:13px;height:13px;margin:0;cursor:pointer;accent-color:var(--tx)';
     const histRows = hist.length === 0
       ? '<div style="font-size:12px;color:var(--tx3);padding:12px 0;text-align:center">처리 기록 없음</div>'
       : hist.map(r => {
@@ -144,6 +150,7 @@ Pages.DailyInput = (() => {
           const moTag = r.moNo ? `<span style="display:inline-block;font-size:10px;padding:1px 5px;background:var(--bg);color:var(--tx2);border:1px solid var(--bd);border-radius:2px;font-family:var(--font-mono);margin-left:6px">${r.moNo}</span>` : '';
           return `
             <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px;align-items:center">
+              <input type="checkbox" data-dsel="${lot.id}" value="${r.id}" ${_selDaily.has(String(r.id)) ? 'checked' : ''} onchange="Pages.DailyInput.toggleSelectDaily('${r.id}',${lot.id},this)" title="선택" style="${cbStyle}">
               <span style="font-family:var(--font-mono);color:var(--tx2)">${r.date}${moTag}</span>
               ${isDram ? `<span style="font-family:var(--font-mono);text-align:right;color:var(--tx)">${formatNumber(parseNumber(r.normal))}</span><span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.noBoot))}</span><span style="font-family:var(--font-mono);text-align:right;color:var(--tx2)">${formatNumber(parseNumber(r.abnormal))}</span>` : ''}
               <span style="font-family:var(--font-mono);text-align:right;color:var(--tx);font-weight:500">${formatNumber(tot)}</span>
@@ -160,6 +167,7 @@ Pages.DailyInput = (() => {
 
     const histHeader = `
       <div style="display:grid;grid-template-columns:${colGrid};gap:6px;padding:6px 0;border-bottom:1px solid var(--bd);font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">
+        <input type="checkbox" id="dp-selall-${lot.id}" ${hist.length ? '' : 'disabled'} ${hist.length && selCount === hist.length ? 'checked' : ''} onchange="Pages.DailyInput.toggleSelectAllDaily(${lot.id},this)" title="전체 선택" style="${cbStyle}">
         <span>날짜</span>${isDram ? '<span style="text-align:right">Normal</span><span style="text-align:right">NoBoot</span><span style="text-align:right">Abnor.</span>' : ''}<span style="text-align:right">처리</span><span style="text-align:right">누적</span><span style="text-align:right">잔량</span><span style="text-align:center">완료</span><span>비고</span><span></span>
       </div>`;
 
@@ -181,7 +189,14 @@ Pages.DailyInput = (() => {
         </div>
 
         <!-- 처리 이력 -->
-        <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">처리 이력 (${hist.length}건)</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;min-height:24px;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em">처리 이력 (${hist.length}건)</div>
+          <div id="dp-selbar-${lot.id}" style="display:${selCount ? 'flex' : 'none'};gap:6px;align-items:center">
+            <span id="dp-selcnt-${lot.id}" style="font-size:11px;font-family:var(--font-mono);color:var(--tx2)">${selCount}건 선택</span>
+            <button onclick="Pages.DailyInput.deleteSelected(${lot.id})" style="padding:4px 10px;font-size:11px;font-weight:500;border:1px solid var(--tx);background:var(--card);color:var(--tx);border-radius:var(--rs);cursor:pointer">선택 삭제</button>
+            <button onclick="Pages.DailyInput.clearSelection(${lot.id})" style="padding:4px 10px;font-size:11px;font-weight:500;border:1px solid var(--bd2);background:var(--card);color:var(--tx2);border-radius:var(--rs);cursor:pointer">해제</button>
+          </div>
+        </div>
         ${histHeader}
         ${histRows}
 
@@ -318,6 +333,7 @@ Pages.DailyInput = (() => {
   function toggleCard(lotId) {
     _openId = _openId === lotId ? null : lotId;
     _editDailyId = null;
+    _selDaily.clear();
     render();
     if (_openId) {
       const el = document.getElementById('acc-' + lotId);
@@ -435,6 +451,67 @@ Pages.DailyInput = (() => {
     UI.toast('삭제됨');
     Api.delete(CONFIG.SHEETS.DAILY, id);
     Api.log('일별처리', '삭제', lot?.lotNo || String(lotId), `${rec?.date || ''} 처리 ${formatQty(parseNumber(rec?.proc), lot?.biz)}${rec?.biz==='DRAM' ? ` (N:${formatNumber(parseNumber(rec?.normal))} / NB:${formatNumber(parseNumber(rec?.noBoot))} / AB:${formatNumber(parseNumber(rec?.abnormal))})` : ''} 삭제`);
+  }
+
+  // ── 처리 이력 다중 선택 / 일괄 삭제 ─────────────────────────
+  function _syncSelUI(lotId) {
+    const boxes = Array.from(document.querySelectorAll(`[data-dsel="${lotId}"]`));
+    const n     = boxes.filter(b => b.checked).length;
+    const bar   = document.getElementById('dp-selbar-' + lotId);
+    const cnt   = document.getElementById('dp-selcnt-' + lotId);
+    const all   = document.getElementById('dp-selall-' + lotId);
+    if (bar) bar.style.display = n ? 'flex' : 'none';
+    if (cnt) cnt.textContent   = n + '건 선택';
+    if (all) {
+      all.checked       = n > 0 && n === boxes.length;
+      all.indeterminate = n > 0 && n < boxes.length;
+    }
+  }
+
+  function toggleSelectDaily(id, lotId, el) {
+    if (el.checked) _selDaily.add(String(id));
+    else            _selDaily.delete(String(id));
+    _syncSelUI(lotId);
+  }
+
+  function toggleSelectAllDaily(lotId, el) {
+    document.querySelectorAll(`[data-dsel="${lotId}"]`).forEach(b => {
+      b.checked = el.checked;
+      if (el.checked) _selDaily.add(String(b.value));
+      else            _selDaily.delete(String(b.value));
+    });
+    _syncSelUI(lotId);
+  }
+
+  function clearSelection(lotId) {
+    document.querySelectorAll(`[data-dsel="${lotId}"]`).forEach(b => b.checked = false);
+    _selDaily.clear();
+    _syncSelUI(lotId);
+  }
+
+  async function deleteSelected(lotId) {
+    const lot     = Store.getLotById(lotId);
+    const targets = Store.getDailies()
+      .filter(d => String(d.lotId) === String(lotId) && _selDaily.has(String(d.id)))
+      .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
+    if (!targets.length) { UI.toast('선택된 처리 이력이 없습니다', true); return; }
+
+    const totQty   = targets.reduce((sum, d) => sum + parseNumber(d.proc), 0);
+    const dates    = [...new Set(targets.map(d => d.date || ''))].filter(Boolean);
+    const dateText = dates.length <= 3 ? dates.join(', ') : `${dates[0]} ~ ${dates[dates.length - 1]}`;
+    if (!confirm(`처리 이력 ${targets.length}건을 삭제하시겠습니까?\n\n${dateText}\n합계 ${formatQty(totQty, lot?.biz)}`)) return;
+
+    for (const rec of targets) {
+      Store.deleteDaily(rec.id);
+      Api.delete(CONFIG.SHEETS.DAILY, rec.id);
+    }
+    _selDaily.clear();
+    render();
+    UI.toast(targets.length + '건 삭제됨');
+
+    const moList = [...new Set(targets.map(d => d.moNo).filter(Boolean))];
+    Api.log('일별처리', '삭제', lot?.lotNo || String(lotId),
+      `처리 이력 ${targets.length}건 일괄 삭제 (${dateText}) 합계 ${formatQty(totQty, lot?.biz)}${moList.length ? ` | MO ${moList.join(', ')}` : ''}`);
   }
 
   // ── 엑셀 붙여넣기 팝업 ──────────────────────────────────────
@@ -592,6 +669,7 @@ Pages.DailyInput = (() => {
   }
 
   return { render, setFilter, toggleCard, calcDram, calcRemaining, saveRecord, deleteRecord, addMo, deleteMo,
+           toggleSelectDaily, toggleSelectAllDaily, clearSelection, deleteSelected,
            startEditDaily, cancelEditDaily, calcEditDailyDram, saveDailyEdit,
            openPasteModal, closePasteModal, parsePaste, setParsedLot, savePaste };
 
