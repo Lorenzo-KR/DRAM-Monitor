@@ -29,7 +29,7 @@ Pages.Customers = (() => {
     const name = document.getElementById('cu-name').value.trim();
     if (!name) { UI.toast('이름 필수', true); return; }
     const record = {
-      id:       Date.now(),
+      id:       newId(),
       name,
       country:  document.getElementById('cu-co').value,
       biz:      document.getElementById('cu-biz').value,

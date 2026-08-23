@@ -849,7 +849,7 @@ Pages.Dashboard = (() => {
     const isDone = remNew === 0;
 
     const record = {
-      id: Date.now(), date: dateStr, lotId: lot.id, lotNo: lot.lotNo || lot.id,
+      id: newId(), date: dateStr, lotId: lot.id, lotNo: lot.lotNo || lot.id,
       biz: lot.biz, country: lot.country, customerName: lot.customerName || '',
       proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew,
       note: '대시보드 빠른 입력', done: isDone ? '1' : '0'

@@ -233,7 +233,7 @@ Pages.Invoice = (() => {
     const lotId = document.getElementById('ip-lot').value;
     const lot   = Store.getLots().find(l => String(l.id) === lotId);
     const record = {
-      id: _editId || Date.now(),
+      id: _editId || newId(),
       no: document.getElementById('ip-no').value.trim() || ('INV-' + Date.now()),
       date, due: document.getElementById('ip-due').value,
       lotId: lotId || '', lotNo: lot ? lot.lotNo || lot.id : '',

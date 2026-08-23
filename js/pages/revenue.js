@@ -499,7 +499,7 @@ Pages.Revenue = (() => {
     }
 
     const record = {
-      id:           existing ? existing.id : Date.now(),
+      id:           existing ? existing.id : newId(),
       no:           existing?.no || ('INV-' + Date.now()),
       date:         invDate,
       lotId:        lot.id,

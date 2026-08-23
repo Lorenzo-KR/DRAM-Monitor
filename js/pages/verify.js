@@ -192,16 +192,18 @@ Pages.Verify = (() => {
     const missing = _results.filter(r=>r.result==='missing' && r.lot);
     if (!missing.length) { UI.toast('LOT가 매칭된 미입력 데이터가 없습니다', true); return; }
     if (!confirm(`${missing.length}건을 DB에 입력하시겠습니까?`)) return;
-    let cnt = 0;
+    let cnt = 0, fail = 0;
     for (const r of missing) {
       const lot    = r.lot;
       const cumNew = getLotCumulative(lot.id, Store.getDailies()) + r.proc;
       const remNew = Math.max(0, parseNumber(lot.qty) - cumNew);
-      const record = { id:Date.now()+Math.random(), date:r.date, lotId:lot.id, lotNo:lot.lotNo||lot.id, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc:r.proc, normal:0, noBoot:0, abnormal:0, cumul:cumNew, remain:remNew, note:'검증 일괄입력', done:'0' };
-      const res = await Api.append(CONFIG.SHEETS.DAILY, record);
-      if (!res.error) { Store.upsertDaily(record); cnt++; }
+      const record = { id:newId(), date:r.date, lotId:lot.id, lotNo:lot.lotNo||lot.id, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc:r.proc, normal:0, noBoot:0, abnormal:0, cumul:cumNew, remain:remNew, note:'검증 일괄입력', done:'0' };
+      // appendNow — 낙관적 큐(Api.append)는 항상 성공으로 돌아와 실패를 못 잡는다
+      const res = await Api.appendNow(CONFIG.SHEETS.DAILY, record, true);
+      if (res.success) { Store.upsertDaily(record); cnt++; }
+      else fail++;
     }
-    UI.toast(`${cnt}건 입력 완료`);
+    UI.toast(fail ? `${cnt}건 입력 완료 / ${fail}건 실패 — 다시 시도해 주세요` : `${cnt}건 입력 완료`, fail > 0);
     runVerify();
   }
 

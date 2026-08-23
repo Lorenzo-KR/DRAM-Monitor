@@ -75,7 +75,7 @@ Pages.Shipment = (() => {
 
   async function save() {
     const record = {
-      id:           _editId || Date.now(),
+      id:           _editId || newId(),
       biz:          document.getElementById('sp-biz').value,
       country:      document.getElementById('sp-country').value,
       customerName: document.getElementById('sp-cust').value.trim(),

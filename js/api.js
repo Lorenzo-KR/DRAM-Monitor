@@ -84,14 +84,16 @@ const Api = (() => {
   }
 
   // ── Direct (non-queued) fetch ───────────────────────────────
-  async function _sendNow(body) {
+  // quiet=true 면 toast를 띄우지 않는다 — 일괄 저장에서 행마다 토스트가 쏟아지는 것 방지.
+  // 호출부가 실패 건수를 모아 한 번에 보고한다.
+  async function _sendNow(body, quiet) {
     _setStatus('saving');
     try {
       const res  = await fetch(CONFIG.API_URL, { method: 'POST', body: JSON.stringify(body) });
       const data = await res.json();
       _setStatus('ok');
       if (data?.error) {
-        UI.toast('저장 실패: ' + data.error + ' — 다시 시도해 주세요', true);
+        if (!quiet) UI.toast('저장 실패: ' + data.error + ' — 다시 시도해 주세요', true);
         return { success: false, error: data.error };
       }
       return { success: true, data };
@@ -102,13 +104,13 @@ const Api = (() => {
         const data2 = await res2.json();
         _setStatus('ok');
         if (data2?.error) {
-          UI.toast('저장 실패: ' + data2.error + ' — 다시 시도해 주세요', true);
+          if (!quiet) UI.toast('저장 실패: ' + data2.error + ' — 다시 시도해 주세요', true);
           return { success: false, error: data2.error };
         }
         return { success: true, data: data2 };
       } catch (_) {
         _setStatus('err');
-        UI.toast('저장 실패 (네트워크 오류) — 인터넷 연결을 확인하고 다시 시도해 주세요', true);
+        if (!quiet) UI.toast('저장 실패 (네트워크 오류) — 인터넷 연결을 확인하고 다시 시도해 주세요', true);
         return { success: false, error: 'network' };
       }
     }
@@ -143,7 +145,10 @@ const Api = (() => {
     },
 
     /**
-     * 새 행 추가 (낙관적 큐 — 즉시 반환)
+     * 새 행 추가 (낙관적 큐 — 서버 응답을 기다리지 않고 즉시 성공으로 반환)
+     *
+     * ※ 반환값의 error 를 검사해도 의미가 없다. 항상 success:true 다.
+     *   저장이 실제로 됐는지 확인해야 하는 데이터(일별 처리, LOT)는 appendNow 를 쓸 것.
      */
     append(sheet, data) {
       return _enqueue({ action: 'append', sheet, data, token: Auth.getToken() });
@@ -152,9 +157,10 @@ const Api = (() => {
     /**
      * 새 행 추가 (동기 — 서버 응답 확인 후 반환)
      * 중요 데이터(일별 처리) 저장에 사용
+     * @param {boolean} [quiet] - true면 실패해도 toast를 띄우지 않음 (일괄 저장용)
      */
-    appendNow(sheet, data) {
-      return _sendNow({ action: 'append', sheet, data, token: Auth.getToken() });
+    appendNow(sheet, data, quiet) {
+      return _sendNow({ action: 'append', sheet, data, token: Auth.getToken() }, quiet);
     },
 
     /**
@@ -162,6 +168,13 @@ const Api = (() => {
      */
     update(sheet, id, data) {
       return _enqueue({ action: 'update', sheet, id, data, token: Auth.getToken() });
+    },
+
+    /**
+     * 기존 행 수정 (동기 — 서버 응답 확인 후 반환)
+     */
+    updateNow(sheet, id, data, quiet) {
+      return _sendNow({ action: 'update', sheet, id, data, token: Auth.getToken() }, quiet);
     },
 
     /**
@@ -209,7 +222,7 @@ const Api = (() => {
      */
     log(category, action, lotNo, summary) {
       const record = {
-        id:        Date.now(),
+        id:        newId(),
         ts:        new Date().toISOString(),
         category,
         action,

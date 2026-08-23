@@ -385,7 +385,7 @@ Pages.Progress = (() => {
 
     const biz = document.getElementById('nl-biz')?.value || 'DRAM';
     const record = {
-      id: Date.now(), biz,
+      id: newId(), biz,
       country: document.getElementById('nl-co')?.value || 'HK',
       customerName: custName, lotNo,
       inDate, targetDate: document.getElementById('nl-tgt')?.value || addDays(inDate, CONFIG.LOT_DEFAULT_TARGET_DAYS),
@@ -1161,7 +1161,7 @@ Pages.Progress = (() => {
     const mo      = moId ? Store.getMoById(moId) : null;
     const moNo    = mo ? mo.moNo : '';
 
-    const record = { id:Date.now(), date, lotId:lot.id, lotNo:lot.lotNo||lot.id, moId, moNo, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc, normal, noBoot, abnormal, cumul:cumNew, remain:remNew, note:document.getElementById('dp-note-'+lotId)?.value||'', done:isDone?'1':'0' };
+    const record = { id:newId(), date, lotId:lot.id, lotNo:lot.lotNo||lot.id, moId, moNo, biz:lot.biz, country:lot.country, customerName:lot.customerName||'', proc, normal, noBoot, abnormal, cumul:cumNew, remain:remNew, note:document.getElementById('dp-note-'+lotId)?.value||'', done:isDone?'1':'0' };
 
     // 저장 중 버튼 비활성화
     const saveBtn = document.querySelector(`[onclick="Pages.Progress.saveDaily(${lotId})"]`);
@@ -1198,7 +1198,7 @@ Pages.Progress = (() => {
     const dup = Store.getMosByLot(lot.id).some(m => m.moNo.toLowerCase() === moNo.toLowerCase());
     if (dup) { UI.toast('이미 등록된 MO 번호입니다', true); return; }
 
-    const record = { id: Date.now(), lotId: lot.id, lotNo: lot.lotNo || String(lot.id), moNo, qty, note: '' };
+    const record = { id: newId(), lotId: lot.id, lotNo: lot.lotNo || String(lot.id), moNo, qty, note: '' };
     Store.upsertMo(record);
     if (noEl)  noEl.value  = '';
     if (qtyEl) qtyEl.value = '';
@@ -1552,7 +1552,7 @@ Pages.Progress = (() => {
     const dailies = Store.getDailies();
 
     let cum = getLotCumulative(lot.id, dailies);
-    let cnt = 0;
+    let cnt = 0, fail = 0;
 
     // 날짜 오름차순으로 처리
     const sorted = [...parsed].sort((a, b) => a.date.localeCompare(b.date));
@@ -1569,14 +1569,16 @@ Pages.Progress = (() => {
       cum += r.proc;
       const remNew = Math.max(0, parseNumber(lot.qty) - cum);
       const record = {
-        id: Date.now() + Math.random(),
+        id: newId(),
         date: r.date, lotId: lot.id, lotNo: lot.lotNo || lot.id,
         biz: lot.biz, country: lot.country, customerName: lot.customerName || '',
         proc: r.proc, normal: r.normal, noBoot: r.noBoot, abnormal: r.abnormal,
         cumul: cum, remain: remNew, note: '', done: remNew === 0 ? '1' : '0',
       };
+      // appendNow — 낙관적 큐(Api.append)는 항상 성공으로 돌아와 실패를 못 잡는다
+      const res = await Api.appendNow(CONFIG.SHEETS.DAILY, record, true);
+      if (!res.success) { fail++; cum -= r.proc; continue; }
       Store.upsertDaily(record);
-      await Api.append(CONFIG.SHEETS.DAILY, record);
       Api.log('일별처리', '등록', record.lotNo || String(record.lotId), `${record.date} 처리 ${Number(record.proc).toLocaleString()}개${record.biz==='DRAM' ? ` (N:${Number(record.normal).toLocaleString()} / NB:${Number(record.noBoot).toLocaleString()} / AB:${Number(record.abnormal).toLocaleString()})` : ''} | 누적 ${Number(record.cumul).toLocaleString()} / 잔여 ${Number(record.remain).toLocaleString()}`);
       cnt++;
     }
@@ -1589,7 +1591,7 @@ Pages.Progress = (() => {
     previewEl.dataset.parsed = '';
     const pasteEl = document.getElementById('dp-paste-' + lotId);
     if (pasteEl) pasteEl.value = '';
-    UI.toast(cnt + '건 저장됨');
+    UI.toast(fail ? `${cnt}건 저장됨 / ${fail}건 실패 — 다시 시도해 주세요` : cnt + '건 저장됨', fail > 0);
     render();
   }
 

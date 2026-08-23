@@ -127,7 +127,7 @@ Pages.LotRegister = (() => {
     const custName = sel.value === '__manual__' ? manual.value.trim() : sel.value;
 
     const record = {
-      id:           Date.now(),
+      id:           newId(),
       biz:          _biz,
       country:      _co,
       customerName: custName,

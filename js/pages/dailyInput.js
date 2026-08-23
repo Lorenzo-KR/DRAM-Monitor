@@ -380,7 +380,7 @@ Pages.DailyInput = (() => {
     const mo      = moId ? Store.getMoById(moId) : null;
     const moNo    = mo ? mo.moNo : '';
 
-    const record = { id: Date.now(), date, lotId: lot.id, lotNo: lot.lotNo || lot.id, moId, moNo, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew, note: document.getElementById('dp-note-' + lotId)?.value || '', done: isDone ? '1' : '0' };
+    const record = { id: newId(), date, lotId: lot.id, lotNo: lot.lotNo || lot.id, moId, moNo, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc, normal, noBoot, abnormal, cumul: cumNew, remain: remNew, note: document.getElementById('dp-note-' + lotId)?.value || '', done: isDone ? '1' : '0' };
 
     const result = await Api.appendNow(CONFIG.SHEETS.DAILY, record);
     if (!result.success) return;
@@ -411,7 +411,7 @@ Pages.DailyInput = (() => {
     const dup = Store.getMosByLot(lot.id).some(m => m.moNo.toLowerCase() === moNo.toLowerCase());
     if (dup) { UI.toast('이미 등록된 MO 번호입니다', true); return; }
 
-    const record = { id: Date.now(), lotId: lot.id, lotNo: lot.lotNo || String(lot.id), moNo, qty, note: '' };
+    const record = { id: newId(), lotId: lot.id, lotNo: lot.lotNo || String(lot.id), moNo, qty, note: '' };
     Store.upsertMo(record);
     if (noEl)  noEl.value  = '';
     if (qtyEl) qtyEl.value = '';
@@ -638,32 +638,59 @@ Pages.DailyInput = (() => {
     btn.disabled = true; btn.textContent = '저장 중...';
     if (topBtn)  { topBtn.disabled = true; topBtn.textContent = '저장 중...'; }
 
+    // 서버 응답을 확인하며 한 건씩 저장한다 (appendNow).
+    // 낙관적 큐(Api.append)를 쓰면 항상 success 로 돌아와 화면만 100%가 되고,
+    // 큐가 다 비워지기 전에 새로고침하면 안 들어간 행이 그대로 사라진다.
     let saved = 0;
-    for (const r of toSave) {
+    const failed = [];
+    for (let i = 0; i < toSave.length; i++) {
+      const r      = toSave[i];
       const lot    = r.lot;
       const dailies = Store.getDailies();
       const cumNew  = getLotCumulative(lot.id, dailies) + r.proc;
       const remNew  = Math.max(0, parseNumber(lot.qty) - cumNew);
       const isDone  = remNew === 0;
-      const record  = { id: Date.now() + Math.random(), date: r.date, lotId: lot.id, lotNo: lot.lotNo || lot.id, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc: r.proc, normal: r.normal, noBoot: r.noBoot, abnormal: r.abnormal, cumul: cumNew, remain: remNew, note: r.note, done: isDone ? '1' : '0' };
-      const res = await Api.append(CONFIG.SHEETS.DAILY, record);
-      if (!res.error) {
+      const record  = { id: newId(), date: r.date, lotId: lot.id, lotNo: lot.lotNo || lot.id, biz: lot.biz, country: lot.country, customerName: lot.customerName || '', proc: r.proc, normal: r.normal, noBoot: r.noBoot, abnormal: r.abnormal, cumul: cumNew, remain: remNew, note: r.note, done: isDone ? '1' : '0' };
+
+      btn.textContent = `저장 중... ${i + 1}/${toSave.length}`;
+      if (topBtn) topBtn.textContent = btn.textContent;
+
+      const res = await Api.appendNow(CONFIG.SHEETS.DAILY, record, true);
+      if (res.success) {
         Store.upsertDaily(record);
         if (isDone) {
           const upd = { ...lot, done: '1', actualDone: r.date };
-          await Api.update(CONFIG.SHEETS.LOTS, lot.id, upd);
-          Store.upsertLot(upd);
+          const ures = await Api.updateNow(CONFIG.SHEETS.LOTS, lot.id, upd, true);
+          if (ures.success) Store.upsertLot(upd);
         }
         saved++;
+      } else {
+        failed.push(`${r.date} ${formatNumber(r.proc)}${r.note ? ' ' + r.note : ''}`);
       }
     }
 
     btn.disabled = false;
+    btn.textContent = '저장';
+    if (topBtn) { topBtn.disabled = false; topBtn.textContent = '저장'; }
+
+    const parts = [saved + '건 저장 완료'];
+    if (skipped > 0)      parts.push('LOT 미선택 ' + skipped + '건 제외');
+    if (failed.length)    parts.push('저장 실패 ' + failed.length + '건');
+
     const msg = document.getElementById('paste-save-msg');
     msg.style.display = 'inline';
-    msg.textContent   = saved + '건 저장 완료' + (skipped > 0 ? ' (LOT 미선택 ' + skipped + '건 제외)' : '');
-    btn.style.display = 'none';
+    msg.textContent   = parts.join(' / ');
     render();
+
+    if (failed.length) {
+      // 실패 건은 화면에 남겨 다시 붙여넣을 수 있게 한다 — 모달을 닫지 않는다.
+      msg.style.color = '#dc2626';
+      UI.toast(`${failed.length}건 저장 실패 — 아래 목록을 다시 입력해 주세요:\n${failed.slice(0, 5).join('\n')}${failed.length > 5 ? `\n… 외 ${failed.length - 5}건` : ''}`, true);
+      console.warn('[savePaste] 저장 실패 행:', failed);
+      return;
+    }
+
+    btn.style.display = 'none';
     UI.toast(saved + '건 저장 완료');
     setTimeout(() => closePasteModal(), 1500);
   }
