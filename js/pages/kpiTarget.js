@@ -56,6 +56,7 @@ Pages.KpiTarget = (() => {
   // 엑셀 다운로드용 최근 렌더 데이터 캐시
   let _exportCache = null;
   let _comboCache  = null;   // 표① 사업별 종합 — 엑셀 다운로드용 (표시값 그대로)
+  let _varCache    = null;   // 표② 롤링 전망 대비 실적 — 엑셀 다운로드용
   function _saveExchangeRate(rate) {
     _exchangeRate = rate;
     localStorage.setItem('kpi_exchange_rate', String(rate));
@@ -149,11 +150,22 @@ Pages.KpiTarget = (() => {
 
   _seedKpi7Baseline();
 
+  /** 저장 시각 — 'YYYY-MM-DD HH:MM' (로컬) */
+  function _nowStamp() {
+    const d = new Date(), p2 = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate())
+         + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+  }
+
   /** 이번 달 제출 회차 키 (YYYY-MM) */
   function _thisVintage() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   }
+  // 회차 메타는 사업 키와 섞이지 않도록 예약 키에 둔다.
+  //   { savedAt, basisMonth, reason, author, locked }
+  const _FC_META = '_meta';
+
   /** 해당 연도의 제출 회차 목록 (최신순) */
   function _fcVintages(year) {
     return Object.keys(_forecast[year] || {}).sort().reverse();
@@ -165,6 +177,31 @@ Pages.KpiTarget = (() => {
     const i = list.indexOf(vintage);
     return i >= 0 ? (list[i + 1] || null) : (list[0] || null);
   }
+  /** 회차 메타 (없으면 빈 객체) */
+  function _fcMeta(year, vintage) {
+    return (_forecast[year]?.[vintage]?.[_FC_META]) || {};
+  }
+  /** 제출 확정(잠금) 여부 — 잠긴 회차는 덮어쓰지 않고 새 리비전을 만든다 */
+  function _fcLocked(year, vintage) { return !!_fcMeta(year, vintage).locked; }
+  /**
+   * 그 회차가 어느 마감 기준으로 제출됐는지 (0-based, 실적 확정 구간의 끝).
+   * 메타가 없는 옛 회차는 저장 당시의 자동 규칙(전월까지)으로 추정한다.
+   */
+  function _vintageBasisIdx(year, vintage) {
+    const m = parseInt(_fcMeta(year, vintage).basisMonth);
+    if (m) return m - 1;
+    const mm = parseInt(String(vintage).slice(5, 7));
+    return mm ? mm - 2 : -1;      // 'YYYY-MM' 회차는 전월까지가 실적이었다
+  }
+  /** 같은 달에 다시 제출할 때 쓸 리비전 키 — 2026-08 → 2026-08-r02 */
+  function _nextRevision(year, vintage) {
+    const base = String(vintage).slice(0, 7);
+    for (let n = 2; n < 100; n++) {
+      const key = base + '-r' + String(n).padStart(2, '0');
+      if (!_forecast[year]?.[key]) return key;
+    }
+    return base + '-rx';
+  }
   /** 전망 12개월 배열 (억원). 없으면 null */
   function _getForecastArr(year, vintage, biz, type) {
     const d = _forecast[year]?.[vintage]?.[biz];
@@ -173,13 +210,46 @@ Pages.KpiTarget = (() => {
     if (!Array.isArray(arr)) return null;
     return Array.from({ length: 12 }, (_, i) => parseFloat(arr[i]) || 0);
   }
-  function _saveForecast(year, vintage, data) {
+  function _saveForecast(year, vintage, data, meta) {
     if (!_forecast[year]) _forecast[year] = {};
+    const prevMeta = _fcMeta(year, vintage);
     _forecast[year][vintage] = { ...(_forecast[year][vintage] || {}), ...data };
+    _forecast[year][vintage][_FC_META] = { ...prevMeta, ...(meta || {}) };
     const json = JSON.stringify(_forecast);
     localStorage.setItem('kpi_forecast_7', json);
     Api.setSetting('kpi_forecast_7', json);
   }
+  // ── 회차 스냅샷 재구성 (KPI-7월 전용 · 단위 M USD) ────────
+  // 회차는 잔여월만 저장된 옛 형식과 12개월 전체가 저장된 새 형식이 섞여 있다.
+  // 어느 쪽이든 '그 회차를 제출하던 시점의 12개월'을 같은 방식으로 복원한다.
+  //   저장값 있음 → 그 값 / 마감 이전 → 실적 / 그 외 → 베이스라인 계획
+
+  /** 실적 1개월 → M USD. type: 'rev' | 'ebit'(=Material Profit) */
+  function _actualRawM(year, biz, i, type) {
+    const usd = type === 'rev'
+      ? _getActualMonth(year, biz, i + 1)
+      : _getActualProfitMonth(year, biz, i + 1, 'kpi7');
+    return usd / 1000000;
+  }
+  /** 그 회차 제출 당시의 12개월 배열 (M USD) */
+  function _vintageMonths(year, vintage, biz, type) {
+    const basisIdx = _vintageBasisIdx(year, vintage);
+    const fcArr    = _getForecastArr(year, vintage, biz, type);
+    const store    = _getRollingStore('kpi7');
+    const baseArr  = type === 'rev' ? _getRollingRevRaw(store, year, biz)
+                                    : _getRollingEbitRaw(store, year, biz);
+    return Array.from({ length: 12 }, (_, i) => {
+      if (fcArr && fcArr[i]) return fcArr[i];
+      if (i <= basisIdx)     return _actualRawM(year, biz, i, type);
+      return baseArr[i] || 0;
+    });
+  }
+  /** 그 회차의 연말 추정 합계 (M USD) */
+  function _vintageLeTotal(year, vintage, bizList, type) {
+    return bizList.reduce((s, b) =>
+      s + _vintageMonths(year, vintage, b, type).reduce((a, v) => a + v, 0), 0);
+  }
+
   function _loadForecast() {
     const raw = Store.getSetting('kpi_forecast_7');
     if (!raw) return;
@@ -191,16 +261,48 @@ Pages.KpiTarget = (() => {
       }
     } catch(e) {}
   }
-  /**
-   * 실적/전망 경계 — '전월까지 자동 실적' 규칙.
-   * 반환값은 마지막 실적 월의 0-based 인덱스 (과거 연도=11, 미래 연도=-1)
-   */
-  function _closedMonthIdx(year) {
+  // ── 마감월 확정 ───────────────────────────────────────────
+  // 본사 제출본과 화면 기준을 맞추려면 마감 시점을 사람이 확정해야 한다.
+  // '전월까지' 자동 규칙만 쓰면 달이 바뀌는 순간 화면 기준이 혼자 움직여서
+  // 이미 제출한 회차와 숫자가 어긋난다.
+  //   구조: { 연도: 1~12 }  · 키가 없으면 자동 규칙으로 폴백
+  let _closedMonth = JSON.parse(localStorage.getItem('kpi_closed_month') || 'null') || {};
+
+  /** 자동 규칙 — 전월까지 실적 */
+  function _autoClosedIdx(year) {
     const now = new Date();
     const y = parseInt(year);
     if (y < now.getFullYear()) return 11;
     if (y > now.getFullYear()) return -1;
     return now.getMonth() - 1;   // 이번 달이 8월(getMonth()=7)이면 6 → 7월까지 실적
+  }
+  /** 확정된 마감월 (1~12). 미확정이면 0 */
+  function _getClosedMonth(year) { return parseInt(_closedMonth[year]) || 0; }
+  function _saveClosedMonth(year, m) {
+    const n = parseInt(m) || 0;
+    if (n) _closedMonth[year] = n; else delete _closedMonth[year];
+    Store.setSetting('kpi_closed_month', JSON.stringify(_closedMonth));
+  }
+  function _loadClosedMonth() {
+    const raw = Store.getSetting('kpi_closed_month');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(_closedMonth, parsed);
+        localStorage.setItem('kpi_closed_month', JSON.stringify(_closedMonth));
+      }
+    } catch(e) {}
+  }
+
+  /**
+   * 실적/전망 경계 — 확정된 마감월이 있으면 그 값, 없으면 '전월까지' 자동 규칙.
+   * 반환값은 마지막 실적 월의 0-based 인덱스 (과거 연도=11, 미래 연도=-1)
+   */
+  function _closedMonthIdx(year) {
+    const m = _getClosedMonth(year);
+    if (m) return m - 1;
+    return _autoClosedIdx(year);
   }
 
   function _getMcMonths(year, biz) {
@@ -458,6 +560,7 @@ Pages.KpiTarget = (() => {
     _loadFactors();
     _loadMaterialCost();
     _loadForecast();
+    _loadClosedMonth();
     _loadExchangeRate();
     _loadNote();
     _seedKpi7Baseline();   // 서버 값 병합 후, 비어 있는 사업만 기준 문서 값으로 채움
@@ -1244,9 +1347,11 @@ Pages.KpiTarget = (() => {
           return i <= closedIdx ? actToDispNum(act[b][i] || 0) : rawToDisp(plan[b][i]);
         });
       };
-      // 현재월 실적 (참고 표시용)
+      // 현재월 실적 (참고 표시용) — 아직 마감 전인 달에만 붙인다.
+      // 마감월이 확정되면 그 달은 실적 구간이라 괄호 표시가 중복된다.
+      var showCurNote = curMonIdx > closedIdx && curMonIdx >= 0 && curMonIdx < 12;
       var curAct = function(b, act) {
-        return curMonIdx >= 0 && curMonIdx < 12 ? actToDispNum(act[b][curMonIdx] || 0) : null;
+        return showCurNote ? actToDispNum(act[b][curMonIdx] || 0) : null;
       };
 
       // 사업별 값 — 표시할 사업만 추린다. HTML과 엑셀이 이 배열 하나를 같이 쓴다.
@@ -1283,8 +1388,8 @@ Pages.KpiTarget = (() => {
       var tRev = sumOf('rev');
       var tMc  = sumOf('mc');
       var tMp  = sumOf('mp');
-      var tCurRev = comboData.reduce(function(s, d) { return s + (curAct(d.biz, actRevByBiz)  || 0); }, 0);
-      var tCurMp  = comboData.reduce(function(s, d) { return s + (curAct(d.biz, actEbitByBiz) || 0); }, 0);
+      var tCurRev = showCurNote ? comboData.reduce(function(s, d) { return s + (curAct(d.biz, actRevByBiz)  || 0); }, 0) : null;
+      var tCurMp  = showCurNote ? comboData.reduce(function(s, d) { return s + (curAct(d.biz, actEbitByBiz) || 0); }, 0) : null;
       var tRevPlan = comboData.reduce(function(s, d) { return s + d.revPlan; }, 0);
       var tMpPlan  = comboData.reduce(function(s, d) { return s + d.mpPlan;  }, 0);
       var tRevTot  = tRev.reduce(function(s, v) { return s + v; }, 0);
@@ -1316,7 +1421,7 @@ Pages.KpiTarget = (() => {
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지) · '
         + '<span style="color:#AAA">흐린 값</span> = 계획 · '
-        + (curMonIdx >= 0 && curMonIdx < 12
+        + (showCurNote
             ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 계획값으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
         + '합계는 실적+잔여계획</span>'
         + '<button onclick="Pages.KpiTarget.downloadCombo()" style="margin-left:auto;font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
@@ -1331,6 +1436,286 @@ Pages.KpiTarget = (() => {
         + abbrNote
         + _noteBox(year)
         + '</div>';
+    }
+
+    // ── 표: 롤링 전망 대비 실적 (KPI-7월 전용) ───────────────
+    // 롤링 체제에서는 '계획 대비'가 하나가 아니라 셋이다.
+    //   당월  = 직전 회차가 예측한 그 달 vs 실적      → 전망이 얼마나 맞았나
+    //   누적  = 베이스라인(AOP) vs 실적               → 연간 목표 진척
+    //   연말  = 이번 회차 LE vs 직전 회차 LE          → 착지 전망이 어떻게 움직였나
+    // 누적을 직전 회차 대비로 잡으면 마감월 이전이 양쪽 다 실적이라
+    // 당월 차이와 같은 값이 나온다 — 그래서 누적 앵커만 베이스라인을 쓴다.
+    var varTable = '', histTable = '', bridge = null;
+    if (_isMpMode(mode) && closedIdx >= 0) {
+      var CM = closedIdx;                                   // 마감월 인덱스
+      // 당월을 '전망'으로 담고 있던 가장 최근 회차 — 회차 이름이 아니라
+      // 마감 기준으로 찾는다 (제출 시점이 달마다 흔들려도 안전하다)
+      var benchVin = _fcVintages(year).filter(function(v) {
+        return _vintageBasisIdx(year, v) < CM;
+      })[0] || null;
+
+      var mcAll = {};
+      bizList.forEach(function(b) { mcAll[b] = _getMcMonths(year, b); });
+
+      var planArr = function(b, t) { return t === 'rev' ? revByBiz[b]    : ebitByBiz[b]; };
+      var actArrOf = function(b, t) { return t === 'rev' ? actRevByBiz[b] : actEbitByBiz[b]; };
+      var actM    = function(b, t, i) { return (actArrOf(b, t)[i] || 0) / 1000000; };
+
+      /** 이번 제출본의 12개월 (M USD) — 마감월까지 실적 + 이후 이번 회차 전망 */
+      var leNowArr = function(b, t) {
+        var fcArr = leVintage ? _getForecastArr(year, leVintage, b, t) : null;
+        var base  = planArr(b, t);
+        return MONTHS.map(function(_, i) {
+          if (i <= CM)              return actM(b, t, i);
+          if (fcArr && fcArr[i])    return fcArr[i];
+          return base[i] || 0;
+        });
+      };
+      /** 직전 제출본의 12개월 (M USD) — 그 회차를 낼 당시 값 그대로 */
+      var lePrevArr = function(b, t) {
+        return benchVin ? _vintageMonths(year, benchVin, b, t) : null;
+      };
+
+      var sum = function(a) { return a.reduce(function(s, v) { return s + (v || 0); }, 0); };
+      var sumTo = function(a, n) { var s = 0; for (var i = 0; i <= n; i++) s += (a[i] || 0); return s; };
+
+      // 사업별 지표 3종 — 매출 / MC(음수) / MP.
+      // MC를 음수로 두면 매출 + MC = MP 가 그대로 성립해서
+      // 차이 행도 매출차이 + MC차이 = MP차이 로 분해된다.
+      var varData = bizList.map(function(b) {
+        var leNowRev = leNowArr(b, 'rev'),  leNowMp = leNowArr(b, 'ebit');
+        var lePrvRev = lePrevArr(b, 'rev'), lePrvMp = lePrevArr(b, 'ebit');
+        var fcMonRev = lePrvRev ? (lePrvRev[CM] || 0) : (planArr(b, 'rev')[CM]  || 0);
+        var fcMonMp  = lePrvMp  ? (lePrvMp[CM]  || 0) : (planArr(b, 'ebit')[CM] || 0);
+        var mkRow = function(label, monFc, monAct, cumPlan, cumAct, leNow, lePrv) {
+          return { label: label, monFc: monFc, monAct: monAct, monDiff: monAct - monFc,
+                   cumPlan: cumPlan, cumAct: cumAct, cumDiff: cumAct - cumPlan,
+                   pct: cumPlan > 0 ? cumAct / cumPlan * 100 : null,
+                   leNow: leNow, lePrv: lePrv,
+                   leDiff: lePrv === null ? null : leNow - lePrv };
+        };
+        var revRow = mkRow('매출', fcMonRev, actM(b, 'rev', CM),
+                           sumTo(planArr(b, 'rev'), CM), sumTo(actArrOf(b, 'rev'), CM) / 1000000,
+                           sum(leNowRev), lePrvRev ? sum(lePrvRev) : null);
+        var mpRow  = mkRow('MP',  fcMonMp,  actM(b, 'ebit', CM),
+                           sumTo(planArr(b, 'ebit'), CM), sumTo(actArrOf(b, 'ebit'), CM) / 1000000,
+                           sum(leNowMp), lePrvMp ? sum(lePrvMp) : null);
+        // MC = 매출 − MP (부호 반대). 실적 MC만 입력값을 그대로 쓴다.
+        var mcRow = {
+          label: 'MC',
+          monFc:   -(revRow.monFc - mpRow.monFc),
+          monAct:  -(mcAll[b][CM] || 0),
+          cumPlan: -(revRow.cumPlan - mpRow.cumPlan),
+          cumAct:  -sumTo(mcAll[b], CM),
+          leNow:   -(revRow.leNow - mpRow.leNow),
+          lePrv:   revRow.lePrv === null ? null : -(revRow.lePrv - mpRow.lePrv),
+          pct: null,
+        };
+        mcRow.monDiff = mcRow.monAct  - mcRow.monFc;
+        mcRow.cumDiff = mcRow.cumAct  - mcRow.cumPlan;
+        mcRow.leDiff  = mcRow.lePrv === null ? null : mcRow.leNow - mcRow.lePrv;
+        return { biz: b, label: CONFIG.BIZ_LABELS[b] || b, rows: [revRow, mcRow, mpRow] };
+      }).filter(function(d) {
+        return d.rows.some(function(r) { return r.monFc || r.monAct || r.cumPlan || r.cumAct || r.leNow; });
+      });
+
+      // 합계 블록 — 표에 보이는 사업만 세로로 더한다
+      var varTotal = ['매출', 'MC', 'MP'].map(function(label, k) {
+        var acc = { label: label, pct: null };
+        ['monFc','monAct','monDiff','cumPlan','cumAct','cumDiff','leNow'].forEach(function(f) {
+          acc[f] = varData.reduce(function(s, d) { return s + (d.rows[k][f] || 0); }, 0);
+        });
+        var anyPrev = varData.some(function(d) { return d.rows[k].lePrv !== null; });
+        acc.lePrv  = anyPrev ? varData.reduce(function(s, d) { return s + (d.rows[k].lePrv || 0); }, 0) : null;
+        acc.leDiff = acc.lePrv === null ? null : acc.leNow - acc.lePrv;
+        acc.pct    = acc.cumPlan > 0 ? acc.cumAct / acc.cumPlan * 100 : null;
+        return acc;
+      });
+
+      // ΔLE 분해 — 마감월까지는 전망이 실적으로 바뀐 몫,
+      // 그 이후는 잔여월 전망을 손댄 몫. 둘을 더하면 정확히 ΔLE 가 된다.
+      bridge = ['rev', 'ebit'].map(function(t) {
+        var act = 0, adj = 0, ok = !!benchVin;
+        bizList.forEach(function(b) {
+          var now = leNowArr(b, t), prv = lePrevArr(b, t);
+          if (!prv) return;
+          for (var i = 0; i < 12; i++) {
+            if (i <= CM) act += (now[i] || 0) - (prv[i] || 0);
+            else         adj += (now[i] || 0) - (prv[i] || 0);
+          }
+        });
+        return { type: t, label: t === 'rev' ? '매출' : 'MP', act: act, adj: adj, total: act + adj, ok: ok };
+      });
+
+      var vFmt  = function(v) {
+        if (v === null || v === undefined) return '-';
+        var d = rawToDisp(v);
+        return (!d && !v) ? '-' : d.toFixed(2);
+      };
+      // 표시 소수점(2자리) 아래로 떨어지는 잔차는 0으로 눌러 '-0.00'이 뜨지 않게 한다
+      var dNum  = function(v) {
+        var d = rawToDisp(v);
+        return Math.abs(d) < 0.005 ? 0 : d;
+      };
+      var vDiff = function(v) { return v === null || v === undefined ? '-' : fmtDiff(dNum(v)); };
+      // 비교할 값이 양쪽 다 없으면 차이 칸도 비운다 (0.00 은 '정확히 맞았다'는 뜻이라 구분해야 한다)
+      var dTxt  = function(v, a, b) { return (!a && !b) ? '-' : vDiff(v); };
+      var dSty  = function(v, a, b) {
+        return (!a && !b) ? '' : ';color:' + diffColor(dNum(v)) + ';font-weight:600';
+      };
+      var vPct  = function(p) { return p === null ? '' : p.toFixed(1) + '%'; };
+
+      _varCache = {
+        year: year, unitLabel: unitLabel, closedMon: CM + 1,
+        benchVin: benchVin, leVintage: leVintage,
+        rows: varData, total: varTotal, bridge: bridge,
+        conv: function(v) { return v === null || v === undefined ? null : rawToDisp(v); },
+      };
+
+      var vTd  = TS.td    + ';width:78px';
+      var vTdS = TS.tdSum + ';width:78px';
+      var varRow = function(r, opt, firstCell) {
+        opt = opt || {};
+        var bold = opt.strong ? ';font-weight:600' : '';
+        var bg   = opt.bg ? ';background:' + opt.bg : '';
+        var c    = function(txt, extra) { return '<td style="' + vTd + bold + bg + (extra || '') + '">' + txt + '</td>'; };
+        return '<tr>'
+          + (firstCell || '')
+          + '<td style="' + TS.tdSub + bold + bg + '">' + r.label + '</td>'
+          + c(vFmt(r.monFc)) + c(vFmt(r.monAct))
+          + c(dTxt(r.monDiff, r.monFc, r.monAct), dSty(r.monDiff, r.monFc, r.monAct))
+          + c(vFmt(r.cumPlan)) + c(vFmt(r.cumAct))
+          + c(dTxt(r.cumDiff, r.cumPlan, r.cumAct), dSty(r.cumDiff, r.cumPlan, r.cumAct))
+          + c(vPct(r.pct), r.pct === null ? '' : ';color:' + pctColor(Math.round(r.pct)))
+          + c(vFmt(r.leNow)) + c(r.lePrv === null ? '-' : vFmt(r.lePrv))
+          + c(dTxt(r.leDiff, r.leNow, r.lePrv), dSty(r.leDiff, r.leNow, r.lePrv))
+          + '</tr>';
+      };
+
+      var varBody = varData.map(function(d) {
+        var bizCell = '<td rowspan="3" style="' + TS.tdL + ';font-weight:600;vertical-align:middle">' + d.label + '</td>';
+        return varRow(d.rows[0], {}, bizCell)
+             + varRow(d.rows[1], {})
+             + varRow(d.rows[2], { strong: true, bg: '#F2F2F2' });
+      }).join('');
+      var totCell = '<td rowspan="3" style="' + TS.tdCumL + ';font-weight:600;vertical-align:middle">전체 합계</td>';
+      varBody += varRow(varTotal[0], { bg: '#F7F7F7' }, totCell)
+               + varRow(varTotal[1], { bg: '#F7F7F7' })
+               + varRow(varTotal[2], { strong: true, bg: '#E8E4D8' });
+
+      var vColgroup = '<colgroup><col style="width:100px"><col style="width:80px">'
+        + Array.from({ length: 10 }, function() { return '<col style="width:78px">'; }).join('')
+        + '</colgroup>';
+
+      var vHeader = '<thead>'
+        + '<tr>'
+        + '<th rowspan="2" style="' + TS.thBiz + '">Biz</th>'
+        + '<th rowspan="2" style="' + TS.thSub + '">구분</th>'
+        + '<th colspan="3" style="' + TS.th + '">' + (CM + 1) + '월 (마감)</th>'
+        + '<th colspan="4" style="' + TS.th + '">누적 1~' + (CM + 1) + '월 · 계획(AOP) 대비</th>'
+        + '<th colspan="3" style="' + TS.th + '">연말 추정</th>'
+        + '</tr><tr>'
+        + ['전망', '실적', '차이', '계획', '실적', '차이', '달성률', '이번', '직전', 'Δ']
+            .map(function(h) { return '<th style="' + TS.thMon + ';width:78px">' + h + '</th>'; }).join('')
+        + '</tr></thead>';
+
+      var bridgeLine = bridge.filter(function(g) { return g.ok; }).map(function(g) {
+        return '<span style="display:inline-block;margin-right:22px">'
+          + '<b style="color:#1D1D1F">Δ연말 ' + g.label + '</b> '
+          + '<span style="color:' + diffColor(dNum(g.total)) + ';font-weight:600">' + fmtDiff(dNum(g.total)) + '</span>'
+          + ' = 당월 실적차이 <span style="color:' + diffColor(dNum(g.act)) + '">' + fmtDiff(dNum(g.act)) + '</span>'
+          + ' + 잔여월 전망 조정 <span style="color:' + diffColor(dNum(g.adj)) + '">' + fmtDiff(dNum(g.adj)) + '</span>'
+          + '</span>';
+      }).join('');
+
+      varTable = '<div style="margin-bottom:14px">'
+        + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
+        + '§N§ 롤링 전망 대비 실적 — ' + (CM + 1) + '월 마감 기준 (' + unitLabel + ')</div>'
+        + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+        + '당월 전망 = ' + (benchVin ? benchVin + ' 제출본' : '<span style="color:#B45309">직전 회차 없음 — 베이스라인 계획으로 비교</span>')
+        + ' · 누적 계획 = 베이스라인(AOP) · 연말 이번 = '
+        + (leVintage ? leVintage + ' 제출본' : '전망 미입력') + '</span>'
+        + '<button onclick="Pages.KpiTarget.downloadVariance()" style="margin-left:auto;font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
+        + '</div>'
+        + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
+        + '<table style="border-collapse:collapse;table-layout:fixed">' + vColgroup + vHeader
+        + '<tbody>' + varBody + '</tbody></table></div>'
+        + (bridgeLine
+            ? '<div style="font-size:11.5px;color:var(--tx2);font-family:Pretendard,sans-serif;padding:6px 10px;background:var(--tbl-sum-bg);border:1px solid #BFBFBF;border-radius:4px;line-height:1.9">'
+              + bridgeLine + '</div>'
+            : '')
+        + '<div style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif;padding:4px 2px 0">'
+        + 'MC는 매출 − MP로 계산한 음수 표기 — 매출 차이 + MC 차이 = MP 차이로 원인이 분해됩니다</div>'
+        + '</div>';
+
+      // ── 표: 제출 회차 이력 ─────────────────────────────────
+      // 매월 계획을 어떻게 고쳤는지 남기는 기록. 본사 질문에 그대로 답할 수 있어야 한다.
+      var vinList = _fcVintages(year);
+      if (vinList.length) {
+        var histRows = vinList.map(function(v, idx) {
+          var p    = vinList[idx + 1] || null;
+          var meta = _fcMeta(year, v);
+          var isTop = (v === leVintage);
+          // 최신 회차는 표②의 '이번 LE'와 같은 값을 써서 두 표가 어긋나지 않게 한다
+          var leRev = isTop ? varTotal[0].leNow : _vintageLeTotal(year, v, bizList, 'rev');
+          var leMp  = isTop ? varTotal[2].leNow : _vintageLeTotal(year, v, bizList, 'ebit');
+          var dAct = null, dAdj = null, dTot = null;
+          if (p) {
+            var basis = isTop ? CM : _vintageBasisIdx(year, v);
+            dAct = 0; dAdj = 0;
+            bizList.forEach(function(b) {
+              var now = isTop ? leNowArr(b, 'ebit') : _vintageMonths(year, v, b, 'ebit');
+              var prv = _vintageMonths(year, p, b, 'ebit');
+              for (var i = 0; i < 12; i++) {
+                if (i <= basis) dAct += (now[i] || 0) - (prv[i] || 0);
+                else            dAdj += (now[i] || 0) - (prv[i] || 0);
+              }
+            });
+            dTot = dAct + dAdj;
+          }
+          var basisTxt = meta.basisMonth ? meta.basisMonth + '월 마감'
+                       : (_vintageBasisIdx(year, v) + 1) + '월 마감(추정)';
+          var reason = String(meta.reason || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          var saved  = meta.savedAt ? String(meta.savedAt).slice(0, 16).replace('T', ' ') : '-';
+          var hc = function(txt, extra) {
+            return '<td style="' + TS.td + ';width:88px' + (extra || '') + '">' + txt + '</td>';
+          };
+          return '<tr' + (isTop ? ' style="background:#F7F7F7"' : '') + '>'
+            + '<td style="' + TS.tdL + ';font-weight:' + (isTop ? '600' : '500') + '">' + v
+            + (meta.locked ? ' <span style="font-size:10px;color:var(--tx3)">확정</span>' : '') + '</td>'
+            + '<td style="' + TS.tdSub + '">' + basisTxt + '</td>'
+            + hc(vFmt(leRev)) + hc(vFmt(leMp), ';font-weight:600')
+            + hc(vDiff(dTot), dTot === null ? '' : ';color:' + diffColor(dNum(dTot)) + ';font-weight:600')
+            + hc(vDiff(dAct), dAct === null ? '' : ';color:' + diffColor(dNum(dAct)))
+            + hc(vDiff(dAdj), dAdj === null ? '' : ';color:' + diffColor(dNum(dAdj)))
+            + '<td style="' + TS.tdL + ';width:auto;white-space:normal;font-size:12px;color:' + (reason ? 'var(--tx)' : '#B45309') + '">'
+            + (reason || '사유 미입력') + '</td>'
+            + '<td style="' + TS.tdSub + ';width:120px;font-size:11px;color:var(--tx3)">' + saved + '</td>'
+            + '</tr>';
+        }).join('');
+
+        histTable = '<div style="margin-bottom:14px">'
+          + '<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:5px;flex-wrap:wrap">'
+          + '<div style="font-size:13px;font-weight:700;color:var(--tx2);font-family:Pretendard,sans-serif;padding:5px 2px;letter-spacing:.05em">'
+          + '§N§ 제출 회차 이력 — 계획 변경 기록 (' + unitLabel + ')</div>'
+          + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
+          + 'Δ는 MP 연말 추정의 직전 회차 대비 변화 · 실적 기여 + 잔여 조정 = Δ</span>'
+          + '</div>'
+          + '<div style="overflow-x:auto;border:1px solid #999;border-radius:4px">'
+          + '<table style="border-collapse:collapse;width:100%"><thead><tr>'
+          + '<th style="' + TS.thBiz + '">회차</th>'
+          + '<th style="' + TS.thSub + '">기준</th>'
+          + '<th style="' + TS.thMon + ';width:88px">매출 LE</th>'
+          + '<th style="' + TS.thMon + ';width:88px">MP LE</th>'
+          + '<th style="' + TS.thMon + ';width:88px">Δ (MP)</th>'
+          + '<th style="' + TS.thMon + ';width:88px">실적 기여</th>'
+          + '<th style="' + TS.thMon + ';width:88px">잔여 조정</th>'
+          + '<th style="' + TS.th + '">사유</th>'
+          + '<th style="' + TS.thSub + ';width:120px">저장</th>'
+          + '</tr></thead><tbody>' + histRows + '</tbody></table></div></div>';
+      }
     }
 
     // ── 연말 추정(LE) 표 ─────────────────────────────────────
@@ -1387,11 +1772,13 @@ Pages.KpiTarget = (() => {
 
     // ── 최종 렌더 ────────────────────────────────────────────
     // 표 번호는 표시되는 표 순서대로 자동 부여
+    var NUM = ['①','②','③','④','⑤','⑥'];
     var _secNo = 0;
-    var secN = function() { _secNo++; return ['①','②','③','④','⑤'][_secNo - 1] + ' '; };
-    if (comboTable) secN();       // 종합표가 ① 을 이미 사용
-    if (leTableHtml) secN();      // 연말 추정 표가 그 다음 번호 사용
-    leTableHtml = leTableHtml.replace('§LE§', comboTable ? '②' : '①');
+    var secN = function() { _secNo++; return NUM[_secNo - 1] + ' '; };
+    if (comboTable)  secN();                                       // 종합표가 첫 번호를 쓴다
+    if (varTable)    varTable    = varTable.replace('§N§',  NUM[_secNo++]);
+    if (leTableHtml) leTableHtml = leTableHtml.replace('§LE§', NUM[_secNo++]);
+    if (histTable)   histTable   = histTable.replace('§N§',  NUM[_secNo++]);
 
     // 계획 표·실적 표·사업별 월 실적 표는 종합표가 같은 내용을 다 담고 있는
     // KPI-7월 탭에서는 숨긴다. (다른 기준 탭은 종합표가 없으므로 그대로 표시)
@@ -1423,7 +1810,9 @@ Pages.KpiTarget = (() => {
     el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">' + cards + '</div>'
       + chart1Html
       + comboTable
+      + varTable
       + leTableHtml
+      + histTable
       + detailTables;
 
     // ================================================================
@@ -1739,6 +2128,22 @@ Pages.KpiTarget = (() => {
       // 관리자 버튼 스타일 (심플)
       const adminBtnStyle = 'padding:5px 11px;border:1px solid #CCC;border-radius:4px;background:#FAFAFA;color:#555;font-size:12px;cursor:pointer;font-family:Pretendard,sans-serif';
 
+      // 마감월 확정 — 본사 제출본과 화면 기준을 맞추는 스위치.
+      // 미확정이면 '전월까지' 자동 규칙이라 달이 바뀔 때 기준이 혼자 움직인다.
+      const _cm     = _getClosedMonth(year);
+      const _cmAuto = _autoClosedIdx(year) + 1;
+      const closedSelect = !_isMpMode(mode) ? '' :
+        `<div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px;color:var(--tx2);font-weight:500;font-family:Pretendard,sans-serif">마감월:</span>
+          <select onchange="Pages.KpiTarget.setClosedMonth(this.value)"
+            style="padding:4px 8px;border:1px solid ${_cm ? '#CCC' : '#B45309'};border-radius:4px;font-size:12px;background:var(--bg);color:var(--tx)">
+            <option value="0"${_cm ? '' : ' selected'}>미확정 (자동)</option>
+            ${Array.from({ length: 12 }, (_, i) =>
+              `<option value="${i + 1}"${_cm === i + 1 ? ' selected' : ''}>${i + 1}월 마감</option>`).join('')}
+          </select>
+          ${_cm ? '' : `<span style="font-size:11px;color:#B45309;font-family:Pretendard,sans-serif">자동 ${_cmAuto > 0 ? _cmAuto + '월' : '없음'}까지 실적</span>`}
+        </div>`;
+
       el.innerHTML=`<div style="max-width:1200px">
         <!-- ① 기준 선택 + 관리자 버튼 (심플) -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -1756,6 +2161,7 @@ Pages.KpiTarget = (() => {
               <button onclick="Pages.KpiTarget.setLeView(false)" style="padding:6px 14px;border:none;border-right:1px solid #CCC;font-size:12px;font-weight:${_leView?'400':'700'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#fff':'#1D1D1F'};color:${_leView?'#333':'#fff'}">계획 대비</button>
               <button onclick="Pages.KpiTarget.setLeView(true)" style="padding:6px 14px;border:none;font-size:12px;font-weight:${_leView?'700':'400'};cursor:pointer;font-family:Pretendard,sans-serif;background:${_leView?'#1D1D1F':'#fff'};color:${_leView?'#fff':'#333'}">연말 추정</button>
             </div>`:''}
+            ${closedSelect}
             ${isKpiM?`<div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:12px;color:var(--tx2);font-weight:400;font-family:Pretendard,sans-serif">기준환율 $1 =</span>
               <input type="number" id="kpi-exchange-input" value="${_exchangeRate||1395}" placeholder="1395"
@@ -2428,14 +2834,27 @@ Pages.KpiTarget = (() => {
       document.body.style.overflow='';
     },
 
+    // ── 마감월 확정 ─────────────────────────────────────────
+    setClosedMonth(m) {
+      _saveClosedMonth(_year, m);
+      Pages.KpiTarget.render();
+    },
+
     // ── 전망(LE) ────────────────────────────────────────────
     setLeView(on)      { _leView = !!on; Pages.KpiTarget.render(); },
     setLeVintage(v)    { _fcVintage = v || null; Pages.KpiTarget.render(); },
 
     openForecastPanel() {
       _fcYear = _year;
-      // 편집 대상: 이번 달 회차 (없으면 새로 만들고, 직전 회차/베이스라인을 복사해 시작)
-      _fcEditVintage = _thisVintage();
+      const y      = _fcYear;
+      const closed = _closedMonthIdx(y);
+      // 편집 대상은 이번 달 회차. 다만 이미 낸 기록을 덮어쓰면 안 되므로,
+      // 확정됐거나 이번 마감보다 이전 기준으로 제출된 회차면 새 리비전을 연다.
+      const cur  = _thisVintage();
+      const mine = _fcVintages(y).filter(k => String(k).slice(0, 7) === cur);
+      let v = mine[0] || cur;
+      if (mine.length && (_fcLocked(y, v) || _vintageBasisIdx(y, v) < closed)) v = _nextRevision(y, v);
+      _fcEditVintage = v;
       const el = document.getElementById('kpi-fc-panel');
       const ov = document.getElementById('kpi-rolling-overlay');
       const sel = document.getElementById('kpi-fc-year');
@@ -2503,14 +2922,30 @@ Pages.KpiTarget = (() => {
       const vintOptions = Array.from(new Set([vintage].concat(_fcVintages(y))))
         .map(v => '<option value="' + v + '"' + (v === vintage ? ' selected' : '') + '>' + v + (v === _thisVintage() ? ' (이번 달)' : '') + '</option>').join('');
 
+      const meta   = _fcMeta(y, vintage);
+      const locked = !!meta.locked;
+      const reason = String(meta.reason || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
       wrap.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
         + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">제출 회차</span>'
         + '<select onchange="Pages.KpiTarget.setFcEditVintage(this.value)" style="padding:4px 8px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;background:var(--bg);color:var(--tx)">' + vintOptions + '</select>'
+        + (locked
+            ? '<span style="font-size:11px;font-weight:600;color:#B45309;font-family:Pretendard,sans-serif;padding:2px 8px;border:1px solid #B45309;border-radius:3px">제출 확정 — 저장하면 새 리비전이 만들어집니다</span>'
+            : '')
         + '<span style="font-size:12px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '단위 M USD · ' + (closed >= 0 ? (closed + 1) + '월까지는 실적 확정이라 입력하지 않습니다' : '전 기간 입력 대상입니다')
         + (prevVin ? ' · 초기값은 ' + prevVin + ' 제출본에서 복사' : ' · 초기값은 계획에서 복사') + '</span>'
         + '</div>'
+        // 사유는 본사 질문("왜 바꿨나")에 답하는 유일한 칸이라 회차와 같이 남긴다
+        + '<div style="margin-bottom:12px">'
+        + '<div style="font-size:12px;font-weight:600;color:var(--tx2);font-family:Pretendard,sans-serif;margin-bottom:4px">변경 사유'
+        + '<span style="font-weight:400;color:var(--tx3);margin-left:6px">잔여월을 고쳤다면 무엇을 왜 바꿨는지 · 제출 확정 시 필수</span></div>'
+        + '<textarea id="kpi-fc-reason" rows="2" placeholder="예) DRAM 8월 MC 상승분을 4Q 물량 증량으로 만회"'
+        + ' style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--bd2);border-radius:4px;'
+        + 'font-family:Pretendard,sans-serif;font-size:12px;line-height:1.6;color:var(--tx);background:var(--card);resize:vertical">'
+        + reason + '</textarea></div>'
         + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%">'
         + '<thead><tr><th style="' + thS + '">구분</th>'
         + MO.map(m => '<th style="' + thS + '">' + m + '</th>').join('')
@@ -2525,26 +2960,51 @@ Pages.KpiTarget = (() => {
       if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '-';
     },
 
-    saveForecast() {
+    /**
+     * 회차 저장. lock=true 면 제출 확정(잠금).
+     * 회차 하나가 12개월 전체 스냅샷이 되도록 마감월까지는 확정 실적을 함께 박는다.
+     * 잔여월만 저장하면 나중에 '그때 몇으로 봤었지'를 되짚을 수 없다.
+     */
+    saveForecast(lock) {
       const tbody = document.getElementById('kpi-fc-tbody'); if (!tbody) return;
-      const y       = _fcYear;
-      const vintage = _fcEditVintage || _thisVintage();
-      const closed  = _closedMonthIdx(y);
-      const data    = {};
+      const y      = _fcYear;
+      const closed = _closedMonthIdx(y);
+      const reason = (document.getElementById('kpi-fc-reason')?.value || '').trim();
+      let vintage  = _fcEditVintage || _thisVintage();
+
+      if (lock && !reason) {
+        alert('제출 확정하려면 변경 사유를 입력해야 합니다.\n본사 질의에 답할 근거가 이 칸입니다.');
+        return;
+      }
+      // 확정된 회차는 덮어쓰지 않는다 — 기록이 조용히 사라지면 안 된다
+      if (_fcLocked(y, vintage)) {
+        const next = _nextRevision(y, vintage);
+        if (!confirm(vintage + ' 회차는 제출 확정된 기록입니다.\n새 리비전 ' + next + ' 으로 저장할까요?')) return;
+        vintage = next;
+      }
+
+      const data = {};
       tbody.querySelectorAll('tr[data-biz]').forEach(tr => {
         const biz  = tr.dataset.biz, type = tr.dataset.type;
         if (!data[biz]) data[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
         // 마감월 이전 칸은 input이 없으므로 셀 순서 기준으로 채운다
         const inputs = Array.from(tr.querySelectorAll('input'));
         const arr = Array(12).fill(0);
+        for (let i = 0; i <= closed && i < 12; i++) arr[i] = _actualRawM(y, biz, i, type);
         for (let i = closed + 1, k = 0; i < 12; i++, k++) arr[i] = parseFloat(inputs[k]?.value) || 0;
         data[biz][type] = arr;
       });
-      _saveForecast(y, vintage, data);
+
+      _saveForecast(y, vintage, data, {
+        savedAt:    _nowStamp(),
+        basisMonth: closed + 1,
+        reason:     reason,
+        locked:     lock ? true : !!_fcMeta(y, vintage).locked,
+      });
       _fcVintage = vintage;
-      _leView = true;
+      _leView = false;
       Pages.KpiTarget.closeForecastPanel();
-      UI.toast(vintage + ' 전망 저장됨');
+      UI.toast(vintage + (lock ? ' 제출 확정됨' : ' 전망 저장됨'));
       Pages.KpiTarget.render();
     },
 
@@ -3206,6 +3666,108 @@ Pages.KpiTarget = (() => {
       const _pad = n => String(n).padStart(2, '0');
       const _stamp = _d.getFullYear() + _pad(_d.getMonth() + 1) + _pad(_d.getDate()) + '_' + _pad(_d.getHours()) + _pad(_d.getMinutes());
       XLSX.writeFile(wb, 'KPI_' + year + '_' + _modeLabel(mode) + '_' + _stamp + '.xlsx');
+    },
+
+    // 표② 롤링 전망 대비 실적 — 본사 송부용.
+    // 화면에 보이는 값을 그대로 옮기고, ΔLE 분해를 표 아래에 같이 적는다.
+    downloadVariance() {
+      if (!_varCache) { alert('데이터를 먼저 불러오세요.'); return; }
+      const V  = _varCache;
+      const cv = V.conv;
+      const NC = 12;                                   // A:Biz B:구분 C~L: 값 10칸
+      const Z  = '0.00_);[Red]\\(0.00\\)';
+      const ZP = '0.0%';
+      const C  = { hdr: 'FFD9D9D9', mp: 'FFF2F2F2', tot: 'FFE8E4D8', white: 'FFFFFFFF' };
+      const LN = st => ({ style: st, color: { rgb: 'FF000000' } });
+
+      const cell = (v, o) => {
+        o = o || {};
+        const st = {
+          fill:      { patternType: 'solid', fgColor: { rgb: o.bg || C.white } },
+          font:      { name: 'Aptos Narrow', sz: 11, bold: !!o.bold, color: { rgb: 'FF000000' } },
+          alignment: { horizontal: o.align || 'left', vertical: 'center', wrapText: !!o.wrap },
+          border:    o.plain ? {} : { top: LN('thin'), right: LN('thin'), bottom: LN('thin'), left: LN('thin') },
+        };
+        if (v === null || v === undefined || v === '') return { t: 's', v: '', s: st };
+        if (typeof v === 'number') {
+          if (isNaN(v)) return { t: 's', v: '', s: st };
+          st.numFmt = o.z || Z;
+          return { t: 'n', z: o.z || Z, v: v, s: st };
+        }
+        return { t: 's', v: String(v), s: st };
+      };
+
+      const ws = {}, merges = [];
+      let R = 0;
+      const put = cells => { cells.forEach((c, i) => { if (c) ws[XLSX.utils.encode_cell({ r: R, c: i })] = c; }); R++; };
+      const line = (txt, bold) => {
+        ws[XLSX.utils.encode_cell({ r: R, c: 0 })] =
+          { t: 's', v: txt, s: { font: { name: 'Aptos Narrow', sz: bold ? 12 : 10, bold: !!bold } } };
+        R++;
+      };
+
+      const M = V.closedMon;
+      line('KPI 롤링 전망 대비 실적 — ' + V.year + '년 ' + M + '월 마감 (' + V.unitLabel + ')', true);
+      line('당월 전망 = ' + (V.benchVin || '직전 회차 없음 · 베이스라인 계획')
+         + '  |  누적 계획 = 베이스라인(AOP)  |  연말 이번 = ' + (V.leVintage || '전망 미입력'));
+      R++;   // 빈 줄
+
+      // 2단 머리글
+      const hTop = R, hSub = R + 1;
+      put([cell('Biz', { bg: C.hdr, bold: true, align: 'center' }),
+           cell('구분', { bg: C.hdr, bold: true, align: 'center' }),
+           cell(M + '월 (마감)', { bg: C.hdr, bold: true, align: 'center' }), cell('', { bg: C.hdr }), cell('', { bg: C.hdr }),
+           cell('누적 1~' + M + '월 · 계획(AOP) 대비', { bg: C.hdr, bold: true, align: 'center' }),
+           cell('', { bg: C.hdr }), cell('', { bg: C.hdr }), cell('', { bg: C.hdr }),
+           cell('연말 추정', { bg: C.hdr, bold: true, align: 'center' }), cell('', { bg: C.hdr }), cell('', { bg: C.hdr })]);
+      put([cell('', { bg: C.hdr }), cell('', { bg: C.hdr })].concat(
+        ['전망', '실적', '차이', '계획', '실적', '차이', '달성률', '이번', '직전', 'Δ']
+          .map(h => cell(h, { bg: C.hdr, bold: true, align: 'center' }))));
+      merges.push({ s: { r: hTop, c: 0 }, e: { r: hSub, c: 0 } });
+      merges.push({ s: { r: hTop, c: 1 }, e: { r: hSub, c: 1 } });
+      merges.push({ s: { r: hTop, c: 2 }, e: { r: hTop, c: 4 } });
+      merges.push({ s: { r: hTop, c: 5 }, e: { r: hTop, c: 8 } });
+      merges.push({ s: { r: hTop, c: 9 }, e: { r: hTop, c: 11 } });
+
+      const dataRow = (bizLabel, r, bg) => {
+        put([cell(bizLabel, { bg: bg, bold: !!bizLabel }),
+             cell(r.label,  { bg: bg, bold: r.label === 'MP' }),
+             cell(cv(r.monFc),   { bg: bg, align: 'right' }),
+             cell(cv(r.monAct),  { bg: bg, align: 'right' }),
+             cell(cv(r.monDiff), { bg: bg, align: 'right' }),
+             cell(cv(r.cumPlan), { bg: bg, align: 'right' }),
+             cell(cv(r.cumAct),  { bg: bg, align: 'right' }),
+             cell(cv(r.cumDiff), { bg: bg, align: 'right' }),
+             cell(r.pct === null ? '' : r.pct / 100, { bg: bg, align: 'right', z: ZP }),
+             cell(cv(r.leNow),   { bg: bg, align: 'right' }),
+             cell(r.lePrv  === null ? '' : cv(r.lePrv),  { bg: bg, align: 'right' }),
+             cell(r.leDiff === null ? '' : cv(r.leDiff), { bg: bg, align: 'right' })]);
+      };
+
+      V.rows.forEach(d => {
+        const top = R;
+        d.rows.forEach((r, k) => dataRow(k === 0 ? d.label : '', r, k === 2 ? C.mp : null));
+        merges.push({ s: { r: top, c: 0 }, e: { r: top + 2, c: 0 } });
+      });
+      const totTop = R;
+      V.total.forEach((r, k) => dataRow(k === 0 ? '전체 합계' : '', r, C.tot));
+      merges.push({ s: { r: totTop, c: 0 }, e: { r: totTop + 2, c: 0 } });
+
+      R++;   // 빈 줄
+      (V.bridge || []).filter(g => g.ok).forEach(g => {
+        line('Δ연말 ' + g.label + ' ' + cv(g.total).toFixed(2)
+           + ' = 당월 실적차이 ' + cv(g.act).toFixed(2)
+           + ' + 잔여월 전망 조정 ' + cv(g.adj).toFixed(2) + '  (' + V.unitLabel + ')');
+      });
+      line('MC는 매출 − MP로 계산한 음수 표기 — 매출 차이 + MC 차이 = MP 차이');
+
+      ws['!ref']  = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: R, c: NC - 1 } });
+      ws['!merges'] = merges;
+      ws['!cols'] = [{ wch: 16 }, { wch: 10 }].concat(Array.from({ length: 10 }, () => ({ wch: 11 })));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, M + '월 마감');
+      _saveXlsxNoGrid(wb, 'KPI_전망대비실적_' + V.year + '_' + String(M).padStart(2, '0') + '월마감.xlsx');
     },
 
     updateExchangeRate(val) {

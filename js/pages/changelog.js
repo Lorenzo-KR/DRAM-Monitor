@@ -15,10 +15,23 @@ Pages.Changelog = (() => {
   // ── 앱 개발 이력 데이터 ────────────────────────────────────
   const VERSIONS = [
     {
+      version: 'v86',
+      date:    '2026-08-28',
+      title:   'KPI 마감월 확정 · 롤링 전망 대비 실적 표 · 제출 회차 이력',
+      latest:  true,
+      items: [
+        { type: 'new',     text: 'KPI — 마감월 확정 스위치 (자동 \'전월까지\' 규칙 대신 사람이 마감 시점을 고정)' },
+        { type: 'new',     text: 'KPI 표② 롤링 전망 대비 실적 — 당월(직전 회차 전망 대비) · 누적(AOP 대비) · 연말 LE 변동' },
+        { type: 'new',     text: 'ΔLE 분해 — 당월 실적차이 + 잔여월 전망 조정 = 연말 추정 변화' },
+        { type: 'new',     text: 'KPI 표③ 제출 회차 이력 — 회차별 LE·변경 사유·저장 시각' },
+        { type: 'new',     text: '전망 입력 — 변경 사유 입력 + 제출 확정(잠금), 확정본 수정 시 새 리비전 생성' },
+        { type: 'improve', text: '회차 스냅샷을 12개월 전체로 저장 (마감월까지는 확정 실적을 함께 기록)' },
+      ],
+    },
+    {
       version: 'v85',
       date:    '2026-05-28 ~ 2026-05-29',
       title:   'LOT 간트차트 · 대시보드 KPI 표시 정리 · DRAM Price 차트 x축',
-      latest:  true,
       items: [
         { type: 'new',     text: 'LOT 진행현황 — 간트차트 보기 모드 추가' },
         { type: 'improve', text: 'DRAM Price 차트 x축 날짜 표기 Apr.1 형식으로 변경' },
