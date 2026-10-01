@@ -343,12 +343,26 @@ function getAll(sheetName) {
 }
 
 function appendRow(sheetName, data) {
-  ensureHeaders(sheetName);
-  var sheet = getSheet(sheetName);
-  var headers = getHeaders(sheet);
-  var row = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });
-  sheet.appendRow(row);
-  return { success: true };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    ensureHeaders(sheetName);
+    var sheet = getSheet(sheetName);
+    var headers = getHeaders(sheet);
+    // 같은 id 재전송(클라이언트 재시도 등)은 무시 — 중복 행 방지
+    var idCol = headers.indexOf('id');
+    if (idCol >= 0 && data.id !== undefined && data.id !== '' && sheet.getLastRow() > 1) {
+      var ids = sheet.getRange(2, idCol + 1, sheet.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < ids.length; i++) {
+        if (String(ids[i][0]) === String(data.id)) return { success: true, duplicate: true };
+      }
+    }
+    var row = headers.map(function(h) { return data[h] !== undefined ? data[h] : ''; });
+    sheet.appendRow(row);
+    return { success: true };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function deleteRow(sheetName, id) {

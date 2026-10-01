@@ -229,7 +229,7 @@ Pages.DailyInput = (() => {
           </div>` : ''}
           <div style="display:flex;gap:10px;align-items:flex-end">
             <div class="fld" style="margin:0;flex:1"><label style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em">비고</label><input type="text" id="dp-note-${lot.id}" placeholder="이슈, 특이사항 등" style="font-size:13px;padding:6px 8px;width:100%"></div>
-            <button onclick="Pages.DailyInput.saveRecord(${lot.id})" style="padding:6px 18px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px">저장</button>
+            <button id="dp-save-${lot.id}" onclick="Pages.DailyInput.saveRecord(${lot.id})" style="padding:6px 18px;font-size:12px;font-weight:500;border:1px solid var(--tx);background:var(--tx);color:var(--card);border-radius:var(--rs);cursor:pointer;height:30px">저장</button>
             <span id="dp-ok-${lot.id}" style="font-size:11px;color:var(--tx2);display:none;align-self:center">저장됨</span>
           </div>
         </div>
@@ -358,7 +358,24 @@ Pages.DailyInput = (() => {
     if (el) el.value = Math.max(0, parseNumber(lot.qty) - cum - proc);
   }
 
+  // 저장 중인 LOT — 응답 대기(1~3초) 중 재클릭/Enter 로 같은 처리량이 두 번 append 되는 것 방지
+  const _savingLots = new Set();
+
   async function saveRecord(lotId) {
+    if (_savingLots.has(lotId)) return;
+    _savingLots.add(lotId);
+    const btn = document.getElementById('dp-save-' + lotId);
+    if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+    try {
+      await _saveRecord(lotId);
+    } finally {
+      _savingLots.delete(lotId);
+      const b = document.getElementById('dp-save-' + lotId);
+      if (b) { b.disabled = false; b.textContent = '저장'; }
+    }
+  }
+
+  async function _saveRecord(lotId) {
     const lot = Store.getLotById(lotId); if (!lot) return;
     const dateEl = document.getElementById('dp-date-' + lotId);
     const procEl = document.getElementById('dp-proc-' + lotId);
