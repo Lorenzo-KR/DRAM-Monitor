@@ -429,7 +429,10 @@ select.ec {
   color: var(--tx2);
 }
 
-/* KPI 롤링 입력표 — 숫자 셀의 위/아래 화살표(스피너) 숨김. 직접 입력만 쓴다 */
-#kpi-rolling-inner input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+/* KPI 롤링·전망 입력표 — 숫자 셀의 위/아래 화살표(스피너) 숨김. 직접 입력만 쓴다 */
+#kpi-rolling-inner input[type=number],
+#kpi-fc-inner input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 #kpi-rolling-inner input[type=number]::-webkit-outer-spin-button,
-#kpi-rolling-inner input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#kpi-rolling-inner input[type=number]::-webkit-inner-spin-button,
+#kpi-fc-inner input[type=number]::-webkit-outer-spin-button,
+#kpi-fc-inner input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
