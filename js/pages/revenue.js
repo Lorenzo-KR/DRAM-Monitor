@@ -230,7 +230,7 @@ Pages.Revenue = (() => {
             </td>
             <td class="td-num">
               ${hasInv && qty > 0
-                ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(1) + '</span>'
+                ? '<span style="color:#1D1D1F;font-weight:500">$' + (amt / qty).toFixed(lot.biz === 'MID' ? 2 : 1) + '</span>'
                 : '<span style="color:#999">—</span>'}
             </td>
             <td class="td-c" style="${claimStyle}">${claimLabel}</td>
