@@ -1306,8 +1306,8 @@ Pages.KpiTarget = (() => {
     // KPI-7월 전용. 사업 한 칸(rowspan)에 3개 지표 행을 묶어 한눈에 보이게 한다.
     // 표②③④와 같은 TS 스타일 상수·같은 열 너비를 써서 세로선이 일직선으로 맞는다.
     // 전월까지는 실적(진한 글씨), 이후는 계획(흐린 글씨) — 선 두께는 전부 동일.
-    // 현재월은 아직 마감 전이라 계산은 롤링(계획)값으로 하고,
-    // 지금까지 쌓인 실적은 셀 툴팁으로 참고 표시한다.
+    // 현재월은 아직 마감 전이라 계산은 롤링(계획)값으로 하고, 그 아래에
+    // 지금까지 쌓인 실적을 괄호로 참고 표시한다.
     var comboTable = '';
     if (_isMpMode(mode)) {
       // 작은 값을 0.01로 올려 표시하면 월 셀을 눈으로 더한 값과 합계가 어긋난다.
@@ -1323,14 +1323,12 @@ Pages.KpiTarget = (() => {
         opt = opt || {};
         var rowBg = opt.bg ? ';background:' + opt.bg : '';
         var bold  = opt.strong ? ';font-weight:600' : '';
-        // 현재월 실적은 셀 안에 두 줄로 넣으면 그 행만 높아져 행 높이가 들쭉날쭉해진다 —
-        // 마우스를 올리면 보이는 툴팁으로 두고, 셀에는 점선 밑줄로만 표시한다.
         var cells = vals.map(function(v, i) {
-          var hasCur = i === curMonIdx && opt.cur !== undefined && opt.cur !== null;
-          var tip = hasCur ? ' title="' + (curMonIdx + 1) + '월 현재 실적: ' + fmtCell(opt.cur) + '"' : '';
-          var val = (opt.minus && v ? '-' : '') + fmtCell(v);
-          return '<td' + tip + ' style="' + TS.td + dimFuture(i) + bold + rowBg + (hasCur ? ';cursor:help' : '') + '">'
-               + (hasCur ? '<span style="border-bottom:1px dotted #AAA">' + val + '</span>' : val) + '</td>';
+          var note = (i === curMonIdx && opt.cur !== undefined && opt.cur !== null)
+            ? '<div style="font-size:10px;color:#888;font-weight:400;line-height:1.1">(' + fmtCell(opt.cur) + ')</div>'
+            : '';
+          return '<td style="' + TS.td + dimFuture(i) + bold + rowBg + '">'
+               + (opt.minus && v ? '-' : '') + fmtCell(v) + note + '</td>';
         }).join('');
         var total = opt.total !== undefined ? opt.total : vals.reduce(function(s, v) { return s + (v || 0); }, 0);
         return '<tr>'
@@ -1424,7 +1422,7 @@ Pages.KpiTarget = (() => {
         + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지) · '
         + '<span style="color:#AAA">흐린 값</span> = 계획 · '
         + (showCurNote
-            ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 계획값으로 계산 (점선 셀에 마우스를 올리면 현재 실적) · ' : '')
+            ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 계획값으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
         + '합계는 실적+잔여계획</span>'
         + '<button onclick="Pages.KpiTarget.downloadCombo()" style="margin-left:auto;font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
         + '</div>'
