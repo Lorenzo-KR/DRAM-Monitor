@@ -147,6 +147,7 @@ Pages.KpiTarget = (() => {
   let _fcVintage  = null;    // 화면에서 선택된 제출 회차
   let _fcYear     = new Date().getFullYear();
   let _fcEditVintage = null; // 입력 패널에서 편집 중인 회차
+  let _fcTotCtx      = null; // 입력 패널 전체 합계 계산용 (마감월·실적·계획 합)
 
   _seedKpi7Baseline();
 
@@ -2919,6 +2920,31 @@ Pages.KpiTarget = (() => {
         + row(b, 'ebit', 'Material Profit(M USD)', '#0F6E56')
       ).join('');
 
+      // 6개 사업 전체 합계 — 마감월까지는 확정 실적, 이후는 입력 중인 전망.
+      // 입력할 때마다 다시 계산하므로 실적·계획 합은 여기서 한 번만 구해 둔다.
+      const bizs = _kpiBizList('kpi7');
+      const sumBiz = fn => bizs.reduce((s, b) => s + fn(b), 0);
+      _fcTotCtx = {
+        closed: closed,
+        act:  { rev:  MO.map((_, i) => i <= closed ? sumBiz(b => _actualRawM(y, b, i, 'rev'))  : 0),
+                ebit: MO.map((_, i) => i <= closed ? sumBiz(b => _actualRawM(y, b, i, 'ebit')) : 0) },
+        plan: { rev:  sumBiz(b => _getRollingRevRaw(baseStore, y, b).reduce((s, v) => s + (v || 0), 0)),
+                ebit: sumBiz(b => _getRollingEbitRaw(baseStore, y, b).reduce((s, v) => s + (v || 0), 0)) },
+      };
+      const totRow = (key, label, bg, strong) =>
+        '<tr data-tot="' + key + '">'
+        + '<td style="padding:5px 8px;font-size:11px;font-weight:600;color:var(--tx);border:1px solid var(--bd);white-space:nowrap;background:' + bg + '">' + label + '</td>'
+        + MO.map(() => '<td class="fc-tc" style="padding:5px 4px;text-align:right;font-size:11px;border:1px solid var(--bd);background:' + bg
+            + ';font-family:var(--font-mono)' + (strong ? ';font-weight:600' : '') + '"></td>').join('')
+        + '<td class="fc-tc" style="padding:5px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);border:1px solid var(--bd);background:' + bg + ';font-family:var(--font-mono)"></td>'
+        + '</tr>';
+      const totals = '<tr><td colspan="' + (MO.length + 2) + '" style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#D9D9D9;border:1px solid var(--bd)">'
+        + '전체 합계 (' + bizs.length + '개 사업) — 회색 = 실적</td></tr>'
+        + totRow('rev',     '매출(M USD)',            '#F7F7F7')
+        + totRow('ebit',    'Material Profit(M USD)', '#F7F7F7', true)
+        + totRow('cumRev',  '누적 매출',              '#EFEFEF')
+        + totRow('cumEbit', '누적 Material Profit',   '#EFEFEF', true);
+
       const vintOptions = Array.from(new Set([vintage].concat(_fcVintages(y))))
         .map(v => '<option value="' + v + '"' + (v === vintage ? ' selected' : '') + '>' + v + (v === _thisVintage() ? ' (이번 달)' : '') + '</option>').join('');
 
@@ -2950,7 +2976,58 @@ Pages.KpiTarget = (() => {
         + '<thead><tr><th style="' + thS + '">구분</th>'
         + MO.map(m => '<th style="' + thS + '">' + m + '</th>').join('')
         + '<th style="' + thS + '">잔여 합계</th></tr></thead>'
-        + '<tbody id="kpi-fc-tbody">' + rows + '</tbody></table></div>';
+        + '<tbody id="kpi-fc-tbody">' + rows + '</tbody>'
+        + '<tfoot id="kpi-fc-tfoot">' + totals + '</tfoot></table></div>'
+        + '<div id="kpi-fc-yearend" style="margin-top:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:4px;'
+        + 'font-size:12px;line-height:1.8;color:var(--tx2);font-family:Pretendard,sans-serif"></div>';
+      Pages.KpiTarget.calcFcTotals();
+    },
+
+    /** 전망 입력 패널 — 전체 합계·누적·12월 마감 예상을 입력값으로 다시 계산 */
+    calcFcTotals() {
+      const tbody = document.getElementById('kpi-fc-tbody');
+      const tfoot = document.getElementById('kpi-fc-tfoot');
+      const ctx   = _fcTotCtx;
+      if (!tbody || !tfoot || !ctx) return;
+      const closed = ctx.closed;
+      const mon = { rev: ctx.act.rev.slice(), ebit: ctx.act.ebit.slice() };
+      tbody.querySelectorAll('tr[data-biz]').forEach(tr => {
+        const arr = mon[tr.dataset.type]; if (!arr) return;
+        Array.from(tr.querySelectorAll('input')).forEach((el, k) => { arr[closed + 1 + k] += parseFloat(el.value) || 0; });
+      });
+      const runCum = a => { let r = 0; return a.map(v => (r += v)); };
+      const fmt = v => v ? v.toFixed(2) : '-';
+      const remain = a => a.reduce((s, v, i) => i > closed ? s + v : s, 0);
+      const lines = {
+        rev:     { vals: mon.rev,          last: remain(mon.rev) },
+        ebit:    { vals: mon.ebit,         last: remain(mon.ebit) },
+        cumRev:  { vals: runCum(mon.rev),  last: null },
+        cumEbit: { vals: runCum(mon.ebit), last: null },
+      };
+      Object.keys(lines).forEach(key => {
+        const tr = tfoot.querySelector('tr[data-tot="' + key + '"]'); if (!tr) return;
+        const tds = tr.querySelectorAll('.fc-tc');
+        lines[key].vals.forEach((v, i) => {
+          tds[i].textContent = fmt(v);
+          tds[i].style.color = i <= closed ? '#999' : 'var(--tx)';
+        });
+        tds[12].textContent = lines[key].last === null ? '' : fmt(lines[key].last);
+      });
+
+      // 12월 마감 예상 = 실적(마감월까지) + 잔여 전망 — 7월 계획과 비교
+      const box = document.getElementById('kpi-fc-yearend'); if (!box) return;
+      const line = (label, type) => {
+        const act = ctx.act[type].reduce((s, v) => s + v, 0);
+        const fc  = remain(mon[type]);
+        const tot = act + fc, diff = tot - ctx.plan[type];
+        return '<div><b style="color:var(--tx)">' + label + ' ' + tot.toFixed(2) + '</b>'
+          + ' = 실적 ' + act.toFixed(2) + ' + 잔여 전망 ' + fc.toFixed(2)
+          + ' · 7월 계획 ' + ctx.plan[type].toFixed(2) + ' 대비 '
+          + '<b style="color:var(--tx)">' + (diff >= 0 ? '+' : '') + diff.toFixed(2) + '</b>'
+          + (ctx.plan[type] ? ' (' + (tot / ctx.plan[type] * 100).toFixed(1) + '%)' : '') + '</div>';
+      };
+      box.innerHTML = '<div style="font-weight:600;color:var(--tx);margin-bottom:2px">12월 마감 예상 (M USD)</div>'
+        + line('매출', 'rev') + line('Material Profit', 'ebit');
     },
 
     calcFcRow(inp) {
@@ -2958,6 +3035,7 @@ Pages.KpiTarget = (() => {
       const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       const cell = tr.querySelector('.fc-rowtotal');
       if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '-';
+      Pages.KpiTarget.calcFcTotals();
     },
 
     /**
