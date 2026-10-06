@@ -2888,21 +2888,40 @@ Pages.KpiTarget = (() => {
       const inpW = 'width:56px;padding:4px 3px;border:1px solid var(--bd2);border-radius:4px;font-size:12px;text-align:right;background:var(--card);color:var(--tx);font-family:var(--font-mono)';
 
       // 값 우선순위: 이번 회차 입력값 → 직전 회차 → 베이스라인 계획
+      // Material Profit은 입력값이 아니라 매출 − Material Cost 계산값 (롤링(7월)과 같은 규칙).
+      // MC를 따로 저장하지 않던 예전 회차는 매출 − MP로 MC를 되살린다.
+      function seedMc(biz) {
+        for (const v of [vintage, prevVin]) {
+          if (!v) continue;
+          const mc = _getForecastArr(y, v, biz, 'mc');
+          if (mc) return mc;
+          const rv = _getForecastArr(y, v, biz, 'rev'), eb = _getForecastArr(y, v, biz, 'ebit');
+          if (rv && eb) return rv.map((x, i) => +(x - eb[i]).toFixed(6));
+        }
+        return _getMcMonths(y, biz);
+      }
       function seed(biz, type) {
-        return _getForecastArr(y, vintage, biz, type)
-            || (prevVin ? _getForecastArr(y, prevVin, biz, type) : null)
-            || (type === 'rev' ? _getRollingRevRaw(baseStore, y, biz) : _getRollingEbitRaw(baseStore, y, biz));
+        if (type === 'mc') return seedMc(biz);
+        const rev = _getForecastArr(y, vintage, biz, 'rev')
+            || (prevVin ? _getForecastArr(y, prevVin, biz, 'rev') : null)
+            || _getRollingRevRaw(baseStore, y, biz);
+        if (type === 'rev') return rev;
+        const mc = seedMc(biz);
+        return rev.map((v, i) => +((v || 0) - (mc[i] || 0)).toFixed(6));
       }
 
       function row(biz, type, label, color) {
         const vals = seed(biz, type);
+        const ro   = type === 'ebit';   // MP는 계산값 — 읽기 전용
         const cells = vals.map((v, i) => {
           // 마감월 이전은 실적 확정 구간 → 입력 비활성 (합계에서도 제외)
           if (i <= closed) {
             return '<td style="padding:3px 3px;border:1px solid var(--bd);background:#F2F2F2;text-align:right;font-size:11px;color:#999;font-family:var(--font-mono)">실적</td>';
           }
           return '<td style="padding:3px 3px;border:1px solid var(--bd)">'
-            + '<input type="number" value="' + (v || '') + '" placeholder="0" step="0.01" style="' + inpW + '" oninput="Pages.KpiTarget.calcFcRow(this)">'
+            + '<input type="number" value="' + (v ? +v.toFixed(4) : '') + '" placeholder="0" step="0.01"'
+            + (ro ? ' readonly tabindex="-1" style="' + inpW + ';background:var(--bg);color:var(--tx2)">'
+                  : ' style="' + inpW + '" oninput="Pages.KpiTarget.calcFcRow(this)">')
             + '</td>';
         }).join('');
         const sum = vals.reduce((s, v, i) => i > closed ? s + (parseFloat(v) || 0) : s, 0);
@@ -2910,13 +2929,14 @@ Pages.KpiTarget = (() => {
           + '<td style="padding:5px 8px;font-size:11px;font-weight:600;color:' + color + ';border:1px solid var(--bd);white-space:nowrap;background:var(--tbl-sum-bg)">' + label + '</td>'
           + cells
           + '<td class="fc-rowtotal" style="padding:5px 4px;text-align:right;font-size:12px;font-weight:600;color:var(--tx);background:var(--tbl-sum-bg);border:1px solid var(--bd);font-family:var(--font-mono)">'
-          + (sum > 0 ? (+sum.toFixed(2)) : '-') + '</td></tr>';
+          + (sum ? (+sum.toFixed(2)) : '-') + '</td></tr>';
       }
 
       const rows = _kpiBizList('kpi7').map((b, i) =>
         '<tr><td colspan="' + (MO.length + 2) + '" style="padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);background:#EBEBEB;border:1px solid var(--bd)">'
         + (i + 1) + '. ' + (CONFIG.BIZ_LABELS[b] || b) + '</td></tr>'
         + row(b, 'rev',  '매출(M USD)', '#185FA5')
+        + row(b, 'mc',   'Material Cost(M USD)', '#8A6D3B')
         + row(b, 'ebit', 'Material Profit(M USD)', '#0F6E56')
       ).join('');
 
@@ -3032,9 +3052,21 @@ Pages.KpiTarget = (() => {
 
     calcFcRow(inp) {
       const tr = inp && inp.closest ? inp.closest('tr') : null; if (!tr) return;
-      const sum = Array.from(tr.querySelectorAll('input')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
-      const cell = tr.querySelector('.fc-rowtotal');
-      if (cell) cell.textContent = sum > 0 ? (+sum.toFixed(2)) : '-';
+      const tbody = tr.parentNode, biz = tr.dataset.biz;
+      const rowOf = t => tbody.querySelector('tr[data-biz="' + biz + '"][data-type="' + t + '"]');
+      const inputsOf = r => r ? Array.from(r.querySelectorAll('input')) : [];
+      // 매출·MC가 바뀌면 같은 사업의 MP(= 매출 − MC)를 다시 계산
+      const revIn = inputsOf(rowOf('rev')), mcIn = inputsOf(rowOf('mc')), ebIn = inputsOf(rowOf('ebit'));
+      ebIn.forEach((el, k) => {
+        const v = (parseFloat(revIn[k]?.value) || 0) - (parseFloat(mcIn[k]?.value) || 0);
+        el.value = v ? +v.toFixed(4) : '';
+      });
+      ['rev', 'mc', 'ebit'].forEach(t => {
+        const r = rowOf(t); if (!r) return;
+        const sum  = inputsOf(r).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+        const cell = r.querySelector('.fc-rowtotal');
+        if (cell) cell.textContent = sum ? (+sum.toFixed(2)) : '-';
+      });
       Pages.KpiTarget.calcFcTotals();
     },
 
@@ -3064,13 +3096,22 @@ Pages.KpiTarget = (() => {
       const data = {};
       tbody.querySelectorAll('tr[data-biz]').forEach(tr => {
         const biz  = tr.dataset.biz, type = tr.dataset.type;
-        if (!data[biz]) data[biz] = { rev: Array(12).fill(0), ebit: Array(12).fill(0) };
+        if (!data[biz]) data[biz] = { rev: Array(12).fill(0), mc: Array(12).fill(0), ebit: Array(12).fill(0) };
         // 마감월 이전 칸은 input이 없으므로 셀 순서 기준으로 채운다
         const inputs = Array.from(tr.querySelectorAll('input'));
         const arr = Array(12).fill(0);
-        for (let i = 0; i <= closed && i < 12; i++) arr[i] = _actualRawM(y, biz, i, type);
+        for (let i = 0; i <= closed && i < 12; i++) {
+          arr[i] = type === 'mc'
+            ? _actualRawM(y, biz, i, 'rev') - _actualRawM(y, biz, i, 'ebit')   // 실적 MC = 매출 − MP
+            : _actualRawM(y, biz, i, type);
+        }
         for (let i = closed + 1, k = 0; i < 12; i++, k++) arr[i] = parseFloat(inputs[k]?.value) || 0;
         data[biz][type] = arr;
+      });
+      // MP는 화면 값이 아니라 매출 − MC로 다시 계산해 저장 (반올림 오차 방지)
+      Object.keys(data).forEach(biz => {
+        const d = data[biz];
+        for (let i = closed + 1; i < 12; i++) d.ebit[i] = +((d.rev[i] || 0) - (d.mc[i] || 0)).toFixed(6);
       });
 
       _saveForecast(y, vintage, data, {
