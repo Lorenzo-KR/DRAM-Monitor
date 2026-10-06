@@ -1307,7 +1307,8 @@ Pages.KpiTarget = (() => {
     // KPI-7월 전용. 사업 한 칸(rowspan)에 3개 지표 행을 묶어 한눈에 보이게 한다.
     // 표②③④와 같은 TS 스타일 상수·같은 열 너비를 써서 세로선이 일직선으로 맞는다.
     // 전월까지는 실적(진한 글씨), 이후는 최신 전망 회차(흐린 글씨) — 선 두께는 전부 동일.
-    // 전망 회차가 없거나 회차에 없는 값은 7월 계획으로 채운다. 연간계획·차이 열은 계속 7월 계획 기준.
+    // 전망은 매달 다시 내므로 없을 수 있다 — 없으면 7월 계획으로 채우지 않고 빈 칸('-')으로 둔다.
+    // 연간계획·차이 열은 7월 계획 기준이라 전망이 비면 차이가 그만큼 벌어진다.
     // 현재월은 아직 마감 전이라 계산은 전망(계획)값으로 하고, 그 아래에
     // 지금까지 쌓인 실적을 괄호로 참고 표시한다.
     var comboTable = '';
@@ -1356,12 +1357,15 @@ Pages.KpiTarget = (() => {
         var fc = fcArrOf(b, type);
         return MONTHS.map(function(_, i) {
           if (i <= closedIdx) return actToDispNum(act[b][i] || 0);
-          return rawToDisp(fc ? fc[i] : plan[b][i]);
+          return fc ? rawToDisp(fc[i]) : 0;
         });
       };
       var mcMonthsOf = function(b) {
         var fc = fcArrOf(b, 'mc'), base = _getMcMonths(year, b);
-        return MONTHS.map(function(_, i) { return rawToDisp(i > closedIdx && fc ? fc[i] : base[i]); });
+        return MONTHS.map(function(_, i) {
+          if (i <= closedIdx) return rawToDisp(base[i]);
+          return fc ? rawToDisp(fc[i]) : 0;
+        });
       };
       // 현재월 실적 (참고 표시용) — 아직 마감 전인 달에만 붙인다.
       // 마감월이 확정되면 그 달은 실적 구간이라 괄호 표시가 중복된다.
@@ -1436,10 +1440,10 @@ Pages.KpiTarget = (() => {
         + '① 사업별 종합 — 매출 · Material Cost · Material Profit (' + unitLabel + ')</div>'
         + '<span style="font-size:11px;color:var(--tx3);font-family:Pretendard,sans-serif">'
         + '<b style="color:#1D1D1F">진한 값</b> = 실적(' + (closedIdx >= 0 ? (closedIdx + 1) + '월' : '없음') + '까지) · '
-        + '<span style="color:#AAA">흐린 값</span> = ' + (leVintage ? '전망(' + leVintage + ' 회차)' : '계획 (전망 미입력)') + ' · '
+        + '<span style="color:#AAA">흐린 값</span> = ' + (leVintage ? '전망(' + leVintage + ' 회차)' : '전망 (미입력 — 빈 칸)') + ' · '
         + (showCurNote
-            ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 ' + (leVintage ? '전망값' : '계획값') + '으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
-        + '합계는 실적+잔여' + (leVintage ? '전망' : '계획') + ' · 연간계획은 7월 계획</span>'
+            ? '<b>' + (curMonIdx + 1) + '월</b>은 마감 전이라 전망값으로 계산하고 괄호 안에 현재 실적 표시 · ' : '')
+        + '합계는 실적+잔여전망 · 연간계획은 7월 계획</span>'
         + '<button onclick="Pages.KpiTarget.downloadCombo()" style="margin-left:auto;font-size:13px;font-family:Pretendard,sans-serif;cursor:pointer;padding:5px 14px;background:#1B4F8A;color:#fff;border:none;border-radius:4px;font-weight:600">↓ 엑셀 다운로드</button>'
         + '</div>'
         + '<div style="overflow-x:auto;margin-bottom:8px;border:1px solid #999;border-radius:4px">'
