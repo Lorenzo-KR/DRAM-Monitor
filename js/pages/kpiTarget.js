@@ -3171,7 +3171,7 @@ Pages.KpiTarget = (() => {
     //   표2: 사업별 Material Profit 만 모아 합계 · 누적
     // 열 구성 — B:C 병합(사업명·지표) / D~O: 1~12월 / P: 합계
     // 단위는 각 표 오른쪽 위 끝, 띠보다 한 줄 위에 한 번만 적는다.
-    // 예상 구간(마감월 이후)은 합계까지 띠로 묶고 값도 회색으로 톤다운한다.
+    // 목표 구간(마감월 이후)은 합계까지 띠로 묶고 값도 회색으로 톤다운한다.
     // 합계·누적·전체 블록은 값이 아니라 수식으로 남겨 월 셀을 고치면 재계산된다.
     downloadCombo() {
       if (!_comboCache) { alert('데이터를 먼저 불러오세요.'); return; }
@@ -3188,13 +3188,13 @@ Pages.KpiTarget = (() => {
       // 참조 양식 색 (테마색 tint 환산값)
       const C = {
         act:  'FFDCEAF7',   // 실적 띠
-        est:  'FFFBE3D6',   // 예상 띠
+        est:  'FFFBE3D6',   // 목표 띠
         hdr:  'FFD9D9D9',   // 머리글
         biz:  'FFF2F2F2',   // 사업명 줄
         cur:  'FFBFBFBF',   // 현재월 (머리글 한 톤 진하게)
         white:'FFFFFFFF',
         tx:   'FF000000',
-        estTx:'FF808080',   // 예상 구간 값 — 톤다운
+        estTx:'FF808080',   // 목표 구간 값 — 톤다운
       };
       const LINE = st => ({ style: st, color: { rgb: 'FF000000' } });
       const MED  = 'medium';
@@ -3235,10 +3235,10 @@ Pages.KpiTarget = (() => {
         }
       };
 
-      // 실적 / 예상 띠 — 예상은 합계 칸까지 이어진다 (합계도 잔여월 계획이 섞인 값)
+      // 실적 / 목표 띠 — 목표는 합계 칸까지 이어진다 (합계도 잔여월 계획이 섞인 값)
       // 단위는 띠보다 한 줄 위, 합계 열 자리에 적는다.
       const bandRow = (r) => {
-        const est0 = closedIdx + 1;                        // 예상 시작 월 (12면 예상 구간 없음)
+        const est0 = closedIdx + 1;                        // 목표 시작 월 (12면 목표 구간 없음)
         const arr  = [null, cell('', { plain: true }), cell('', { plain: true })];
         for (let i = 0; i < 12; i++) {
           arr.push(cell('', { bg: i <= closedIdx ? C.act : C.est, align: 'center', bold: true, plain: true }));
@@ -3249,7 +3249,7 @@ Pages.KpiTarget = (() => {
           merges.push({ s: { r: r, c: M0 }, e: { r: r, c: est0 > 11 ? SUMC : closedIdx + M0 } });
         }
         if (est0 <= 11) {
-          arr[est0 + M0] = cell('예상', { bg: C.est, align: 'center', bold: true, plain: true });
+          arr[est0 + M0] = cell('목표', { bg: C.est, align: 'center', bold: true, plain: true });
           merges.push({ s: { r: r, c: est0 + M0 }, e: { r: r, c: SUMC } });
         }
         put(r, arr);
