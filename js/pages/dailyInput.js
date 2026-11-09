@@ -603,7 +603,9 @@ Pages.DailyInput = (() => {
     saveBtn.style.display = 'inline-block'; saveBtn.textContent = _parsedRows.length + '건 저장';
     if (topBtn) { topBtn.style.display = 'inline-block'; topBtn.textContent = _parsedRows.length + '건 저장'; }
 
-    const lots = Store.getLots().filter(l => (_co ? l.country === _co : true) && (_biz ? l.biz === _biz : true));
+    const lots = Store.getLots()
+      .filter(l => (_co ? l.country === _co : true) && (_biz ? l.biz === _biz : true))
+      .sort((a, b) => String(b.inDate || '').localeCompare(String(a.inDate || '')) || String(b.id).localeCompare(String(a.id)));
 
     document.getElementById('paste-preview-body').innerHTML = _parsedRows.map((r, i) => {
       const isDram    = r.lot && r.lot.biz === 'DRAM';
